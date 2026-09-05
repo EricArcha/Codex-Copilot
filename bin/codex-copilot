@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+from pathlib import Path
+import sys
+
+
+def _bootstrap() -> None:
+    here = Path(__file__).resolve()
+    candidates = [
+        here.parents[1] / "src",
+        here.parents[1] / "share" / "codex-copilot" / "src",
+    ]
+    for candidate in candidates:
+        if (candidate / "codex_copilot").is_dir():
+            sys.path.insert(0, str(candidate))
+            return
+    raise SystemExit("Codex-Copilot runtime not found. Re-run the installer.")
+
+
+_bootstrap()
+from codex_copilot.cli import main  # noqa: E402
+
+raise SystemExit(main())
+
