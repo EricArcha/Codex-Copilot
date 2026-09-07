@@ -18,7 +18,7 @@ The default installation uses symbolic links so changes in this repository take 
 ./bin/codex-copilot status
 ```
 
-The installer adds the skill to `~/.agents/skills`, installs four custom agents under `~/.codex/agents`, exposes `~/.local/bin/codex-copilot`, and safely merges a small set of managed settings into `~/.codex/config.toml`.
+The installer adds the skill to `~/.agents/skills`, installs five custom agents under `~/.codex/agents`, exposes `~/.local/bin/codex-copilot`, and safely merges a small set of managed settings into `~/.codex/config.toml`.
 
 ## Use
 
@@ -47,9 +47,22 @@ codex-copilot doctor [--json]
 codex-copilot status [--json] [--refresh]
 codex-copilot launch [--level routine|complex|critical] [--dry-run] [--override-quota] [-- <codex args>]
 codex-copilot metrics [--days N] [--json]
+codex-copilot trace [--run RUN_ID] [--json]
 ```
 
 Runtime state is stored in `~/.codex-copilot`. Metrics are local and exclude prompts, code, raw paths, commands, logs, and model responses.
+
+`trace` shows the declared configuration and observed lifecycle of subagents dispatched by
+the Skill. It is not backend billing telemetry.
+
+## Delegation governance
+
+Every child dispatch passes a local quota gate. The gate refreshes allowance, treats the run's
+subagent cap as cumulative, and retains the most restrictive quota band observed during that
+run. It reserves the required final-review slot before allowing exploratory work. A trace stores
+only declared agent policy and generic lifecycle state, using an opaque UUID run ID; it never
+stores task content or agent output. Exceeding the budget requires explicit user authorization
+and is labeled in the trace.
 
 ## Uninstall
 
@@ -58,4 +71,3 @@ codex-copilot uninstall
 ```
 
 Uninstall removes only artifacts recorded in the install manifest. Managed config values are restored only when the current value still matches the installed value; later user edits are preserved.
-

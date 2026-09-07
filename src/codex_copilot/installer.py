@@ -30,6 +30,7 @@ AGENT_FILES = (
     "copilot-investigator.toml",
     "copilot-worker.toml",
     "copilot-reviewer.toml",
+    "copilot-final-reviewer.toml",
 )
 
 
@@ -98,6 +99,10 @@ def _is_current_install(manifest: dict[str, Any] | None, mode: str, config: dict
     if not artifacts or any(
         artifact_fingerprint(Path(item["target"])) != item.get("fingerprint") for item in artifacts
     ):
+        return False
+    expected_agent_targets = {str(codex_home() / "agents" / name) for name in AGENT_FILES}
+    recorded_targets = {item.get("target") for item in artifacts}
+    if not expected_agent_targets.issubset(recorded_targets):
         return False
     if mode == "copy":
         distribution = next((item for item in artifacts if item.get("kind") == "distribution"), None)

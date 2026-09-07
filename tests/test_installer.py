@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from codex_copilot.installer import InstallError, install, load_manifest, uninstall
+from codex_copilot.installer import AGENT_FILES, InstallError, _is_current_install, install, load_manifest, uninstall
 
 
 class InstallerTests(unittest.TestCase):
@@ -76,6 +76,22 @@ class InstallerTests(unittest.TestCase):
                 result = uninstall()
                 self.assertTrue(any("model" in warning for warning in result["warnings"]))
                 self.assertEqual(tomllib.loads(config.read_text())["model"], "custom")
+
+    def test_old_manifest_is_not_current_when_a_new_agent_is_required(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            with patch.dict(os.environ, env, clear=False):
+                install()
+                manifest = load_manifest()
+                self.assertIsNotNone(manifest)
+                assert manifest is not None
+                final_target = str(Path(env["CODEX_HOME"]) / "agents" / "copilot-final-reviewer.toml")
+                manifest["artifacts"] = [
+                    item for item in manifest["artifacts"] if item["target"] != final_target
+                ]
+                config = tomllib.loads((Path(env["CODEX_HOME"]) / "config.toml").read_text())
+                self.assertIn("copilot-final-reviewer.toml", AGENT_FILES)
+                self.assertFalse(_is_current_install(manifest, "symlink", config))
 
 
 if __name__ == "__main__":

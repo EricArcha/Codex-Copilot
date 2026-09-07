@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from codex_copilot.cli import main
+from codex_copilot.metrics import record
 
 
 class CliTests(unittest.TestCase):
@@ -47,7 +48,39 @@ class CliTests(unittest.TestCase):
                 self.assertEqual(data["command"][2], "gpt-5.6-terra")
                 self.assertEqual(data["route"]["max_subagents"], 2)
 
+    def test_trace_json_reports_retained_subagent_run(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}, clear=False):
+                record(
+                    {
+                        "event": "subagent_dispatched",
+                        "run_id": "11111111-1111-4111-8111-111111111111",
+                        "task_level": "L1",
+                        "effective_quota_band": "yellow",
+                        "subagent_role": "copilot_reviewer",
+                        "subagent_ordinal": 1,
+                        "subagent_model": "gpt-5.6-terra",
+                        "subagent_effort": "high",
+                        "subagent_phase": "final_review",
+                    }
+                )
+                output = StringIO()
+                with redirect_stdout(output):
+                    code = main(["trace", "--json"])
+                self.assertEqual(code, 0)
+                data = json.loads(output.getvalue())
+                self.assertEqual(data["run_id"], "11111111-1111-4111-8111-111111111111")
+                self.assertEqual(data["agents"][0]["role"], "copilot_reviewer")
+
+    def test_trace_without_subagents_is_a_clear_non_secret_error(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}, clear=False):
+                output = StringIO()
+                with redirect_stdout(output):
+                    code = main(["trace"])
+                self.assertEqual(code, 1)
+                self.assertEqual(output.getvalue().strip(), "No subagent trace found.")
+
 
 if __name__ == "__main__":
     unittest.main()
-

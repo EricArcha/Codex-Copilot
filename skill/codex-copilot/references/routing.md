@@ -23,6 +23,31 @@ Use the lower remaining percentage across the primary and secondary Codex window
 
 Never redeem resets automatically. An explicit user instruction is required to override a pause. If an override arrives, preserve required tests and review rather than silently lowering the quality bar.
 
+## Delegation gate
+
+The subagent cap is cumulative for one run: a completed, failed, or sequential child still consumes its slot. Before every child, generate one canonical UUID with `uuidgen` and run:
+
+```text
+codex-copilot _delegate dispatch --run-id <run-id> --task-level <L0-L3> \
+  --role <copilot_role> --phase <exploration|implementation|final_review>
+```
+
+Only call the child when this succeeds. Immediately after it finishes, record its generic
+result with `codex-copilot _delegate complete --run-id <run-id> --ordinal <n> --outcome <success|failure>`.
+The gate refreshes quota before each dispatch and preserves the most restrictive band observed
+for that run. It never automatically relaxes after a later refresh. Pass `--override` only after
+the user explicitly authorizes exceeding the current delegation budget; trace will mark it.
+
+Reserve review capacity: Green L1/L2 allows at most one exploratory child plus the final
+`copilot_reviewer`; Yellow/Unknown L1/L2 reserves the only slot for that reviewer. Green L3
+allows at most one read-only scout/investigator plus `copilot_final_reviewer` (Sol High).
+Yellow L3 reserves its only slot for that final reviewer. Unknown L3 reserves it for
+`copilot_reviewer`; Red and Critical allow none. If Sol is unavailable for a non-quota reason,
+use `copilot_reviewer` with `--sol-unavailable` as the sole L3 final-review fallback.
+Explorers use only `exploration`, workers only `implementation`, and reviewers only
+`final_review`; the gate rejects a role/phase mismatch and any installed agent configuration
+that differs from the declared route policy.
+
 When Red pauses L2/L3, perform only the Start section's narrow read-only triage. Do not delegate, modify code or configuration, or start review. Immediately return a checkpoint with the task level, quota band, known evidence, zero changed files, reset time, and next action.
 
 For Green L3, use at most one read-only investigator before implementation and reserve the other agent slot for the final Sol High review. Keep exactly one writer. The definition of done must cover the relevant permission matrix, migration compatibility, failure rollback or retry behavior, and representative existing data.

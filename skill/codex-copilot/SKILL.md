@@ -20,7 +20,8 @@ Complete the requested development outcome while preserving quality and included
 
 - Keep requirements, decisions, and final evidence in the primary thread. Move bounded exploration, diagnosis, test-output triage, or review to subagents.
 - Do not delegate L0. For L1-L3, delegate only independent work that materially improves speed, evidence, or context quality.
-- Use the installed `copilot_scout`, `copilot_investigator`, `copilot_worker`, and `copilot_reviewer` roles. Respect the route's subagent cap and explicitly wait for required results.
+- Use the installed `copilot_scout`, `copilot_investigator`, `copilot_worker`, `copilot_reviewer`, and reserved `copilot_final_reviewer` roles. Respect the route's subagent cap and explicitly wait for required results.
+- Before every subagent dispatch, run the delegation gate described in [routing.md](references/routing.md). Do not dispatch when it rejects the request. It counts the entire run, refreshes quota, and applies the most restrictive band observed so far. Use `copilot_final_reviewer` only for the permitted L3 Sol High final-review slot.
 - Maintain exactly one writer. The primary agent should normally implement; use `copilot_worker` only when implementation itself is the bounded delegated unit. Do not use the multi-writer exception for L3 work.
 - Use Sol only when the route permits it, and only for an L3 decision or critical review. Never use Max or Ultra under this skill.
 - Apply relevant installed specialist skills only when their own trigger matches. They are optional; do not fail because one is absent.
@@ -32,3 +33,4 @@ Complete the requested development outcome while preserving quality and included
 - Recheck only findings and affected paths after fixes unless new evidence justifies a full review.
 - Follow [context.md](references/context.md) when the thread grows or work must pause. Return a compact checkpoint when the remaining quota cannot safely carry the task through testing and review.
 - Record privacy-safe route metadata on a best-effort basis using [metrics.md](references/metrics.md); failure to record metrics must not fail the task.
+- When any subagent was dispatched, include one short `codex-copilot trace --run <run-id>` summary in the final response; do not expand it unless asked.

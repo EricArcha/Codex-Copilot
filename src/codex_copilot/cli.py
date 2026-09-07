@@ -12,11 +12,12 @@ from typing import Any
 
 from . import VERSION
 from .config_edit import parse_toml
+from .delegation import DelegationDenied, complete as complete_delegation, dispatch as dispatch_delegation, trace
 from .installer import AGENT_FILES, InstallError, artifact_fingerprint, install, load_manifest, uninstall
 from .metrics import project_hash, record, summarize
 from .paths import bin_dir, codex_home, skills_home
 from .quota import QuotaSnapshot, get_quota
-from .routing import QuotaBand, launch_level, route_for
+from .routing import QuotaBand, TaskLevel, launch_level, route_for
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -48,6 +49,10 @@ def _parser() -> argparse.ArgumentParser:
     metrics_parser.add_argument("--days", type=int, default=30)
     metrics_parser.add_argument("--json", action="store_true")
 
+    trace_parser = sub.add_parser("trace", help="Show the retained declared subagent trace")
+    trace_parser.add_argument("--run")
+    trace_parser.add_argument("--json", action="store_true")
+
     hidden = sub.add_parser("_record", help=argparse.SUPPRESS)
     hidden.add_argument("--event", required=True)
     hidden.add_argument("--run-id")
@@ -65,6 +70,17 @@ def _parser() -> argparse.ArgumentParser:
     hidden.add_argument("--outcome")
     hidden.add_argument("--elapsed-seconds", type=float)
     hidden.add_argument("--error-category")
+
+    delegate = sub.add_parser("_delegate", help=argparse.SUPPRESS)
+    delegate.add_argument("action", choices=("dispatch", "complete"))
+    delegate.add_argument("--run-id", required=True)
+    delegate.add_argument("--task-level", choices=tuple(level.value for level in TaskLevel))
+    delegate.add_argument("--role")
+    delegate.add_argument("--phase")
+    delegate.add_argument("--ordinal", type=int)
+    delegate.add_argument("--outcome")
+    delegate.add_argument("--override", action="store_true")
+    delegate.add_argument("--sol-unavailable", action="store_true")
     return parser
 
 
@@ -177,6 +193,25 @@ def _human_doctor(result: dict[str, Any]) -> None:
         print(f"[{marker}] {check['name']}: {check['detail']}")
 
 
+def _human_trace(result: dict[str, Any]) -> None:
+    if not result["found"]:
+        print(result["message"])
+        return
+    print(f"Run: {result['run_id']}")
+    print(
+        "Policy: "
+        f"{result['task_level']}; effective quota band {result['effective_quota_band']}; "
+        f"{result['dispatched']} dispatched; {result['compliance']}"
+    )
+    print("Configuration: declared (not backend billing telemetry)")
+    for agent in result["agents"]:
+        suffix = "; USER-APPROVED OVERRIDE" if agent["override"] else ""
+        print(
+            f"#{agent['ordinal']} {agent['role']} | {agent['model']} {agent['effort']} | "
+            f"{agent['phase']} | {agent['status']}{suffix}"
+        )
+
+
 def _launch(args: argparse.Namespace) -> int:
     snapshot = get_quota(refresh=True)
     level = launch_level(args.level)
@@ -248,6 +283,13 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"  {route}: {count}")
                 print(result["note"])
             return 0
+        if args.command == "trace":
+            result = trace(args.run)
+            if args.json:
+                print(json.dumps(result, indent=2))
+            else:
+                _human_trace(result)
+            return 0 if result["found"] else 1
         if args.command == "_record":
             event = {
                 "event": args.event,
@@ -269,7 +311,25 @@ def main(argv: list[str] | None = None) -> int:
             }
             record(event)
             return 0
-    except (InstallError, OSError, ValueError, subprocess.SubprocessError) as exc:
+        if args.command == "_delegate":
+            if args.action == "dispatch":
+                if not args.task_level or not args.role or not args.phase:
+                    raise DelegationDenied("dispatch requires --task-level, --role, and --phase")
+                event = dispatch_delegation(
+                    run_id=args.run_id,
+                    level=TaskLevel(args.task_level),
+                    role=args.role,
+                    phase=args.phase,
+                    override=args.override,
+                    sol_unavailable=args.sol_unavailable,
+                )
+            else:
+                if args.ordinal is None or not args.outcome:
+                    raise DelegationDenied("complete requires --ordinal and --outcome")
+                event = complete_delegation(run_id=args.run_id, ordinal=args.ordinal, outcome=args.outcome)
+            print(json.dumps(event, indent=2))
+            return 0
+    except (InstallError, DelegationDenied, OSError, ValueError, subprocess.SubprocessError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     return 1

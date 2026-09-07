@@ -41,6 +41,8 @@ class MetricsTests(unittest.TestCase):
                     record({"event": "bad", "prompt": "secret"})
                 with self.assertRaises(ValueError):
                     record({"event": "bad", "project_path": "/secret"})
+                with self.assertRaises(ValueError):
+                    record({"event": "bad", "run_id": "/secret"})
 
     def test_rotates_bounded_local_log(self):
         with tempfile.TemporaryDirectory() as temp:

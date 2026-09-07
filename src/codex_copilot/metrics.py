@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import secrets
+import uuid
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -32,6 +33,13 @@ ALLOWED_FIELDS = {
     "outcome",
     "elapsed_seconds",
     "error_category",
+    "effective_quota_band",
+    "subagent_role",
+    "subagent_ordinal",
+    "subagent_model",
+    "subagent_effort",
+    "subagent_phase",
+    "override",
 }
 
 
@@ -71,6 +79,14 @@ def record(event: dict[str, Any]) -> None:
     unknown = set(event) - ALLOWED_FIELDS
     if unknown:
         raise ValueError(f"Metrics rejected unapproved fields: {', '.join(sorted(unknown))}")
+    run_id = event.get("run_id")
+    if run_id is not None:
+        try:
+            parsed = uuid.UUID(str(run_id))
+        except (ValueError, AttributeError) as exc:
+            raise ValueError("Metrics rejected non-opaque run_id") from exc
+        if str(parsed) != str(run_id).lower():
+            raise ValueError("Metrics rejected non-canonical run_id")
     clean = {key: value for key, value in event.items() if key in ALLOWED_FIELDS and value is not None}
     clean.setdefault("schema", 1)
     clean.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
@@ -79,6 +95,38 @@ def record(event: dict[str, Any]) -> None:
     _rotate(path)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(clean, sort_keys=True, separators=(",", ":")) + "\n")
+
+
+def records_for_run(run_id: str) -> list[dict[str, Any]]:
+    """Return privacy-safe events for one retained run, in write order."""
+    path = metrics_path()
+    if not path.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for line in path.read_text().splitlines():
+        try:
+            item = json.loads(line)
+        except ValueError:
+            continue
+        if item.get("run_id") == run_id:
+            records.append(item)
+    return records
+
+
+def latest_trace_run_id() -> str | None:
+    """Find the most recently dispatched retained subagent run."""
+    path = metrics_path()
+    if not path.exists():
+        return None
+    latest: str | None = None
+    for line in path.read_text().splitlines():
+        try:
+            item = json.loads(line)
+        except ValueError:
+            continue
+        if item.get("event") == "subagent_dispatched" and isinstance(item.get("run_id"), str):
+            latest = item["run_id"]
+    return latest
 
 
 def summarize(days: int) -> dict[str, Any]:
