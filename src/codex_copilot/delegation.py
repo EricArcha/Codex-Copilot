@@ -151,6 +151,7 @@ def dispatch(
         "surface": "skill",
         "task_level": level.value,
         "quota_band": current.value,
+        "quota_source": snapshot.source,
         "effective_quota_band": effective.value,
         "primary_used_percent": snapshot.primary.used_percent if snapshot.primary else None,
         "secondary_used_percent": snapshot.secondary.used_percent if snapshot.secondary else None,
@@ -179,6 +180,7 @@ def complete(*, run_id: str, ordinal: int, outcome: str) -> dict[str, Any]:
         "surface": "skill",
         "task_level": matching.get("task_level"),
         "quota_band": matching.get("quota_band"),
+        "quota_source": matching.get("quota_source"),
         "effective_quota_band": matching.get("effective_quota_band"),
         "subagent_role": matching.get("subagent_role"),
         "subagent_ordinal": ordinal,
@@ -215,6 +217,7 @@ def trace(run_id: str | None = None) -> dict[str, Any]:
                 "model": item.get("subagent_model"),
                 "effort": item.get("subagent_effort"),
                 "phase": item.get("subagent_phase"),
+                "quota_source": item.get("quota_source"),
                 "status": finished.get("outcome") if finished else "dispatched",
                 "override": bool(item.get("override")),
             }

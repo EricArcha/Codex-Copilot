@@ -111,6 +111,7 @@ def _format_reset(timestamp: int | None) -> str:
 
 def _status_text(snapshot: QuotaSnapshot) -> str:
     lines = [f"Quota band: {snapshot.band}"]
+    lines.append(f"Quota source: {snapshot.source}")
     if snapshot.effective_remaining_percent is not None:
         lines.append(f"Effective remaining: {snapshot.effective_remaining_percent:g}%")
     for label, window in (("Primary", snapshot.primary), ("Secondary", snapshot.secondary)):

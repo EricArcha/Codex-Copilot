@@ -73,6 +73,71 @@ class QuotaTests(unittest.TestCase):
                 self.assertEqual(snapshot.reset_credits_available, 2)
                 self.assertTrue((Path(temp) / "quota-cache.json").exists())
 
+    def test_refresh_failure_uses_recent_successful_cache(self):
+        fixture = Path(__file__).parent / "fixtures" / "quota-green.json"
+        with tempfile.TemporaryDirectory() as temp:
+            with patch.dict(
+                os.environ,
+                {
+                    "CODEX_COPILOT_STATE_DIR": temp,
+                    "CODEX_COPILOT_QUOTA_FIXTURE": str(fixture),
+                },
+                clear=False,
+            ):
+                get_quota(refresh=True)
+            with patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}, clear=False), patch(
+                "codex_copilot.quota._read_rpc_result", side_effect=TimeoutError("timed out")
+            ):
+                snapshot = get_quota(refresh=True)
+        self.assertEqual(snapshot.band, "green")
+        self.assertEqual(snapshot.source, "cache-fallback")
+        self.assertEqual(snapshot.error, "Fresh quota read failed: timed out")
+
+    def test_refresh_failure_rejects_stale_or_non_successful_cache(self):
+        fixture = Path(__file__).parent / "fixtures" / "quota-green.json"
+        for mutation in (
+            lambda raw: raw.update(fetched_at=0),
+            lambda raw: raw.update(source="unavailable"),
+        ):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temp:
+                with patch.dict(
+                    os.environ,
+                    {
+                        "CODEX_COPILOT_STATE_DIR": temp,
+                        "CODEX_COPILOT_QUOTA_FIXTURE": str(fixture),
+                    },
+                    clear=False,
+                ):
+                    get_quota(refresh=True)
+                cache = Path(temp) / "quota-cache.json"
+                raw = json.loads(cache.read_text())
+                mutation(raw)
+                cache.write_text(json.dumps(raw))
+                with patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}, clear=False), patch(
+                    "codex_copilot.quota._read_rpc_result", side_effect=TimeoutError("timed out")
+                ):
+                    snapshot = get_quota(refresh=True)
+                self.assertEqual(snapshot.band, "unknown")
+                self.assertEqual(snapshot.source, "unavailable")
+
+    def test_non_refresh_cache_is_labeled_as_cached(self):
+        fixture = Path(__file__).parent / "fixtures" / "quota-green.json"
+        with tempfile.TemporaryDirectory() as temp:
+            with patch.dict(
+                os.environ,
+                {
+                    "CODEX_COPILOT_STATE_DIR": temp,
+                    "CODEX_COPILOT_QUOTA_FIXTURE": str(fixture),
+                },
+                clear=False,
+            ):
+                get_quota(refresh=True)
+            with patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}, clear=False), patch(
+                "codex_copilot.quota._read_rpc_result", side_effect=AssertionError("must not refresh")
+            ):
+                snapshot = get_quota()
+        self.assertEqual(snapshot.source, "cache")
+
 
 if __name__ == "__main__":
     unittest.main()

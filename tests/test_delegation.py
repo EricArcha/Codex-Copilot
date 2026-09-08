@@ -70,8 +70,10 @@ class DelegationTests(unittest.TestCase):
                 dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role="copilot_reviewer", phase="final_review")
         result = trace(self.RUN_1)
         self.assertEqual(first["subagent_model"], "gpt-5.6-terra")
+        self.assertEqual(first["quota_source"], "test")
         self.assertEqual(result["compliance"], "COMPLIANT")
         self.assertEqual(result["agents"][1]["model"], "gpt-5.6-sol")
+        self.assertEqual(result["agents"][1]["quota_source"], "test")
         self.assertEqual(result["agents"][1]["status"], "success")
 
     def test_downgrade_is_sticky_and_blocks_a_second_l3_child(self):

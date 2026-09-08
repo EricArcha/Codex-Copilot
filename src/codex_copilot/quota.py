@@ -5,7 +5,7 @@ import os
 import selectors
 import subprocess
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -163,21 +163,44 @@ def cache_path() -> Path:
     return state_dir() / "quota-cache.json"
 
 
+def _cached_snapshot(cache: Path, ttl: int, *, source: str) -> QuotaSnapshot | None:
+    """Load a recent successful app-server result and label its cache use."""
+    if not cache.exists():
+        return None
+    try:
+        raw = json.loads(cache.read_text())
+        age = time.time() - raw["fetched_at"]
+        if not 0 <= age <= ttl:
+            return None
+        snapshot = _snapshot_from_dict(raw)
+        # The cache is written only after a successful live read. Keeping this
+        # provenance check prevents an unavailable or prior fallback result from
+        # becoming a future source of authority.
+        if snapshot.source != "app-server":
+            return None
+        return replace(snapshot, source=source)
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
 def get_quota(*, refresh: bool = False, timeout: float = 10.0, ttl: int = 60) -> QuotaSnapshot:
     cache = cache_path()
-    if not refresh and cache.exists():
-        try:
-            raw = json.loads(cache.read_text())
-            if time.time() - raw["fetched_at"] <= ttl:
-                return _snapshot_from_dict(raw)
-        except (OSError, ValueError, KeyError, TypeError):
-            pass
+    if not refresh:
+        cached = _cached_snapshot(cache, ttl, source="cache")
+        if cached:
+            return cached
     try:
         snapshot = snapshot_from_result(_read_rpc_result(timeout))
         cache.parent.mkdir(parents=True, exist_ok=True)
         _atomic_json(cache, snapshot.to_dict())
         return snapshot
     except (OSError, ValueError, RuntimeError, TimeoutError, subprocess.SubprocessError) as exc:
+        # A live read remains authoritative. A transient failure may reuse only
+        # the tool's own very recent successful result, never caller-provided
+        # quota input. The source and error make the degraded mode explicit.
+        cached = _cached_snapshot(cache, ttl, source="cache-fallback")
+        if cached:
+            return replace(cached, error=f"Fresh quota read failed: {exc}")
         return unknown_snapshot(str(exc))
 
 
@@ -198,4 +221,3 @@ def _atomic_json(path: Path, data: dict[str, Any]) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
     os.replace(temporary, path)
-

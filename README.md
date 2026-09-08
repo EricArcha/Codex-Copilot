@@ -76,6 +76,10 @@ only declared agent policy and generic lifecycle state, using an opaque UUID run
 stores task content or agent output. Exceeding the budget requires explicit user authorization
 and is labeled in the trace.
 
+If an app-server refresh transiently fails, the gate can reuse only its own most recent successful
+app-server snapshot (60-second TTL). This degraded result is labeled `cache-fallback`; callers
+cannot supply a quota band or snapshot.
+
 ## Uninstall
 
 ```bash

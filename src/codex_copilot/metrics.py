@@ -23,6 +23,7 @@ ALLOWED_FIELDS = {
     "project_hash",
     "task_level",
     "quota_band",
+    "quota_source",
     "primary_used_percent",
     "secondary_used_percent",
     "primary_delta_observed",

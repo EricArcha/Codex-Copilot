@@ -34,8 +34,10 @@ codex-copilot _delegate dispatch --run-id <run-id> --task-level <L0-L3> \
 
 Only call the child when this succeeds. Immediately after it finishes, record its generic
 result with `codex-copilot _delegate complete --run-id <run-id> --ordinal <n> --outcome <success|failure>`.
-The gate refreshes quota before each dispatch and preserves the most restrictive band observed
-for that run. It never automatically relaxes after a later refresh. Pass `--override` only after
+The gate refreshes quota before each dispatch. A transient refresh failure can use only the
+tool's most recent successful app-server snapshot within the 60-second TTL; it is marked
+`cache-fallback`. The gate never accepts a caller-supplied quota band or snapshot, and preserves
+the most restrictive band observed for that run. It never automatically relaxes after a later refresh. Pass `--override` only after
 the user explicitly authorizes exceeding the current delegation budget; trace will mark it.
 
 Reserve review capacity: Green L1/L2 allows at most one exploratory child plus the final
