@@ -2,16 +2,79 @@ import json
 import os
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from codex_copilot.cli import main
+from codex_copilot.cli import doctor, main
+from codex_copilot.installer import SYMLINK_RISK_WARNING, install
 from codex_copilot.metrics import record
+from codex_copilot.quota import unknown_snapshot
 
 
 class CliTests(unittest.TestCase):
+    def environment(self, root: str) -> dict[str, str]:
+        base = Path(root)
+        return {
+            "CODEX_HOME": str(base / ".codex"),
+            "CODEX_COPILOT_SKILLS_HOME": str(base / ".agents" / "skills"),
+            "CODEX_COPILOT_BIN_DIR": str(base / ".local" / "bin"),
+            "CODEX_COPILOT_SHARE_DIR": str(base / ".local" / "share" / "codex-copilot"),
+            "CODEX_COPILOT_STATE_DIR": str(base / ".codex-copilot"),
+        }
+
+    def test_doctor_accepts_copy_install_and_warns_for_symlink_agents(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            with patch.dict(os.environ, env, clear=False), patch(
+                "codex_copilot.cli.shutil.which", return_value=None
+            ), patch("codex_copilot.cli.get_quota", return_value=unknown_snapshot("test")):
+                install()
+                copied = doctor()
+                copied_checks = {check["name"]: check for check in copied["checks"]}
+                self.assertTrue(copied_checks["installation_integrity"]["ok"])
+                self.assertIn("regular file", copied_checks["copilot-scout.toml"]["detail"])
+                self.assertFalse(any(SYMLINK_RISK_WARNING in warning for warning in copied["warnings"]))
+
+                install(mode="symlink")
+                linked = doctor()
+                linked_checks = {check["name"]: check for check in linked["checks"]}
+                self.assertTrue(linked_checks["installation_integrity"]["ok"])
+                self.assertIn("symlink", linked_checks["copilot-scout.toml"]["detail"])
+                self.assertTrue(any(SYMLINK_RISK_WARNING in warning for warning in linked["warnings"]))
+
+    def test_doctor_reports_unavailable_quota_as_a_warning(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            env["PATH"] = f"{env['CODEX_COPILOT_BIN_DIR']}{os.pathsep}{os.environ.get('PATH', '')}"
+            responses = iter(
+                (
+                    SimpleNamespace(stdout="codex-cli 0.147.0", stderr="", returncode=0),
+                    SimpleNamespace(stdout="Logged in using ChatGPT", stderr="", returncode=0),
+                )
+            )
+            with patch.dict(os.environ, env, clear=False), patch(
+                "codex_copilot.cli.shutil.which", return_value="/usr/local/bin/codex"
+            ), patch("codex_copilot.cli.subprocess.run", side_effect=responses), patch(
+                "codex_copilot.cli.get_quota", return_value=unknown_snapshot("timed out")
+            ):
+                install()
+                result = doctor()
+                self.assertTrue(result["ok"])
+                self.assertTrue(any("Quota check unavailable" in warning for warning in result["warnings"]))
+
+    def test_symlink_dry_run_prints_risk_warning(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            with patch.dict(os.environ, env, clear=False):
+                stdout, stderr = StringIO(), StringIO()
+                with redirect_stdout(stdout), redirect_stderr(stderr):
+                    code = main(["install", "--mode", "symlink", "--dry-run"])
+                self.assertEqual(code, 0)
+                self.assertIn(SYMLINK_RISK_WARNING, stderr.getvalue())
+
     def test_status_json_with_fixture(self):
         fixture = Path(__file__).parent / "fixtures" / "quota-green.json"
         with tempfile.TemporaryDirectory() as temp:

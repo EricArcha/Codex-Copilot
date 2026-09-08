@@ -32,6 +32,13 @@ AGENT_FILES = (
     "copilot-reviewer.toml",
     "copilot-final-reviewer.toml",
 )
+SYMLINK_RISK_WARNING = (
+    "WARNING: Codex may reject symlinked custom-agent configuration files and report "
+    "'agent type is currently not available'. Use regular copies when reliability matters: "
+    "codex-copilot install --mode copy"
+)
+RESTART_NOTICE = "Restart Codex Desktop and open a new task before using the installed agents."
+IGNORED_FINGERPRINT_FILENAMES = {".DS_Store"}
 
 
 class InstallError(RuntimeError):
@@ -69,7 +76,7 @@ def artifact_fingerprint(path: Path) -> str:
         digest.update(path.read_bytes())
         return digest.hexdigest()
     if path.is_dir():
-        for child in sorted(item for item in path.rglob("*") if item.is_file()):
+        for child in _fingerprint_files(path):
             digest.update(str(child.relative_to(path)).encode())
             digest.update(child.read_bytes())
         return digest.hexdigest()
@@ -84,10 +91,30 @@ def _distribution_fingerprint(root: Path) -> str:
             digest.update(name.encode())
             digest.update(path.read_bytes())
             continue
-        for child in sorted(item for item in path.rglob("*") if item.is_file()):
+        for child in _fingerprint_files(path):
             digest.update(str(child.relative_to(root)).encode())
             digest.update(child.read_bytes())
     return digest.hexdigest()
+
+
+def _fingerprint_files(root: Path) -> list[Path]:
+    return sorted(
+        item
+        for item in root.rglob("*")
+        if item.is_file() and item.name not in IGNORED_FINGERPRINT_FILENAMES
+    )
+
+
+def artifact_fingerprint_for(item: dict[str, Any]) -> str:
+    """Fingerprint an installed artifact using the algorithm recorded for its kind."""
+    target = Path(item["target"])
+    if item.get("kind") == "distribution":
+        return _distribution_fingerprint(target)
+    return artifact_fingerprint(target)
+
+
+def artifact_matches(item: dict[str, Any]) -> bool:
+    return artifact_fingerprint_for(item) == item.get("fingerprint")
 
 
 def _is_current_install(manifest: dict[str, Any] | None, mode: str, config: dict[str, Any]) -> bool:
@@ -96,9 +123,7 @@ def _is_current_install(manifest: dict[str, Any] | None, mode: str, config: dict
     if any(get_path(config, path, MISSING) != value for path, value in CONFIG_UPDATES.items()):
         return False
     artifacts = manifest.get("artifacts", [])
-    if not artifacts or any(
-        artifact_fingerprint(Path(item["target"])) != item.get("fingerprint") for item in artifacts
-    ):
+    if not artifacts or any(not artifact_matches(item) for item in artifacts):
         return False
     expected_agent_targets = {str(codex_home() / "agents" / name) for name in AGENT_FILES}
     recorded_targets = {item.get("target") for item in artifacts}
@@ -161,7 +186,26 @@ def _distribution_source(mode: str, dry_run: bool) -> tuple[Path, list[dict[str,
     return target, artifacts
 
 
-def install(*, mode: str = "symlink", dry_run: bool = False) -> dict[str, Any]:
+def _remove_stale_distribution(
+    manifest: dict[str, Any] | None, mode: str, actions: list[str], warnings: list[str]
+) -> None:
+    """Remove an unchanged copied distribution when changing back to symlink mode."""
+    if mode != "symlink" or not manifest:
+        return
+    for artifact in manifest.get("artifacts", []):
+        if artifact.get("kind") != "distribution":
+            continue
+        target = Path(artifact["target"])
+        if not target.exists() and not target.is_symlink():
+            continue
+        if not artifact_matches(artifact):
+            warnings.append(f"Preserved modified previous distribution: {target}")
+            continue
+        _remove(target)
+        actions.append(f"remove obsolete copied distribution: {target}")
+
+
+def install(*, mode: str = "copy", dry_run: bool = False) -> dict[str, Any]:
     if mode not in {"symlink", "copy"}:
         raise InstallError(f"Unsupported install mode: {mode}")
     if os.name == "nt":
@@ -185,11 +229,20 @@ def install(*, mode: str = "symlink", dry_run: bool = False) -> dict[str, Any]:
     updated_config, changes = apply_updates(config_text, CONFIG_UPDATES)
     actions = [f"{mode}: {source} -> {target}" for source, target, _ in planned]
     actions.append(f"merge managed settings: {config_path}")
+    warnings = [RESTART_NOTICE]
+    if mode == "symlink":
+        warnings.insert(0, SYMLINK_RISK_WARNING)
     if dry_run:
-        return {"changed": False, "dry_run": True, "actions": actions}
+        return {"changed": False, "dry_run": True, "actions": actions, "warnings": warnings}
     if _is_current_install(current, mode, parsed_config):
-        return {"changed": False, "dry_run": False, "actions": ["Already installed; no changes."]}
+        return {
+            "changed": False,
+            "dry_run": False,
+            "actions": ["Already installed; no changes."],
+            "warnings": warnings,
+        }
 
+    _remove_stale_distribution(current, mode, actions, warnings)
     distribution_root, distribution_artifacts = _distribution_source(mode, dry_run=False)
     actual_planned = [
         (distribution_root / "skill" / "codex-copilot", skills_home() / "codex-copilot", "skill"),
@@ -234,7 +287,13 @@ def install(*, mode: str = "symlink", dry_run: bool = False) -> dict[str, Any]:
         "config_changes": original_changes,
     }
     _atomic_write(manifest_path(), json.dumps(manifest, indent=2, sort_keys=True) + "\n", 0o600)
-    return {"changed": True, "dry_run": False, "actions": actions, "manifest": str(manifest_path())}
+    return {
+        "changed": True,
+        "dry_run": False,
+        "actions": actions,
+        "warnings": warnings,
+        "manifest": str(manifest_path()),
+    }
 
 
 def uninstall(*, dry_run: bool = False) -> dict[str, Any]:
@@ -248,7 +307,7 @@ def uninstall(*, dry_run: bool = False) -> dict[str, Any]:
         target = Path(artifact["target"])
         if not target.exists() and not target.is_symlink():
             continue
-        if artifact_fingerprint(target) != artifact.get("fingerprint"):
+        if not artifact_matches(artifact):
             warnings.append(f"Preserved modified installed path: {target}")
             continue
         actions.append(f"remove: {target}")

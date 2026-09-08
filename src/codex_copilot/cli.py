@@ -13,7 +13,15 @@ from typing import Any
 from . import VERSION
 from .config_edit import parse_toml
 from .delegation import DelegationDenied, complete as complete_delegation, dispatch as dispatch_delegation, trace
-from .installer import AGENT_FILES, InstallError, artifact_fingerprint, install, load_manifest, uninstall
+from .installer import (
+    AGENT_FILES,
+    SYMLINK_RISK_WARNING,
+    InstallError,
+    artifact_matches,
+    install,
+    load_manifest,
+    uninstall,
+)
 from .metrics import project_hash, record, summarize
 from .paths import bin_dir, codex_home, skills_home
 from .quota import QuotaSnapshot, get_quota
@@ -26,7 +34,7 @@ def _parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     install_parser = sub.add_parser("install", help="Install the skill, agents, CLI, and managed config")
-    install_parser.add_argument("--mode", choices=("symlink", "copy"), default="symlink")
+    install_parser.add_argument("--mode", choices=("symlink", "copy"), default="copy")
     install_parser.add_argument("--dry-run", action="store_true")
 
     uninstall_parser = sub.add_parser("uninstall", help="Remove managed installation artifacts")
@@ -132,8 +140,8 @@ def _version_tuple(text: str) -> tuple[int, ...] | None:
 def doctor() -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
-    def add(name: str, ok: bool, detail: str) -> None:
-        checks.append({"name": name, "ok": ok, "detail": detail})
+    def add(name: str, ok: bool, detail: str, severity: str = "ok") -> None:
+        checks.append({"name": name, "ok": ok, "detail": detail, "severity": severity})
 
     if os.name == "nt":
         add("platform", False, "Windows is not supported in v0.1")
@@ -165,9 +173,8 @@ def doctor() -> dict[str, Any]:
     if manifest:
         mismatches = []
         for artifact in manifest.get("artifacts", []):
-            target = Path(artifact["target"])
-            if artifact_fingerprint(target) != artifact.get("fingerprint"):
-                mismatches.append(str(target))
+            if not artifact_matches(artifact):
+                mismatches.append(str(artifact["target"]))
         add(
             "installation_integrity",
             not mismatches,
@@ -175,22 +182,42 @@ def doctor() -> dict[str, Any]:
         )
     skill = skills_home() / "codex-copilot" / "SKILL.md"
     add("skill", skill.exists(), str(skill))
+    symlinked_agents = []
     for name in AGENT_FILES:
         target = codex_home() / "agents" / name
-        add(name, target.exists(), str(target))
+        if target.is_symlink():
+            symlinked_agents.append(str(target))
+            detail = f"{target} (symlink)"
+        elif target.exists():
+            detail = f"{target} (regular file)"
+        else:
+            detail = str(target)
+        add(name, target.exists(), detail)
+    warnings = []
+    if symlinked_agents:
+        warnings.append(
+            f"{SYMLINK_RISK_WARNING}. Detected: {', '.join(symlinked_agents)}"
+        )
     executable = bin_dir() / "codex-copilot"
     add("launcher", executable.exists(), str(executable))
     path_entries = {str(Path(item).expanduser()) for item in os.environ.get("PATH", "").split(os.pathsep)}
     add("path", str(bin_dir()) in path_entries, f"{bin_dir()} in PATH")
     quota = get_quota(refresh=True)
-    add("quota", quota.band != QuotaBand.UNKNOWN.value, quota.error or _status_text(quota).splitlines()[0])
-    return {"ok": all(check["ok"] for check in checks), "checks": checks}
+    quota_detail = quota.error or _status_text(quota).splitlines()[0]
+    if quota.band == QuotaBand.UNKNOWN.value:
+        warnings.append(f"Quota check unavailable: {quota_detail}")
+        add("quota", True, quota_detail, severity="warning")
+    else:
+        add("quota", True, quota_detail)
+    return {"ok": all(check["ok"] for check in checks), "checks": checks, "warnings": warnings}
 
 
 def _human_doctor(result: dict[str, Any]) -> None:
     for check in result["checks"]:
-        marker = "OK" if check["ok"] else "FAIL"
+        marker = "WARNING" if check.get("severity") == "warning" else "OK" if check["ok"] else "FAIL"
         print(f"[{marker}] {check['name']}: {check['detail']}")
+    for warning in result.get("warnings", []):
+        print(f"warning: {warning}", file=sys.stderr)
 
 
 def _human_trace(result: dict[str, Any]) -> None:

@@ -10,13 +10,25 @@ Requires Python 3.11+ and a recent Codex CLI on macOS or Linux.
 ./bin/codex-copilot install
 ```
 
-The default installation uses symbolic links so changes in this repository take effect immediately. Use `--mode copy` for a relocatable installation and `--dry-run` to preview changes.
+The default installation uses regular copied files for stable Codex compatibility. Re-run the
+installer after changing this source checkout to deploy those changes. Use `--dry-run` to preview
+the installation.
 
 ```bash
-./bin/codex-copilot install --mode copy
 ./bin/codex-copilot doctor
 ./bin/codex-copilot status
 ```
+
+For local development only, `--mode symlink` keeps this checkout live:
+
+```bash
+./bin/codex-copilot install --mode symlink
+```
+
+**Warning:** Codex can reject symlinked custom-agent configuration files and report
+`agent type is currently not available`. Prefer the default copied installation. To migrate back,
+run `codex-copilot install --mode copy`, restart Codex Desktop, and open a new task. See the
+[tracked Codex compatibility issue](https://github.com/openai/codex/issues/40131).
 
 The installer adds the skill to `~/.agents/skills`, installs five custom agents under `~/.codex/agents`, exposes `~/.local/bin/codex-copilot`, and safely merges a small set of managed settings into `~/.codex/config.toml`.
 
@@ -41,7 +53,7 @@ Codex-Copilot never redeems rate-limit resets. If remaining allowance is too low
 ## Commands
 
 ```text
-codex-copilot install [--mode symlink|copy] [--dry-run]
+codex-copilot install [--mode copy|symlink] [--dry-run]
 codex-copilot uninstall [--dry-run]
 codex-copilot doctor [--json]
 codex-copilot status [--json] [--refresh]
