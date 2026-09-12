@@ -17,9 +17,8 @@ When pausing or starting a new task, return this checkpoint:
 ## Changed files
 ## Verification
 ## Known risks
-## Reset time
+## Next quota-window refresh time
 ## Next action
 ```
 
 Reference existing plans, diffs, ADRs, or commits instead of duplicating them. Redact secrets and personal data.
-

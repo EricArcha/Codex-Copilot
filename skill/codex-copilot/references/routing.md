@@ -19,10 +19,10 @@ depleted solely because the weekly window is moderately lower.
 | Green / standard | 5-hour ≥50% and weekly ≥35% | Terra Medium parent. L0 has no subagent; L1/L2 may use one scout and one final reviewer. L3 reserves its final review. |
 | Yellow / guarded | 5-hour ≥30% and weekly ≥20% | One reviewer slot for code-changing L1-L3 work; a diagnosis-only task may use it for a scout. |
 | Red | 10-29% | L0: Luna Low. L1: Terra Low/Medium without delegation. Pause L2/L3. |
-| Critical | under 10% or reached | Do not begin code changes. Produce a checkpoint and reset time. |
+| Critical | under 10% or reached | Do not begin code changes. Produce a checkpoint and the next natural quota-window refresh time. |
 | Unknown | unavailable | Terra Medium, one read-only subagent maximum, no Sol/Max/Ultra. |
 
-Never redeem resets automatically. An explicit user instruction is required to override a pause. If an override arrives, preserve required tests and review rather than silently lowering the quality bar.
+Reset credits and reset opportunities are exclusively manual user actions. Never suggest, recommend, offer, prompt, redeem, consume, invoke, or otherwise use one—even on explicit user instruction. An explicit user instruction may override a route pause to continue work, but it never authorizes reset-credit use. If an override arrives, preserve required tests and review rather than silently lowering the quality bar.
 
 ## Delegation gate
 
@@ -54,7 +54,7 @@ that differs from the declared route policy.
 For a Yellow diagnosis with no code change, pass `--read-only` with a scout or investigator;
 that consumes the guarded slot and makes a later reviewer dispatch unavailable.
 
-When Red pauses L2/L3, perform only the Start section's narrow read-only triage. Do not delegate, modify code or configuration, or start review. Immediately return a checkpoint with the task level, quota band, known evidence, zero changed files, reset time, and next action.
+When Red pauses L2/L3, perform only the Start section's narrow read-only triage. Do not delegate, modify code or configuration, or start review. Immediately return a checkpoint with the task level, quota band, known evidence, zero changed files, next natural quota-window refresh time, and next action. A user override may resume work, but never permits reset-credit use.
 
 For Green/standard L3, use at most one read-only investigator before implementation and reserve the other agent slot for the final review. The premium profile uses the dedicated Astra final reviewer; balanced and conservative use Sol High. Keep exactly one writer. The definition of done must cover the relevant permission matrix, migration compatibility, failure rollback or retry behavior, and representative existing data.
 

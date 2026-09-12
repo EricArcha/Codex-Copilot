@@ -11,10 +11,14 @@ Complete the requested development outcome while preserving quality and included
 
 > **Environment:** This version supports Codex Desktop only. Do not rely on its quota-aware routing or custom-agent workflow in a standalone CLI-only environment.
 
+## Reset-credit prohibition
+
+Only the user may manually redeem a reset credit or reset opportunity. Never suggest, recommend, offer, or prompt them to do so. The Skill must never redeem, consume, invoke, or otherwise use one, even if the user asks. If available allowance is insufficient, follow the applicable low-quota route: reduce optional work, return a checkpoint, or pause for the next natural quota-window refresh.
+
 ## Start
 
 1. Read applicable `AGENTS.md` files and inspect the target repository narrowly enough to understand its state, commands, and constraints.
-2. Obtain a quota snapshot. Prefer a native usage-limit tool when available; otherwise run `codex-copilot status --json`. Never redeem a reset credit.
+2. Obtain a quota snapshot. Prefer a native usage-limit tool when available; otherwise run `codex-copilot status --json`. The reset-credit prohibition applies without exception.
    Read the active profile with `codex-copilot profile show`; balanced is the default. Premium is explicit and uses Astra only for L3 key work or final review.
 3. Classify the task as L0-L3 and choose the route in [routing.md](references/routing.md). If quota cannot be read, use the `unknown` route.
 4. State the task level, quota band, chosen route, and definition of done in one short update. Treat the route as a guardrail, not an exact cost prediction.
