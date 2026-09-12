@@ -24,8 +24,9 @@ from .installer import (
 )
 from .metrics import project_hash, record, summarize
 from .paths import bin_dir, codex_home, skills_home
+from .profile import active_profile, set_profile
 from .quota import QuotaSnapshot, get_quota
-from .routing import QuotaBand, TaskLevel, launch_level, route_for
+from .routing import Profile, QuotaBand, TaskLevel, launch_level, route_for
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -51,6 +52,7 @@ def _parser() -> argparse.ArgumentParser:
     launch_parser.add_argument("--level", choices=("routine", "complex", "critical"), default="routine")
     launch_parser.add_argument("--dry-run", action="store_true")
     launch_parser.add_argument("--override-quota", action="store_true")
+    launch_parser.add_argument("--profile", choices=tuple(profile.value for profile in Profile))
     launch_parser.add_argument("codex_args", nargs=argparse.REMAINDER)
 
     metrics_parser = sub.add_parser("metrics", help="Summarize local privacy-preserving route metrics")
@@ -60,6 +62,10 @@ def _parser() -> argparse.ArgumentParser:
     trace_parser = sub.add_parser("trace", help="Show the retained declared subagent trace")
     trace_parser.add_argument("--run")
     trace_parser.add_argument("--json", action="store_true")
+
+    profile_parser = sub.add_parser("profile", help="Show or select a Codex-Copilot routing profile")
+    profile_parser.add_argument("action", choices=("list", "show", "set"))
+    profile_parser.add_argument("profile", nargs="?", choices=tuple(profile.value for profile in Profile))
 
     hidden = sub.add_parser("_record", help=argparse.SUPPRESS)
     hidden.add_argument("--event", required=True)
@@ -89,6 +95,8 @@ def _parser() -> argparse.ArgumentParser:
     delegate.add_argument("--outcome")
     delegate.add_argument("--override", action="store_true")
     delegate.add_argument("--sol-unavailable", action="store_true")
+    delegate.add_argument("--profile", choices=tuple(profile.value for profile in Profile))
+    delegate.add_argument("--read-only", action="store_true")
     return parser
 
 
@@ -204,6 +212,16 @@ def doctor() -> dict[str, Any]:
     path_entries = {str(Path(item).expanduser()) for item in os.environ.get("PATH", "").split(os.pathsep)}
     add("path", str(bin_dir()) in path_entries, f"{bin_dir()} in PATH")
     quota = get_quota(refresh=True)
+    profile = active_profile()
+    add("profile", True, profile.value)
+    astra_agent = codex_home() / "agents" / "copilot-astra-final-reviewer.toml"
+    add(
+        "astra_profile",
+        astra_agent.exists(),
+        "configuration installed; account entitlement is checked when premium is launched"
+        if astra_agent.exists() else "premium profile unavailable: Astra agent is not installed",
+        severity="ok" if astra_agent.exists() else "warning",
+    )
     quota_detail = quota.error or _status_text(quota).splitlines()[0]
     if quota.band == QuotaBand.UNKNOWN.value:
         warnings.append(f"Quota check unavailable: {quota_detail}")
@@ -228,7 +246,7 @@ def _human_trace(result: dict[str, Any]) -> None:
     print(f"Run: {result['run_id']}")
     print(
         "Policy: "
-        f"{result['task_level']}; effective quota band {result['effective_quota_band']}; "
+        f"{result['task_level']}; profile {result.get('profile', 'balanced')}; effective quota band {result['effective_quota_band']}; "
         f"{result['dispatched']} dispatched; {result['compliance']}"
     )
     print("Configuration: declared (not backend billing telemetry)")
@@ -243,7 +261,13 @@ def _human_trace(result: dict[str, Any]) -> None:
 def _launch(args: argparse.Namespace) -> int:
     snapshot = get_quota(refresh=True)
     level = launch_level(args.level)
-    route = route_for(QuotaBand(snapshot.band), level)
+    profile = Profile(args.profile) if args.profile else active_profile()
+    if args.profile:
+        set_profile(profile)
+    if profile is Profile.PREMIUM and not (codex_home() / "agents" / "copilot-astra-final-reviewer.toml").exists():
+        print("Premium profile unavailable: install the Astra reviewer or switch to balanced.", file=sys.stderr)
+        return 2
+    route = route_for(QuotaBand(snapshot.band), level, profile)
     if route.pause and not args.override_quota:
         print(_status_text(snapshot), file=sys.stderr)
         print(f"Launch paused: {route.reason}", file=sys.stderr)
@@ -268,6 +292,7 @@ def _launch(args: argparse.Namespace) -> int:
             "secondary_used_percent": snapshot.secondary.used_percent if snapshot.secondary else None,
             "root_model": model,
             "root_effort": effort,
+            "profile": profile.value,
             "subagent_count": 0,
             "outcome": "planned",
         }
@@ -292,6 +317,16 @@ def main(argv: list[str] | None = None) -> int:
             snapshot = get_quota(refresh=args.refresh)
             print(json.dumps(snapshot.to_dict(), indent=2) if args.json else _status_text(snapshot))
             return 0 if snapshot.band != QuotaBand.UNKNOWN.value else 1
+        if args.command == "profile":
+            if args.action == "set":
+                if not args.profile:
+                    raise ValueError("profile set requires conservative, balanced, or premium")
+                set_profile(Profile(args.profile))
+            if args.action == "list":
+                print("conservative\nbalanced\npremium")
+            else:
+                print(active_profile().value)
+            return 0
         if args.command == "doctor":
             result = doctor()
             if args.json:
@@ -350,6 +385,8 @@ def main(argv: list[str] | None = None) -> int:
                     phase=args.phase,
                     override=args.override,
                     sol_unavailable=args.sol_unavailable,
+                    profile=Profile(args.profile) if args.profile else None,
+                    read_only=args.read_only,
                 )
             else:
                 if args.ordinal is None or not args.outcome:

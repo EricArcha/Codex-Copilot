@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from codex_copilot.delegation import DelegationDenied, complete, dispatch, trace
 from codex_copilot.quota import QuotaSnapshot
-from codex_copilot.routing import QuotaBand, TaskLevel
+from codex_copilot.routing import Profile, QuotaBand, TaskLevel
 
 
 def snapshot(band: QuotaBand) -> QuotaSnapshot:
@@ -44,6 +44,7 @@ class DelegationTests(unittest.TestCase):
             "copilot-worker": ("gpt-5.6-terra", "medium"),
             "copilot-reviewer": ("gpt-5.6-terra", "high"),
             "copilot-final-reviewer": ("gpt-5.6-sol", "high"),
+            "copilot-astra-final-reviewer": ("gpt-6-astra", "high"),
         }
         for name, (model, effort) in specs.items():
             (agents / f"{name}.toml").write_text(
@@ -130,6 +131,18 @@ class DelegationTests(unittest.TestCase):
         with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.YELLOW)):
             with self.assertRaises(DelegationDenied):
                 dispatch(run_id=self.RUN_1, level=TaskLevel.L1, role="copilot_reviewer", phase="final_review")
+
+    def test_premium_l3_uses_dedicated_astra_final_reviewer(self):
+        with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.GREEN)):
+            event = dispatch(
+                run_id=self.RUN_1,
+                level=TaskLevel.L3,
+                role="copilot_astra_final_reviewer",
+                phase="final_review",
+                profile=Profile.PREMIUM,
+            )
+        self.assertEqual(event["subagent_model"], "gpt-6-astra")
+        self.assertEqual(event["profile"], "premium")
 
 
 if __name__ == "__main__":

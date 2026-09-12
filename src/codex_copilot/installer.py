@@ -16,8 +16,6 @@ from .paths import bin_dir, codex_home, repo_root, share_dir, skills_home, state
 
 
 CONFIG_UPDATES: dict[str, Any] = {
-    "model": "gpt-5.6-terra",
-    "model_reasoning_effort": "medium",
     "service_tier": "standard",
     "features.multi_agent": True,
     "agents.max_concurrent_threads_per_session": 3,
@@ -31,6 +29,7 @@ AGENT_FILES = (
     "copilot-worker.toml",
     "copilot-reviewer.toml",
     "copilot-final-reviewer.toml",
+    "copilot-astra-final-reviewer.toml",
 )
 SYMLINK_RISK_WARNING = (
     "WARNING: Codex may reject symlinked custom-agent configuration files and report "

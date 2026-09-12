@@ -7,8 +7,9 @@ from typing import Any
 
 from .metrics import record, records_for_run
 from .paths import codex_home
+from .profile import active_profile
 from .quota import get_quota
-from .routing import QuotaBand, TaskLevel, route_for
+from .routing import Profile, QuotaBand, TaskLevel, route_for
 
 
 _BAND_ORDER = {
@@ -24,6 +25,7 @@ _KNOWN_ROLES = {
     "copilot_worker",
     "copilot_reviewer",
     "copilot_final_reviewer",
+    "copilot_astra_final_reviewer",
 }
 _PHASES = {"exploration", "implementation", "final_review"}
 _OUTCOMES = {"success", "failure"}
@@ -33,6 +35,7 @@ _ROLE_CONFIGURATION = {
     "copilot_worker": ("gpt-5.6-terra", "medium"),
     "copilot_reviewer": ("gpt-5.6-terra", "high"),
     "copilot_final_reviewer": ("gpt-5.6-sol", "high"),
+    "copilot_astra_final_reviewer": ("gpt-6-astra", "high"),
 }
 
 
@@ -51,9 +54,11 @@ def _agent_path(role: str):
     return codex_home() / "agents" / f"{role.replace('_', '-')}.toml"
 
 
-def dispatch_spec(role: str) -> DispatchSpec:
+def dispatch_spec(role: str, profile: Profile) -> DispatchSpec:
     if role not in _KNOWN_ROLES:
         raise DelegationDenied(f"Unknown Copilot role: {role}")
+    if role == "copilot_astra_final_reviewer" and profile is not Profile.PREMIUM:
+        raise DelegationDenied("Astra final review requires the premium profile")
     path = _agent_path(role)
     try:
         raw = tomllib.loads(path.read_text())
@@ -92,7 +97,7 @@ def _valid_role_phase(level: TaskLevel, role: str, phase: str) -> bool:
 
 
 def _allow_role(
-    level: TaskLevel, band: QuotaBand, role: str, phase: str, count: int, sol_unavailable: bool
+    level: TaskLevel, band: QuotaBand, role: str, phase: str, count: int, sol_unavailable: bool, profile: Profile
 ) -> bool:
     if not _valid_role_phase(level, role, phase):
         return False
@@ -102,12 +107,16 @@ def _allow_role(
         if band is QuotaBand.GREEN:
             if role in {"copilot_scout", "copilot_investigator"}:
                 return count == 0
-            if role == "copilot_final_reviewer":
+            if role == "copilot_final_reviewer" and profile is not Profile.PREMIUM:
+                return count <= 1
+            if role == "copilot_astra_final_reviewer" and profile is Profile.PREMIUM:
                 return count <= 1
             return role == "copilot_reviewer" and sol_unavailable and count <= 1
         if band is QuotaBand.YELLOW:
             return count == 0 and (
-                role == "copilot_final_reviewer" or (role == "copilot_reviewer" and sol_unavailable)
+                (role == "copilot_final_reviewer" and profile is not Profile.PREMIUM)
+                or (role == "copilot_astra_final_reviewer" and profile is Profile.PREMIUM)
+                or (role == "copilot_reviewer" and sol_unavailable)
             )
         if band is QuotaBand.UNKNOWN:
             return count == 0 and role == "copilot_reviewer"
@@ -121,7 +130,8 @@ def _allow_role(
 
 
 def dispatch(
-    *, run_id: str, level: TaskLevel, role: str, phase: str, override: bool = False, sol_unavailable: bool = False
+    *, run_id: str, level: TaskLevel, role: str, phase: str, override: bool = False,
+    sol_unavailable: bool = False, profile: Profile | None = None, read_only: bool = False
 ) -> dict[str, Any]:
     try:
         parsed_run_id = uuid.UUID(run_id)
@@ -132,18 +142,24 @@ def dispatch(
     if phase not in _PHASES:
         raise DelegationDenied(f"Unknown delegation phase: {phase}")
     records = records_for_run(run_id)
+    selected_profile = profile or active_profile()
+    prior_profiles = {item.get("profile") for item in _dispatched(records) if item.get("profile")}
+    if prior_profiles and prior_profiles != {selected_profile.value}:
+        raise DelegationDenied("Profile is pinned by the first subagent dispatch for this run")
     snapshot = get_quota(refresh=True)
     current = QuotaBand(snapshot.band)
     effective = _effective_band(records, current)
     prior = _dispatched(records)
-    allowed = _allow_role(level, effective, role, phase, len(prior), sol_unavailable)
+    allowed = _allow_role(level, effective, role, phase, len(prior), sol_unavailable, selected_profile)
+    if effective is QuotaBand.YELLOW and level in {TaskLevel.L1, TaskLevel.L2} and read_only:
+        allowed = role in {"copilot_scout", "copilot_investigator"} and phase == "exploration" and not prior
     if not allowed and not override:
-        route = route_for(effective, level)
+        route = route_for(effective, level, selected_profile)
         raise DelegationDenied(
             f"Delegation blocked: effective {effective.value} route permits no {role} dispatch "
             f"after {len(prior)} subagent(s). {route.reason}"
         )
-    spec = dispatch_spec(role)
+    spec = dispatch_spec(role, selected_profile)
     ordinal = len(prior) + 1
     event = {
         "event": "subagent_dispatched",
@@ -153,6 +169,7 @@ def dispatch(
         "quota_band": current.value,
         "quota_source": snapshot.source,
         "effective_quota_band": effective.value,
+        "profile": selected_profile.value,
         "primary_used_percent": snapshot.primary.used_percent if snapshot.primary else None,
         "secondary_used_percent": snapshot.secondary.used_percent if snapshot.secondary else None,
         "subagent_role": spec.role,
@@ -182,6 +199,7 @@ def complete(*, run_id: str, ordinal: int, outcome: str) -> dict[str, Any]:
         "quota_band": matching.get("quota_band"),
         "quota_source": matching.get("quota_source"),
         "effective_quota_band": matching.get("effective_quota_band"),
+        "profile": matching.get("profile"),
         "subagent_role": matching.get("subagent_role"),
         "subagent_ordinal": ordinal,
         "subagent_model": matching.get("subagent_model"),
@@ -227,6 +245,7 @@ def trace(run_id: str | None = None) -> dict[str, Any]:
         "run_id": selected,
         "task_level": dispatched[0].get("task_level"),
         "effective_quota_band": dispatched[-1].get("effective_quota_band"),
+        "profile": dispatched[0].get("profile", "balanced"),
         "dispatched": len(agents),
         "compliance": "OVERRIDDEN BY USER" if any(agent["override"] for agent in agents) else "COMPLIANT",
         "configuration_label": "declared",

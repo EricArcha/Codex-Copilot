@@ -9,7 +9,7 @@ from codex_copilot.quota import get_quota, snapshot_from_result
 
 
 class QuotaTests(unittest.TestCase):
-    def test_uses_lower_remaining_window(self):
+    def test_uses_separate_window_capacity_thresholds(self):
         result = {
             "rateLimits": {
                 "primary": {"usedPercent": 20, "windowDurationMins": 300},
@@ -19,7 +19,13 @@ class QuotaTests(unittest.TestCase):
         }
         snapshot = snapshot_from_result(result)
         self.assertEqual(snapshot.effective_remaining_percent, 25)
-        self.assertEqual(snapshot.band, "red")
+        self.assertEqual(snapshot.band, "yellow")
+
+    def test_healthy_primary_and_weekly_windows_allow_standard_capacity(self):
+        snapshot = snapshot_from_result(
+            {"rateLimits": {"primary": {"usedPercent": 14}, "secondary": {"usedPercent": 54}}}
+        )
+        self.assertEqual(snapshot.band, "green")
 
     def test_reached_state_is_critical(self):
         result = {
@@ -40,6 +46,10 @@ class QuotaTests(unittest.TestCase):
         }
         self.assertEqual(snapshot_from_result(result).reset_credits_available, 3)
         self.assertEqual(snapshot_from_result({"rateLimits": {}}).source, "app-server")
+
+    def test_single_window_plan_keeps_its_existing_capacity_classification(self):
+        snapshot = snapshot_from_result({"rateLimits": {"primary": {"usedPercent": 5}}})
+        self.assertEqual(snapshot.band, "green")
 
     def test_timeout_login_failure_and_unavailable_are_unknown(self):
         failures = [

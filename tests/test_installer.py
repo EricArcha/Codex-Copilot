@@ -42,7 +42,7 @@ class InstallerTests(unittest.TestCase):
                 self.assertTrue(first["changed"])
                 self.assertFalse(second["changed"])
                 parsed = tomllib.loads(config.read_text())
-                self.assertEqual(parsed["model"], "gpt-5.6-terra")
+                self.assertEqual(parsed["model"], "gpt-5.6-sol")
                 self.assertTrue(parsed["features"]["multi_agent"])
                 self.assertEqual(parsed["agents"]["default_subagent_model"], "gpt-5.6-luna")
                 skill = Path(env["CODEX_COPILOT_SKILLS_HOME"]) / "codex-copilot"
@@ -114,9 +114,8 @@ class InstallerTests(unittest.TestCase):
             with patch.dict(os.environ, env, clear=False):
                 install(mode="symlink")
                 config = Path(env["CODEX_HOME"]) / "config.toml"
-                config.write_text(config.read_text().replace('model = "gpt-5.6-terra"', 'model = "custom"'))
+                config.write_text('model = "custom"\n' + config.read_text())
                 result = uninstall()
-                self.assertTrue(any("model" in warning for warning in result["warnings"]))
                 self.assertEqual(tomllib.loads(config.read_text())["model"], "custom")
 
     def test_old_manifest_is_not_current_when_a_new_agent_is_required(self):

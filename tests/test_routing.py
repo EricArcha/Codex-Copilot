@@ -1,6 +1,6 @@
 import unittest
 
-from codex_copilot.routing import QuotaBand, TaskLevel, band_for_remaining, route_for
+from codex_copilot.routing import Profile, QuotaBand, TaskLevel, band_for_remaining, band_for_windows, route_for
 
 
 class RoutingTests(unittest.TestCase):
@@ -21,6 +21,15 @@ class RoutingTests(unittest.TestCase):
     def test_reached_overrides_percentage(self):
         self.assertEqual(band_for_remaining(90, reached=True), QuotaBand.CRITICAL)
         self.assertEqual(band_for_remaining(90, spend_control_reached=True), QuotaBand.CRITICAL)
+
+    def test_standard_capacity_requires_both_windows(self):
+        self.assertEqual(band_for_windows(86, 54), QuotaBand.GREEN)
+        self.assertEqual(band_for_windows(49, 90), QuotaBand.YELLOW)
+        self.assertEqual(band_for_windows(90, 19), QuotaBand.RED)
+
+    def test_premium_uses_astra_only_for_l3_root_route(self):
+        self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L2, Profile.PREMIUM).root_model, "gpt-5.6-terra")
+        self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L3, Profile.PREMIUM).root_model, "gpt-6-astra")
 
     def test_route_matrix_invariants(self):
         for band in QuotaBand:
@@ -46,4 +55,3 @@ class RoutingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

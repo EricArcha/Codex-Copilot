@@ -11,12 +11,13 @@ Classify from actual blast radius and uncertainty, not prompt length. A large me
 
 ## Quota band
 
-Use the lower remaining percentage across the primary and secondary Codex windows.
+Evaluate the two Codex windows independently: a healthy five-hour window must not be treated as
+depleted solely because the weekly window is moderately lower.
 
 | Band | Remaining | Policy |
 |---|---:|---|
-| Green | 60-100% | Terra Medium parent. L0 has no subagent; L1-L3 may use up to two read-heavy subagents. L3 uses one Sol High final-review phase. |
-| Yellow | 30-59% | Terra Medium parent. One subagent maximum for L1-L3. No Max or Ultra. Reserve Sol for the L3 final review. |
+| Green / standard | 5-hour ≥50% and weekly ≥35% | Terra Medium parent. L0 has no subagent; L1/L2 may use one scout and one final reviewer. L3 reserves its final review. |
+| Yellow / guarded | 5-hour ≥30% and weekly ≥20% | One reviewer slot for code-changing L1-L3 work; a diagnosis-only task may use it for a scout. |
 | Red | 10-29% | L0: Luna Low. L1: Terra Low/Medium without delegation. Pause L2/L3. |
 | Critical | under 10% or reached | Do not begin code changes. Produce a checkpoint and reset time. |
 | Unknown | unavailable | Terra Medium, one read-only subagent maximum, no Sol/Max/Ultra. |
@@ -40,7 +41,7 @@ tool's most recent successful app-server snapshot within the 60-second TTL; it i
 the most restrictive band observed for that run. It never automatically relaxes after a later refresh. Pass `--override` only after
 the user explicitly authorizes exceeding the current delegation budget; trace will mark it.
 
-Reserve review capacity: Green L1/L2 allows at most one exploratory child plus the final
+Reserve review capacity: Green/standard L1/L2 allows at most one exploratory child plus the final
 `copilot_reviewer`; Yellow/Unknown L1/L2 reserves the only slot for that reviewer. Green L3
 allows at most one read-only scout/investigator plus `copilot_final_reviewer` (Sol High).
 Yellow L3 reserves its only slot for that final reviewer. Unknown L3 reserves it for
@@ -50,9 +51,12 @@ Explorers use only `exploration`, workers only `implementation`, and reviewers o
 `final_review`; the gate rejects a role/phase mismatch and any installed agent configuration
 that differs from the declared route policy.
 
+For a Yellow diagnosis with no code change, pass `--read-only` with a scout or investigator;
+that consumes the guarded slot and makes a later reviewer dispatch unavailable.
+
 When Red pauses L2/L3, perform only the Start section's narrow read-only triage. Do not delegate, modify code or configuration, or start review. Immediately return a checkpoint with the task level, quota band, known evidence, zero changed files, reset time, and next action.
 
-For Green L3, use at most one read-only investigator before implementation and reserve the other agent slot for the final Sol High review. Keep exactly one writer. The definition of done must cover the relevant permission matrix, migration compatibility, failure rollback or retry behavior, and representative existing data.
+For Green/standard L3, use at most one read-only investigator before implementation and reserve the other agent slot for the final review. The premium profile uses the dedicated Astra final reviewer; balanced and conservative use Sol High. Keep exactly one writer. The definition of done must cover the relevant permission matrix, migration compatibility, failure rollback or retry behavior, and representative existing data.
 
 ## Delegation economy
 

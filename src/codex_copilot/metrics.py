@@ -41,6 +41,7 @@ ALLOWED_FIELDS = {
     "subagent_effort",
     "subagent_phase",
     "override",
+    "profile",
 }
 
 

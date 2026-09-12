@@ -2,6 +2,8 @@
 
 Codex-Copilot is a quota-aware development orchestrator for Codex. It keeps the primary task focused, delegates bounded work to stable custom agents, and uses the remaining ChatGPT plan allowance as a conservative guardrail.
 
+> **Codex Desktop only (current version).** This release is designed for Codex Desktop on macOS or Linux. Its usage-aware routing and custom-agent workflow rely on the Desktop environment; standalone CLI use is not a supported deployment target yet.
+
 ## Install
 
 Requires Python 3.11+ and a recent Codex CLI on macOS or Linux.
@@ -46,6 +48,8 @@ For a new CLI session with a quota preflight:
 codex-copilot launch
 codex-copilot launch --level complex
 codex-copilot launch --level critical -- --cd /path/to/project
+codex-copilot profile set premium
+codex-copilot launch --profile premium --level critical
 ```
 
 Codex-Copilot never redeems rate-limit resets. If remaining allowance is too low to preserve required testing and review, it pauses expensive work and reports the reset time.
@@ -60,6 +64,7 @@ codex-copilot status [--json] [--refresh]
 codex-copilot launch [--level routine|complex|critical] [--dry-run] [--override-quota] [-- <codex args>]
 codex-copilot metrics [--days N] [--json]
 codex-copilot trace [--run RUN_ID] [--json]
+codex-copilot profile list|show|set <conservative|balanced|premium>
 ```
 
 Runtime state is stored in `~/.codex-copilot`. Metrics are local and exclude prompts, code, raw paths, commands, logs, and model responses.
@@ -79,6 +84,14 @@ and is labeled in the trace.
 If an app-server refresh transiently fails, the gate can reuse only its own most recent successful
 app-server snapshot (60-second TTL). This degraded result is labeled `cache-fallback`; callers
 cannot supply a quota band or snapshot.
+
+## Profiles and allowance
+
+`balanced` is the default: when the 5-hour window has at least 50% remaining and the weekly
+window at least 35%, L1/L2 work can use one Luna scout and one independent Terra reviewer.
+Guarded capacity (30%/20%) reserves its one slot for review. `conservative` keeps the
+low-cost route; `premium` uses Astra only for L3 root work and its reserved final review.
+Premium is explicit and never silently selected.
 
 ## Uninstall
 

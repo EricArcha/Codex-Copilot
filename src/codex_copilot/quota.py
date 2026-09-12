@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .paths import state_dir
-from .routing import QuotaBand, band_for_remaining
+from .routing import QuotaBand, band_for_windows
 
 
 @dataclass(frozen=True)
@@ -61,8 +61,9 @@ def snapshot_from_result(result: dict[str, Any], source: str = "app-server") -> 
     effective = min(remaining) if remaining else None
     reached_type = limits.get("rateLimitReachedType")
     spend_reached = bool(limits.get("spendControlReached"))
-    band = band_for_remaining(
-        effective,
+    band = band_for_windows(
+        primary.remaining_percent if primary else None,
+        secondary.remaining_percent if secondary else None,
         reached=bool(reached_type),
         spend_control_reached=spend_reached,
     )
@@ -183,7 +184,7 @@ def _cached_snapshot(cache: Path, ttl: int, *, source: str) -> QuotaSnapshot | N
         return None
 
 
-def get_quota(*, refresh: bool = False, timeout: float = 10.0, ttl: int = 60) -> QuotaSnapshot:
+def get_quota(*, refresh: bool = False, timeout: float = 20.0, ttl: int = 60) -> QuotaSnapshot:
     cache = cache_path()
     if not refresh:
         cached = _cached_snapshot(cache, ttl, source="cache")
