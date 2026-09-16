@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -9,7 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from codex_copilot.cli import doctor, main
-from codex_copilot.installer import SYMLINK_RISK_WARNING, install
+from codex_copilot.installer import CONFIG_UPDATES, SYMLINK_RISK_WARNING, install
 from codex_copilot.metrics import record
 from codex_copilot.quota import unknown_snapshot
 
@@ -74,6 +75,90 @@ class CliTests(unittest.TestCase):
                     code = main(["install", "--mode", "symlink", "--dry-run"])
                 self.assertEqual(code, 0)
                 self.assertIn(SYMLINK_RISK_WARNING, stderr.getvalue())
+
+    def test_install_dry_run_shows_managed_config_changes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            stdout, stderr = StringIO(), StringIO()
+            with patch.dict(os.environ, env, clear=False), redirect_stdout(stdout), redirect_stderr(stderr):
+                code = main(["install", "--dry-run"])
+            self.assertEqual(code, 0)
+            self.assertIn("Managed settings", stdout.getvalue())
+            self.assertIn("features.multi_agent: <unset> -> true", stdout.getvalue())
+            self.assertIn("Configuration backup directory", stdout.getvalue())
+            for path in CONFIG_UPDATES:
+                self.assertIn(path, stdout.getvalue())
+            self.assertFalse(Path(env["CODEX_COPILOT_STATE_DIR"]).exists())
+
+    def test_install_refuses_non_interactive_without_yes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            stdout, stderr = StringIO(), StringIO()
+            with patch.dict(os.environ, env, clear=False), redirect_stdout(stdout), redirect_stderr(stderr):
+                code = main(["install"])
+            self.assertEqual(code, 2)
+            self.assertIn("without --yes", stderr.getvalue())
+            self.assertFalse(Path(env["CODEX_COPILOT_STATE_DIR"]).exists())
+
+    def test_install_can_be_confirmed_with_yes_and_is_idempotent(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            with patch.dict(os.environ, env, clear=False):
+                first_out, first_err = StringIO(), StringIO()
+                with redirect_stdout(first_out), redirect_stderr(first_err):
+                    self.assertEqual(main(["install", "--yes"]), 0)
+                self.assertIn("Managed settings", first_out.getvalue())
+                self.assertTrue((Path(env["CODEX_HOME"]) / "config.toml").exists())
+
+                second_out, second_err = StringIO(), StringIO()
+                with redirect_stdout(second_out), redirect_stderr(second_err):
+                    self.assertEqual(main(["install"]), 0)
+                self.assertIn("Already installed; no changes.", second_out.getvalue())
+                self.assertNotIn("without --yes", second_err.getvalue())
+
+    def test_copy_to_symlink_preview_lists_the_distribution_removal(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            with patch.dict(os.environ, env, clear=False):
+                install(mode="copy")
+                distribution = Path(env["CODEX_COPILOT_SHARE_DIR"])
+                stdout, stderr = StringIO(), StringIO()
+                with redirect_stdout(stdout), redirect_stderr(stderr):
+                    self.assertEqual(main(["install", "--mode", "symlink", "--dry-run"]), 0)
+                self.assertIn("remove obsolete copied distribution", stdout.getvalue())
+                self.assertTrue(distribution.exists())
+
+                with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                    self.assertEqual(main(["install", "--mode", "symlink", "--yes"]), 0)
+                self.assertFalse(distribution.exists())
+
+    def test_install_decline_leaves_no_state(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            stdout, stderr = StringIO(), StringIO()
+            interactive_stdin = SimpleNamespace(isatty=lambda: True)
+            with (
+                patch.dict(os.environ, env, clear=False),
+                patch("codex_copilot.cli.sys.stdin", interactive_stdin),
+                patch("codex_copilot.cli.builtins.input", return_value=""),
+                redirect_stdout(stdout),
+                redirect_stderr(stderr),
+            ):
+                code = main(["install"])
+            self.assertEqual(code, 2)
+            self.assertIn("Installation cancelled", stderr.getvalue())
+            self.assertFalse(Path(env["CODEX_COPILOT_STATE_DIR"]).exists())
+
+    def test_doctor_explains_recovery_when_the_installed_skill_is_missing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            with patch.dict(os.environ, env, clear=False), patch(
+                "codex_copilot.cli.shutil.which", return_value=None
+            ), patch("codex_copilot.cli.get_quota", return_value=unknown_snapshot("test")):
+                install()
+                shutil.rmtree(Path(env["CODEX_COPILOT_SKILLS_HOME"]) / "codex-copilot")
+                result = doctor()
+            self.assertTrue(any("installation residue" in warning for warning in result["warnings"]))
 
     def test_status_json_with_fixture(self):
         fixture = Path(__file__).parent / "fixtures" / "quota-green.json"

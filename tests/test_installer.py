@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 import tomllib
 import unittest
@@ -81,6 +82,18 @@ class InstallerTests(unittest.TestCase):
                 uninstall()
                 self.assertFalse(skill.exists())
 
+    def test_install_rejects_an_obsolete_confirmed_plan(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            config = Path(env["CODEX_HOME"]) / "config.toml"
+            config.parent.mkdir(parents=True)
+            with patch.dict(os.environ, env, clear=False):
+                preview = install(dry_run=True)
+                config.write_text('model = "changed-after-preview"\n')
+                with self.assertRaises(InstallError):
+                    install(expected_plan_token=preview["plan_token"])
+                self.assertFalse(Path(env["CODEX_COPILOT_STATE_DIR"]).exists())
+
     def test_symlink_mode_warns_and_can_be_replaced_by_copy(self):
         with tempfile.TemporaryDirectory() as temp:
             env = self.environment(temp)
@@ -117,6 +130,23 @@ class InstallerTests(unittest.TestCase):
                 config.write_text('model = "custom"\n' + config.read_text())
                 result = uninstall()
                 self.assertEqual(tomllib.loads(config.read_text())["model"], "custom")
+
+    def test_uninstall_restores_config_after_the_installed_skill_was_deleted(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            config = Path(env["CODEX_HOME"]) / "config.toml"
+            config.parent.mkdir(parents=True)
+            config.write_text('model = "gpt-5.6-sol"\n')
+            with patch.dict(os.environ, env, clear=False):
+                install()
+                skill = Path(env["CODEX_COPILOT_SKILLS_HOME"]) / "codex-copilot"
+                shutil.rmtree(skill)
+                result = uninstall()
+                self.assertTrue(result["changed"])
+                restored = tomllib.loads(config.read_text())
+                self.assertEqual(restored["model"], "gpt-5.6-sol")
+                self.assertEqual(restored.get("features"), {})
+                self.assertEqual(restored.get("agents"), {})
 
     def test_old_manifest_is_not_current_when_a_new_agent_is_required(self):
         with tempfile.TemporaryDirectory() as temp:

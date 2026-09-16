@@ -18,8 +18,14 @@ Only the user may manually redeem a reset credit or reset opportunity. Never sug
 ## Start
 
 1. Read applicable `AGENTS.md` files and inspect the target repository narrowly enough to understand its state, commands, and constraints.
-2. Obtain a quota snapshot. Prefer a native usage-limit tool when available; otherwise run `codex-copilot status --json`. The reset-credit prohibition applies without exception.
-   Read the active profile with `codex-copilot profile show`; balanced is the default. Premium is explicit and uses Astra only for L3 key work or final review.
+2. Check whether `codex-copilot` is available. If it is available, run `codex-copilot doctor --json` and treat missing required `copilot-*` agent checks as an incomplete workflow. If the CLI or a required agent is missing, state once that this is **Skill-only mode**: the orchestration guidance is available, while custom-agent routing, CLI diagnostics, and managed Codex configuration are optional enhancements. Continue with the task; do not install anything or modify configuration. If the user wants the complete workflow, offer these user-run commands:
+   ```bash
+   git clone https://github.com/EricArcha/Codex-Copilot.git
+   cd Codex-Copilot
+   ./bin/codex-copilot install --dry-run
+   ./bin/codex-copilot install
+   ```
+   The complete installer shows every managed configuration change and requires confirmation. If a user manually deleted the Skill, explain that this does not restore Codex settings; `codex-copilot uninstall` safely removes managed artifacts and restores eligible settings. If its launcher is also gone, they can re-clone this repository and run `./bin/codex-copilot uninstall`; preserve `~/.codex-copilot` until recovery is complete. If the complete workflow is healthy, obtain a quota snapshot with `codex-copilot status --json` and read the active profile with `codex-copilot profile show`; balanced is the default. Premium is explicit and uses Astra only for L3 key work or final review. The reset-credit prohibition applies without exception.
 3. Classify the task as L0-L3 and choose the route in [routing.md](references/routing.md). If quota cannot be read, use the `unknown` route.
 4. State the task level, quota band, chosen route, and definition of done in one short update. Treat the route as a guardrail, not an exact cost prediction.
 

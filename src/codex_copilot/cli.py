@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import builtins
 import json
 import os
 import shutil
@@ -37,6 +38,7 @@ def _parser() -> argparse.ArgumentParser:
     install_parser = sub.add_parser("install", help="Install the skill, agents, CLI, and managed config")
     install_parser.add_argument("--mode", choices=("symlink", "copy"), default="copy")
     install_parser.add_argument("--dry-run", action="store_true")
+    install_parser.add_argument("--yes", action="store_true", help="Confirm the displayed installation plan")
 
     uninstall_parser = sub.add_parser("uninstall", help="Remove managed installation artifacts")
     uninstall_parser.add_argument("--dry-run", action="store_true")
@@ -109,6 +111,39 @@ def _print_result(result: dict[str, Any]) -> None:
         print("Dry run: no changes made.")
     elif result.get("changed"):
         print("Done.")
+
+
+def _config_value(change: dict[str, Any], key: str) -> str:
+    if key == "previous_value" and not change["previous_present"]:
+        return "<unset>"
+    return json.dumps(change[key])
+
+
+def _print_install_plan(result: dict[str, Any]) -> None:
+    print("Installation plan:")
+    for action in result.get("actions", []):
+        print(f"  {action}")
+    changes = result.get("config_changes", [])
+    if changes:
+        print(f"Managed settings in {result['config_path']}:")
+        for change in changes:
+            previous = _config_value(change, "previous_value")
+            installed = _config_value(change, "installed_value")
+            suffix = " (unchanged)" if previous == installed else ""
+            print(f"  {change['path']}: {previous} -> {installed}{suffix}")
+    print(f"Configuration backup directory: {result['config_backup_dir']}")
+    for warning in result.get("warnings", []):
+        print(f"warning: {warning}", file=sys.stderr)
+
+
+def _confirm_install() -> bool:
+    if not sys.stdin.isatty():
+        print("error: refusing non-interactive installation without --yes", file=sys.stderr)
+        return False
+    try:
+        return builtins.input("Proceed with this installation? [y/N] ").strip().lower() in {"y", "yes"}
+    except EOFError:
+        return False
 
 
 def _format_reset(timestamp: int | None) -> str:
@@ -228,6 +263,11 @@ def doctor() -> dict[str, Any]:
         add("quota", True, quota_detail, severity="warning")
     else:
         add("quota", True, quota_detail)
+    if manifest and not skill.exists():
+        warnings.append(
+            "Codex-Copilot installation residue detected: the Skill is missing, but managed settings may remain. "
+            "Run 'codex-copilot uninstall' to remove managed artifacts and restore eligible settings."
+        )
     return {"ok": all(check["ok"] for check in checks), "checks": checks, "warnings": warnings}
 
 
@@ -308,7 +348,17 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "install":
-            _print_result(install(mode=args.mode, dry_run=args.dry_run))
+            preview = install(mode=args.mode, dry_run=True)
+            _print_install_plan(preview)
+            if args.dry_run:
+                print("Dry run: no changes made.")
+                return 0
+            if not preview.get("needs_confirmation"):
+                return 0
+            if not args.yes and not _confirm_install():
+                print("Installation cancelled. No changes made.", file=sys.stderr)
+                return 2
+            _print_result(install(mode=args.mode, expected_plan_token=preview["plan_token"]))
             return 0
         if args.command == "uninstall":
             _print_result(uninstall(dry_run=args.dry_run))

@@ -1,130 +1,93 @@
 # Codex-Copilot
 
-[![Runtime](https://img.shields.io/badge/runtime-Codex%20Desktop-412991?logo=openai&logoColor=white)](https://openai.com/codex/)
+[![Codex Desktop](https://img.shields.io/badge/Codex-Desktop-412991?logo=openai&logoColor=white)](https://openai.com/codex/)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
-[![Standard library](https://img.shields.io/badge/dependencies-standard%20library-0f766e)](pyproject.toml)
-[![License](https://img.shields.io/badge/license-MIT-f59e0b)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-f59e0b)](LICENSE)
 
-**A calmer cockpit for complex Codex work.** Codex-Copilot keeps implementation, delegation, allowance, and independent verification in one deliberate flight path—so “go build it” does not turn into “where did the context go?”
+**A friendly air-traffic controller for big Codex tasks.** It helps Codex decide what deserves a subagent, what should stay focused, and when to save tokens for the final check.
 
 [简体中文](README.zh-CN.md)
 
-> **Codex Desktop only.** This release is designed for Codex Desktop on macOS or Linux. Its usage-aware routing and custom-agent workflow rely on the Desktop environment; standalone CLI use is not a supported deployment target yet.
+> Made for **Codex Desktop** on macOS or Linux.
 
-## Description
+## Start in 30 seconds
 
-**English:** A Codex Desktop-only skill and CLI that orchestrates substantial development with quota-aware routing, bounded subagents, and independent verification.
-
-**中文：** 一个仅供 Codex Desktop 使用的 Skill 与 CLI：通过配额感知路由、边界明确的子代理和独立验证，编排复杂开发工作。
-
-## Why Codex-Copilot?
-
-- **Protects the finish line** — reserves the evidence and review needed to know a change is actually done.
-- **Uses context deliberately** — delegates only bounded work that benefits from a fresh set of eyes.
-- **Treats allowance as a guardrail** — scales the route to the available budget without silently skipping required checks.
-- **Keeps telemetry private** — local metrics omit prompts, code, paths, commands, logs, and model responses.
-
-## Install
-
-Requires Python 3.11+ and a recent Codex CLI on macOS or Linux.
+Want to try the Skill with **zero settings changes**? Install just the instructions:
 
 ```bash
-./bin/codex-copilot install
+npx skills add EricArcha/Codex-Copilot --skill codex-copilot -g --copy -y
 ```
 
-The default installation uses regular copied files for stable Codex compatibility. Re-run the
-installer after changing this source checkout to deploy those changes. Use `--dry-run` to preview
-the installation.
-
-```bash
-./bin/codex-copilot doctor
-./bin/codex-copilot status
-```
-
-For local development only, `--mode symlink` keeps this checkout live:
-
-```bash
-./bin/codex-copilot install --mode symlink
-```
-
-**Warning:** Codex can reject symlinked custom-agent configuration files and report
-`agent type is currently not available`. Prefer the default copied installation. To migrate back,
-run `codex-copilot install --mode copy`, restart Codex Desktop, and open a new task. See the
-[tracked Codex compatibility issue](https://github.com/openai/codex/issues/40131).
-
-The installer adds the skill to `~/.agents/skills`, installs six custom agents under `~/.codex/agents`, exposes `~/.local/bin/codex-copilot`, and safely merges a small set of managed settings into `~/.codex/config.toml`.
-
-## The flight path
+Then ask Codex:
 
 ```text
-Understand scope  →  Check allowance  →  Route the work  →  Build  →  Verify independently
+$codex-copilot help me build this feature end to end.
 ```
 
-Codex-Copilot is intentionally opinionated about the last step: a passing implementation is not the same thing as a reviewed delivery.
+That is it. No agents, CLI files, or Codex settings are added.
 
-## Use
+## Want the full cockpit?
 
-Invoke the skill explicitly for the most predictable behavior:
-
-```text
-$codex-copilot implement this feature and verify it end to end.
-```
-
-For a new CLI session with a quota preflight:
+The optional full install adds six custom agents, the `codex-copilot` command, and a few managed Codex settings for multi-agent work.
 
 ```bash
-codex-copilot launch
-codex-copilot launch --level complex
-codex-copilot launch --level critical -- --cd /path/to/project
-codex-copilot profile set premium
-codex-copilot launch --profile premium --level critical
+git clone https://github.com/EricArcha/Codex-Copilot.git
+cd Codex-Copilot
+./bin/codex-copilot install --dry-run  # look first
+./bin/codex-copilot install            # confirm in the terminal
 ```
 
-Codex-Copilot never redeems rate-limit resets. If remaining allowance is too low to preserve required testing and review, it pauses expensive work and reports the reset time.
+Before changing anything, the installer shows every file action and all six settings it manages. For scripts or CI, review the dry run and add `--yes` to confirm.
 
-## Commands
+<details>
+<summary>Which Codex settings change?</summary>
+
+- Enable multi-agent work
+- Allow up to 3 concurrent subagent tasks
+- Set a lightweight default subagent (`gpt-5.6-luna`, low reasoning)
+- Use the standard service tier and disable fast mode
+
+The original values are recorded for safe restoration.
+</details>
+
+## What happens inside?
 
 ```text
-codex-copilot install [--mode copy|symlink] [--dry-run]
-codex-copilot uninstall [--dry-run]
-codex-copilot doctor [--json]
-codex-copilot status [--json] [--refresh]
-codex-copilot launch [--level routine|complex|critical] [--dry-run] [--override-quota] [-- <codex args>]
-codex-copilot metrics [--days N] [--json]
-codex-copilot trace [--run RUN_ID] [--json]
-codex-copilot profile list|show|set <conservative|balanced|premium>
+Understand the task → choose the smallest useful team → protect the token budget → verify independently → ship with evidence
 ```
 
-Runtime state is stored in `~/.codex-copilot`. Metrics are local and exclude prompts, code, raw paths, commands, logs, and model responses.
+Codex-Copilot is intentionally a little stubborn: it would rather finish one well-checked change than send a crowd of agents chasing tiny edits.
 
-`trace` shows the declared configuration and observed lifecycle of subagents dispatched by
-the Skill. It is not backend billing telemetry.
+## Remove it safely
 
-## Delegation governance
-
-Every child dispatch passes a local quota gate. The gate refreshes allowance, treats the run's
-subagent cap as cumulative, and retains the most restrictive quota band observed during that
-run. It reserves the required final-review slot before allowing exploratory work. A trace stores
-only declared agent policy and generic lifecycle state, using an opaque UUID run ID; it never
-stores task content or agent output. Exceeding the budget requires explicit user authorization
-and is labeled in the trace.
-
-If an app-server refresh transiently fails, the gate can reuse only its own most recent successful
-app-server snapshot (60-second TTL). This degraded result is labeled `cache-fallback`; callers
-cannot supply a quota band or snapshot.
-
-## Profiles and allowance
-
-`balanced` is the default: when the 5-hour window has at least 50% remaining and the weekly
-window at least 35%, L1/L2 work can use one Luna scout and one independent Terra reviewer.
-Guarded capacity (30%/20%) reserves its one slot for review. `conservative` keeps the
-low-cost route; `premium` uses Astra only for L3 root work and its reserved final review.
-Premium is explicit and never silently selected.
-
-## Uninstall
+Use this when you want to uninstall the complete workflow:
 
 ```bash
 codex-copilot uninstall
 ```
 
-Uninstall removes only artifacts recorded in the install manifest. Managed config values are restored only when the current value still matches the installed value; later user edits are preserved.
+It removes only the files it installed and restores a setting only if you have not changed it since installation.
+
+**Deleting `~/.agents/skills/codex-copilot` by hand only removes the Skill. It does not restore Codex settings.** Run `codex-copilot uninstall` instead. If that command is gone too, clone this repository again and run:
+
+```bash
+./bin/codex-copilot uninstall
+```
+
+Keep `~/.codex-copilot` until recovery is finished—it contains the safe, per-setting restoration record.
+
+## Handy commands
+
+```bash
+codex-copilot doctor       # Is everything ready?
+codex-copilot status       # How much allowance is left?
+codex-copilot profile show # Which routing style is active?
+```
+
+Codex-Copilot never redeems usage reset credits. It keeps local routing notes private: no prompts, code, command output, or raw project paths are stored.
+
+## For contributors
+
+```bash
+PYTHONPATH=src python3 -m unittest discover -s tests -v
+```

@@ -21,3 +21,7 @@ build/
 .idea/
 .vscode/
 *.swp
+
+# HyperFrames build dependencies and intermediate renders
+videos/*/node_modules/
+videos/*/renders/*.mp4

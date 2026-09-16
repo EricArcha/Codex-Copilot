@@ -186,7 +186,13 @@ def _distribution_source(mode: str, dry_run: bool) -> tuple[Path, list[dict[str,
 
 
 def _remove_stale_distribution(
-    manifest: dict[str, Any] | None, mode: str, actions: list[str], warnings: list[str]
+    manifest: dict[str, Any] | None,
+    mode: str,
+    actions: list[str],
+    warnings: list[str],
+    *,
+    dry_run: bool = False,
+    record: bool = True,
 ) -> None:
     """Remove an unchanged copied distribution when changing back to symlink mode."""
     if mode != "symlink" or not manifest:
@@ -198,13 +204,32 @@ def _remove_stale_distribution(
         if not target.exists() and not target.is_symlink():
             continue
         if not artifact_matches(artifact):
-            warnings.append(f"Preserved modified previous distribution: {target}")
+            if record:
+                warnings.append(f"Preserved modified previous distribution: {target}")
             continue
-        _remove(target)
-        actions.append(f"remove obsolete copied distribution: {target}")
+        if not dry_run:
+            _remove(target)
+        if record:
+            actions.append(f"remove obsolete copied distribution: {target}")
 
 
-def install(*, mode: str = "copy", dry_run: bool = False) -> dict[str, Any]:
+def _install_plan_token(
+    config_text: str, manifest: dict[str, Any] | None, planned: list[tuple[Path, Path, str]], actions: list[str]
+) -> str:
+    digest = hashlib.sha256()
+    digest.update(config_text.encode())
+    digest.update(json.dumps(manifest, sort_keys=True).encode())
+    for source, target, kind in planned:
+        digest.update(f"{kind}:{source}:{artifact_fingerprint(source)}".encode())
+        digest.update(f"{kind}:{target}:{artifact_fingerprint(target)}".encode())
+    for action in actions:
+        digest.update(action.encode())
+    return digest.hexdigest()
+
+
+def install(
+    *, mode: str = "copy", dry_run: bool = False, expected_plan_token: str | None = None
+) -> dict[str, Any]:
     if mode not in {"symlink", "copy"}:
         raise InstallError(f"Unsupported install mode: {mode}")
     if os.name == "nt":
@@ -226,22 +251,42 @@ def install(*, mode: str = "copy", dry_run: bool = False) -> dict[str, Any]:
     config_text = config_path.read_text() if config_path.exists() else ""
     parsed_config = parse_toml(config_text)
     updated_config, changes = apply_updates(config_text, CONFIG_UPDATES)
+    planned_changes = [asdict(change) for change in changes]
     actions = [f"{mode}: {source} -> {target}" for source, target, _ in planned]
     actions.append(f"merge managed settings: {config_path}")
     warnings = [RESTART_NOTICE]
     if mode == "symlink":
         warnings.insert(0, SYMLINK_RISK_WARNING)
-    if dry_run:
-        return {"changed": False, "dry_run": True, "actions": actions, "warnings": warnings}
+    _remove_stale_distribution(current, mode, actions, warnings, dry_run=True)
+    plan_token = _install_plan_token(config_text, current, planned, actions)
+    if expected_plan_token is not None and expected_plan_token != plan_token:
+        raise InstallError("Installation plan changed; run 'codex-copilot install --dry-run' and review it again")
     if _is_current_install(current, mode, parsed_config):
         return {
             "changed": False,
-            "dry_run": False,
+            "dry_run": dry_run,
             "actions": ["Already installed; no changes."],
             "warnings": warnings,
+            "needs_confirmation": False,
+            "config_changes": [],
+            "config_path": str(config_path),
+            "config_backup_dir": str(state_dir() / "backups"),
+            "plan_token": plan_token,
+        }
+    if dry_run:
+        return {
+            "changed": False,
+            "dry_run": True,
+            "actions": actions,
+            "warnings": warnings,
+            "needs_confirmation": True,
+            "config_changes": planned_changes,
+            "config_path": str(config_path),
+            "config_backup_dir": str(state_dir() / "backups"),
+            "plan_token": plan_token,
         }
 
-    _remove_stale_distribution(current, mode, actions, warnings)
+    _remove_stale_distribution(current, mode, actions, warnings, record=False)
     distribution_root, distribution_artifacts = _distribution_source(mode, dry_run=False)
     actual_planned = [
         (distribution_root / "skill" / "codex-copilot", skills_home() / "codex-copilot", "skill"),
@@ -292,6 +337,11 @@ def install(*, mode: str = "copy", dry_run: bool = False) -> dict[str, Any]:
         "actions": actions,
         "warnings": warnings,
         "manifest": str(manifest_path()),
+        "needs_confirmation": False,
+        "config_changes": planned_changes,
+        "config_path": str(config_path),
+        "config_backup_dir": str(backup_path.parent),
+        "plan_token": plan_token,
     }
 
 
