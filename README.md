@@ -1,8 +1,28 @@
 # Codex-Copilot
 
-Codex-Copilot is a quota-aware development orchestrator for Codex. It keeps the primary task focused, delegates bounded work to stable custom agents, and uses the remaining ChatGPT plan allowance as a conservative guardrail.
+[![Runtime](https://img.shields.io/badge/runtime-Codex%20Desktop-412991?logo=openai&logoColor=white)](https://openai.com/codex/)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Standard library](https://img.shields.io/badge/dependencies-standard%20library-0f766e)](pyproject.toml)
+[![License](https://img.shields.io/badge/license-MIT-f59e0b)](LICENSE)
 
-> **Codex Desktop only (current version).** This release is designed for Codex Desktop on macOS or Linux. Its usage-aware routing and custom-agent workflow rely on the Desktop environment; standalone CLI use is not a supported deployment target yet.
+**A calmer cockpit for complex Codex work.** Codex-Copilot keeps implementation, delegation, allowance, and independent verification in one deliberate flight path—so “go build it” does not turn into “where did the context go?”
+
+[简体中文](README.zh-CN.md)
+
+> **Codex Desktop only.** This release is designed for Codex Desktop on macOS or Linux. Its usage-aware routing and custom-agent workflow rely on the Desktop environment; standalone CLI use is not a supported deployment target yet.
+
+## Description
+
+**English:** A Codex Desktop-only skill and CLI that orchestrates substantial development with quota-aware routing, bounded subagents, and independent verification.
+
+**中文：** 一个仅供 Codex Desktop 使用的 Skill 与 CLI：通过配额感知路由、边界明确的子代理和独立验证，编排复杂开发工作。
+
+## Why Codex-Copilot?
+
+- **Protects the finish line** — reserves the evidence and review needed to know a change is actually done.
+- **Uses context deliberately** — delegates only bounded work that benefits from a fresh set of eyes.
+- **Treats allowance as a guardrail** — scales the route to the available budget without silently skipping required checks.
+- **Keeps telemetry private** — local metrics omit prompts, code, paths, commands, logs, and model responses.
 
 ## Install
 
@@ -32,7 +52,15 @@ For local development only, `--mode symlink` keeps this checkout live:
 run `codex-copilot install --mode copy`, restart Codex Desktop, and open a new task. See the
 [tracked Codex compatibility issue](https://github.com/openai/codex/issues/40131).
 
-The installer adds the skill to `~/.agents/skills`, installs five custom agents under `~/.codex/agents`, exposes `~/.local/bin/codex-copilot`, and safely merges a small set of managed settings into `~/.codex/config.toml`.
+The installer adds the skill to `~/.agents/skills`, installs six custom agents under `~/.codex/agents`, exposes `~/.local/bin/codex-copilot`, and safely merges a small set of managed settings into `~/.codex/config.toml`.
+
+## The flight path
+
+```text
+Understand scope  →  Check allowance  →  Route the work  →  Build  →  Verify independently
+```
+
+Codex-Copilot is intentionally opinionated about the last step: a passing implementation is not the same thing as a reviewed delivery.
 
 ## Use
 

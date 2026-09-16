@@ -1,8 +1,7 @@
 interface:
   display_name: "Codex Copilot"
-  short_description: "Quota-aware coding workflow orchestration"
-  default_prompt: "Use $codex-copilot to complete this development task with quota-aware model and subagent routing."
+  short_description: "Codex Desktop quota-aware orchestration"
+  default_prompt: "Use $codex-copilot in Codex Desktop to complete this development task with quota-aware routing and independent verification."
 
 policy:
   allow_implicit_invocation: true
-

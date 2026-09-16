@@ -24,5 +24,5 @@ Run before considering a change complete:
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 ${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py skill/codex-copilot
+python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skill/codex-copilot
 ```

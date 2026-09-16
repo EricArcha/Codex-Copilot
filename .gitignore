@@ -6,3 +6,18 @@ __pycache__/
 dist/
 build/
 
+# Local credentials and signing material
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.mobileprovision
+
+# Local editor and tooling state
+.idea/
+.vscode/
+*.swp

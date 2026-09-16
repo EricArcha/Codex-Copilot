@@ -1,6 +1,6 @@
 ---
 name: codex-copilot
-description: Orchestrate substantial software implementation and complex fixes in Codex with quota-aware model and subagent routing, bounded context, verification, and independent review. Use for end-to-end development, multi-stage changes, explicit subagent orchestration, or requests to optimize Codex allowance. Do not take over simple edits, questions, or review-only requests unless explicitly invoked.
+description: Codex Desktop-only development orchestration with quota-aware model and subagent routing, bounded context, verification, and independent review. / 仅供 Codex Desktop 使用的配额感知开发编排技能，适用于端到端开发、复杂修复与多代理协作。Do not use for simple edits, questions, or review-only work unless explicitly invoked.
 metadata:
   short-description: Quota-aware development orchestration
 ---
