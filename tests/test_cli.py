@@ -12,10 +12,25 @@ from unittest.mock import patch
 from codex_copilot.cli import doctor, main
 from codex_copilot.installer import CONFIG_UPDATES, SYMLINK_RISK_WARNING, install
 from codex_copilot.metrics import record
-from codex_copilot.quota import unknown_snapshot
+from codex_copilot.quota import QuotaSnapshot, unknown_snapshot
 
 
 class CliTests(unittest.TestCase):
+    def yellow_snapshot(self) -> QuotaSnapshot:
+        return QuotaSnapshot(
+            fetched_at=0,
+            band="yellow",
+            effective_remaining_percent=None,
+            primary=None,
+            secondary=None,
+            plan_type=None,
+            credits_balance=None,
+            reset_credits_available=0,
+            reached_type=None,
+            spend_control_reached=False,
+            source="test",
+        )
+
     def environment(self, root: str) -> dict[str, str]:
         base = Path(root)
         return {
@@ -193,7 +208,7 @@ class CliTests(unittest.TestCase):
                     code = main(["launch", "--level", "complex", "--dry-run"])
                 self.assertEqual(code, 0)
                 data = json.loads(output.getvalue())
-                self.assertEqual(data["command"][2], "gpt-5.6-terra")
+                self.assertEqual(data["command"][2], "gpt-6-sol")
                 self.assertEqual(data["route"]["max_subagents"], 2)
 
     def test_trace_json_reports_retained_subagent_run(self):
@@ -207,7 +222,7 @@ class CliTests(unittest.TestCase):
                         "effective_quota_band": "yellow",
                         "subagent_role": "copilot_reviewer",
                         "subagent_ordinal": 1,
-                        "subagent_model": "gpt-5.6-terra",
+                        "subagent_model": "gpt-6-sol",
                         "subagent_effort": "high",
                         "subagent_phase": "final_review",
                     }
@@ -219,6 +234,29 @@ class CliTests(unittest.TestCase):
                 data = json.loads(output.getvalue())
                 self.assertEqual(data["run_id"], "11111111-1111-4111-8111-111111111111")
                 self.assertEqual(data["agents"][0]["role"], "copilot_reviewer")
+
+    def test_delegate_accepts_the_astra_fallback_flag(self):
+        with tempfile.TemporaryDirectory() as temp:
+            env = self.environment(temp)
+            with patch.dict(os.environ, env, clear=False), patch(
+                "codex_copilot.delegation.get_quota", return_value=self.yellow_snapshot()
+            ):
+                install()
+                denied = StringIO()
+                with redirect_stderr(denied):
+                    self.assertEqual(main([
+                        "_delegate", "dispatch", "--run-id", "11111111-1111-4111-8111-111111111111",
+                        "--task-level", "L3", "--role", "copilot_reviewer", "--phase", "final_review",
+                        "--profile", "premium",
+                    ]), 1)
+                output = StringIO()
+                with redirect_stdout(output):
+                    code = main([
+                        "_delegate", "dispatch", "--run-id", "11111111-1111-4111-8111-111111111111",
+                        "--task-level", "L3", "--role", "copilot_reviewer", "--phase", "final_review",
+                        "--astra-unavailable", "--profile", "premium",
+                    ])
+                self.assertEqual(code, 0)
 
     def test_trace_without_subagents_is_a_clear_non_secret_error(self):
         with tempfile.TemporaryDirectory() as temp:

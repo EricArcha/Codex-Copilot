@@ -20,6 +20,6 @@ Example shape:
 ```text
 codex-copilot _record --event complete --run-id <random-id> --surface skill \
   --project <current-project-root> --task-level L1 --quota-band green \
-  --root-model gpt-5.6-terra --root-effort medium --subagent-count 1 \
+  --root-model gpt-6-sol --root-effort medium --subagent-count 1 \
   --outcome success --elapsed-seconds 120
 ```

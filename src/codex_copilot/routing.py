@@ -35,6 +35,7 @@ class Route:
     root_effort: str
     max_subagents: int
     allow_sol: bool
+    allow_astra: bool
     allow_max_or_ultra: bool
     pause: bool
     reason: str
@@ -99,7 +100,7 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
     )
 
     if band is QuotaBand.GREEN:
-        root_model = "gpt-6-astra" if profile is Profile.PREMIUM and level is TaskLevel.L3 else "gpt-5.6-terra"
+        root_model = "gpt-6-astra" if profile is Profile.PREMIUM and level is TaskLevel.L3 else "gpt-6-sol"
         root_effort = "low" if profile is Profile.CONSERVATIVE else "medium"
         return Route(
             **base,
@@ -107,6 +108,7 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
             root_effort=root_effort,
             max_subagents=0 if level is TaskLevel.L0 else 2,
             allow_sol=level is TaskLevel.L3 and profile is not Profile.PREMIUM,
+            allow_astra=level is TaskLevel.L3 and profile is Profile.PREMIUM,
             allow_max_or_ultra=False,
             pause=False,
             reason="Normal quota guardrails; use bounded delegation only when it adds value.",
@@ -114,10 +116,11 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
     if band is QuotaBand.YELLOW:
         return Route(
             **base,
-            root_model="gpt-5.6-terra",
+            root_model="gpt-6-sol",
             root_effort="medium",
             max_subagents=0 if level is TaskLevel.L0 else 1,
-            allow_sol=level is TaskLevel.L3,
+            allow_sol=level is TaskLevel.L3 and profile is not Profile.PREMIUM,
+            allow_astra=level is TaskLevel.L3 and profile is Profile.PREMIUM,
             allow_max_or_ultra=False,
             pause=False,
             reason="Preserve allowance: one subagent maximum and no Max or Ultra.",
@@ -126,10 +129,11 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
         paused = level in {TaskLevel.L2, TaskLevel.L3}
         return Route(
             **base,
-            root_model="gpt-5.6-luna" if level is TaskLevel.L0 else "gpt-5.6-terra",
+            root_model="gpt-6-luna" if level is TaskLevel.L0 else "gpt-6-sol",
             root_effort="low",
             max_subagents=0,
             allow_sol=False,
+            allow_astra=False,
             allow_max_or_ultra=False,
             pause=paused,
             reason=(
@@ -141,23 +145,25 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
     if band is QuotaBand.CRITICAL:
         return Route(
             **base,
-            root_model="gpt-5.6-luna",
+            root_model="gpt-6-luna",
             root_effort="low",
             max_subagents=0,
             allow_sol=False,
+            allow_astra=False,
             allow_max_or_ultra=False,
             pause=True,
             reason="Do not begin code changes; produce a checkpoint and wait for reset or explicit override.",
         )
     return Route(
         **base,
-        root_model="gpt-5.6-terra",
+        root_model="gpt-6-sol",
         root_effort="medium",
         max_subagents=0 if level is TaskLevel.L0 else 1,
         allow_sol=False,
+        allow_astra=False,
         allow_max_or_ultra=False,
         pause=False,
-        reason="Quota is unavailable; use a conservative Terra route and no premium escalation.",
+        reason="Quota is unavailable; use a conservative GPT-6 Sol route and no premium escalation.",
     )
 
 

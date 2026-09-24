@@ -1,6 +1,6 @@
 name = "copilot_reviewer"
 description = "Independent read-only reviewer focused on correctness, security, regressions, and meaningful test gaps."
-model = "gpt-5.6-terra"
+model = "gpt-6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 
@@ -11,4 +11,3 @@ Report only actionable findings supported by evidence; include file and symbol o
 Avoid style-only comments unless they hide a real defect. Return no more than ten findings and do not paste long diffs or logs.
 Do not delegate to another agent.
 """
-

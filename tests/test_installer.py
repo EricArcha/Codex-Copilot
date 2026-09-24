@@ -45,7 +45,7 @@ class InstallerTests(unittest.TestCase):
                 parsed = tomllib.loads(config.read_text())
                 self.assertEqual(parsed["model"], "gpt-5.6-sol")
                 self.assertTrue(parsed["features"]["multi_agent"])
-                self.assertEqual(parsed["agents"]["default_subagent_model"], "gpt-5.6-luna")
+                self.assertEqual(parsed["agents"]["default_subagent_model"], "gpt-6-luna")
                 skill = Path(env["CODEX_COPILOT_SKILLS_HOME"]) / "codex-copilot"
                 self.assertTrue(skill.is_dir())
                 self.assertFalse(skill.is_symlink())

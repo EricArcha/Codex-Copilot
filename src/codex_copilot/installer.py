@@ -19,7 +19,7 @@ CONFIG_UPDATES: dict[str, Any] = {
     "service_tier": "standard",
     "features.multi_agent": True,
     "agents.max_concurrent_threads_per_session": 3,
-    "agents.default_subagent_model": "gpt-5.6-luna",
+    "agents.default_subagent_model": "gpt-6-luna",
     "agents.default_subagent_reasoning_effort": "low",
     "features.fast_mode": False,
 }

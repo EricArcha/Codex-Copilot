@@ -25,7 +25,7 @@ Only the user may manually redeem a reset credit or reset opportunity. Never sug
    ./bin/codex-copilot install --dry-run
    ./bin/codex-copilot install
    ```
-   The complete installer shows every managed configuration change and requires confirmation. If a user manually deleted the Skill, explain that this does not restore Codex settings; `codex-copilot uninstall` safely removes managed artifacts and restores eligible settings. If its launcher is also gone, they can re-clone this repository and run `./bin/codex-copilot uninstall`; preserve `~/.codex-copilot` until recovery is complete. If the complete workflow is healthy, obtain a quota snapshot with `codex-copilot status --json` and read the active profile with `codex-copilot profile show`; balanced is the default. Premium is explicit and uses Astra only for L3 key work or final review. The reset-credit prohibition applies without exception.
+   The complete installer shows every managed configuration change and requires confirmation. If a user manually deleted the Skill, explain that this does not restore Codex settings; `codex-copilot uninstall` safely removes managed artifacts and restores eligible settings. If its launcher is also gone, they can re-clone this repository and run `./bin/codex-copilot uninstall`; preserve `~/.codex-copilot` until recovery is complete. If the complete workflow is healthy, obtain a quota snapshot with `codex-copilot status --json` and read the active profile with `codex-copilot profile show`; balanced is the default. Use GPT-6 Luna for focused exploration, GPT-6 Sol for normal implementation and review, and reserve GPT-6 Astra for explicit premium L3 key work or final review. The reset-credit prohibition applies without exception.
 3. Classify the task as L0-L3 and choose the route in [routing.md](references/routing.md). If quota cannot be read, use the `unknown` route.
 4. State the task level, quota band, chosen route, and definition of done in one short update. Treat the route as a guardrail, not an exact cost prediction.
 
@@ -36,13 +36,13 @@ Only the user may manually redeem a reset credit or reset opportunity. Never sug
 - Use the installed `copilot_scout`, `copilot_investigator`, `copilot_worker`, `copilot_reviewer`, and reserved final-review role. In premium L3 routes, use `copilot_astra_final_reviewer`; otherwise use `copilot_final_reviewer`.
 - Before every subagent dispatch, run the delegation gate described in [routing.md](references/routing.md). Do not dispatch when it rejects the request. It counts the entire run, refreshes quota, and applies the most restrictive band observed so far. Use `copilot_final_reviewer` only for the permitted L3 Sol High final-review slot.
 - Maintain exactly one writer. The primary agent should normally implement; use `copilot_worker` only when implementation itself is the bounded delegated unit. Do not use the multi-writer exception for L3 work.
-- Use Sol only when the route permits it, and only for an L3 decision or critical review. Never use Max or Ultra under this skill.
+- Use GPT-6 Sol for normal coding, implementation, and review routes. Use GPT-6 Astra only for the explicit premium L3 route. Never use Max or Ultra under this skill.
 - Apply relevant installed specialist skills only when their own trigger matches. They are optional; do not fail because one is absent.
 
 ## Verify and finish
 
 - Run the repository's required checks. Quota pressure may narrow optional exploration but must not remove verification needed for the definition of done.
-- For L1-L3 code changes, reserve capacity for an independent review unless the quota route requires pausing. For Green/Yellow L3, spend the single permitted Sol High phase on the final review; the installed Terra High reviewer remains the fallback when Sol is unavailable for reasons other than quota. If the required L3 review cannot run, pause rather than weaken the quality gate.
+- For L1-L3 code changes, reserve capacity for an independent review unless the quota route requires pausing. For Green/Yellow L3, use GPT-6 Astra High for the premium final review; balanced and conservative profiles use GPT-6 Sol High. The installed GPT-6 Sol High reviewer is the premium fallback when Astra is unavailable for reasons other than quota. If the required L3 review cannot run, pause rather than weaken the quality gate.
 - Recheck only findings and affected paths after fixes unless new evidence justifies a full review.
 - Follow [context.md](references/context.md) when the thread grows or work must pause. Return a compact checkpoint when the remaining quota cannot safely carry the task through testing and review.
 - Record privacy-safe route metadata on a best-effort basis using [metrics.md](references/metrics.md); failure to record metrics must not fail the task.

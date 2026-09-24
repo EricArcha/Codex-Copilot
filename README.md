@@ -44,7 +44,7 @@ Before changing anything, the installer shows every file action and all six sett
 
 - Enable multi-agent work
 - Allow up to 3 concurrent subagent tasks
-- Set a lightweight default subagent (`gpt-5.6-luna`, low reasoning)
+- Set a lightweight default subagent (`gpt-6-luna`, low reasoning)
 - Use the standard service tier and disable fast mode
 
 The original values are recorded for safe restoration.
@@ -84,7 +84,7 @@ codex-copilot status       # How much allowance is left?
 codex-copilot profile show # Which routing style is active?
 ```
 
-Codex-Copilot never redeems usage reset credits. It keeps local routing notes private: no prompts, code, command output, or raw project paths are stored.
+Codex-Copilot never redeems usage reset credits. Its GPT-6 routing uses Luna for focused exploration, Sol for standard coding and review, and Astra only for premium L3 work. It keeps local routing notes private: no prompts, code, command output, or raw project paths are stored.
 
 ## For contributors
 

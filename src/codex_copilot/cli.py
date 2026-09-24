@@ -96,7 +96,7 @@ def _parser() -> argparse.ArgumentParser:
     delegate.add_argument("--ordinal", type=int)
     delegate.add_argument("--outcome")
     delegate.add_argument("--override", action="store_true")
-    delegate.add_argument("--sol-unavailable", action="store_true")
+    delegate.add_argument("--astra-unavailable", action="store_true")
     delegate.add_argument("--profile", choices=tuple(profile.value for profile in Profile))
     delegate.add_argument("--read-only", action="store_true")
     return parser
@@ -316,7 +316,7 @@ def _launch(args: argparse.Namespace) -> int:
     model = route.root_model
     effort = route.root_effort
     if route.pause and args.override_quota and level.value in {"L2", "L3"}:
-        model, effort = "gpt-5.6-terra", "medium"
+        model, effort = "gpt-6-sol", "medium"
     extra = list(args.codex_args)
     if extra and extra[0] == "--":
         extra = extra[1:]
@@ -434,7 +434,7 @@ def main(argv: list[str] | None = None) -> int:
                     role=args.role,
                     phase=args.phase,
                     override=args.override,
-                    sol_unavailable=args.sol_unavailable,
+                    astra_unavailable=args.astra_unavailable,
                     profile=Profile(args.profile) if args.profile else None,
                     read_only=args.read_only,
                 )

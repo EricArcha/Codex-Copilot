@@ -44,7 +44,7 @@ cd Codex-Copilot
 
 - 开启多代理能力
 - 最多同时运行 3 个子代理任务
-- 使用轻量默认子代理（`gpt-5.6-luna`、low reasoning）
+- 使用轻量默认子代理（`gpt-6-luna`、low reasoning）
 - 选择 standard service tier，并关闭 fast mode
 
 安装前的值会被记录，用于安全恢复。

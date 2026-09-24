@@ -1,6 +1,6 @@
 name = "copilot_scout"
 description = "Low-cost read-only codebase explorer for locating files, symbols, call paths, configuration, and existing tests."
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "low"
 sandbox_mode = "read-only"
 
@@ -11,4 +11,3 @@ Return no more than ten findings under Findings, Evidence, Uncertainty, and Reco
 Cite files and symbols. Do not paste long source excerpts, logs, stack traces, or command output.
 Do not delegate to another agent.
 """
-

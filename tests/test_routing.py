@@ -28,8 +28,13 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(band_for_windows(90, 19), QuotaBand.RED)
 
     def test_premium_uses_astra_only_for_l3_root_route(self):
-        self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L2, Profile.PREMIUM).root_model, "gpt-5.6-terra")
+        self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L2, Profile.PREMIUM).root_model, "gpt-6-sol")
         self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L3, Profile.PREMIUM).root_model, "gpt-6-astra")
+
+    def test_balanced_routes_use_sol_and_luna_by_task_criticality(self):
+        self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L1).root_model, "gpt-6-sol")
+        self.assertEqual(route_for(QuotaBand.RED, TaskLevel.L0).root_model, "gpt-6-luna")
+        self.assertEqual(route_for(QuotaBand.RED, TaskLevel.L1).root_model, "gpt-6-sol")
 
     def test_route_matrix_invariants(self):
         for band in QuotaBand:
@@ -40,8 +45,12 @@ class RoutingTests(unittest.TestCase):
                     self.assertFalse(route.allow_max_or_ultra)
                     if level is TaskLevel.L0:
                         self.assertEqual(route.max_subagents, 0)
+                    if route.allow_astra:
+                        self.assertEqual(level, TaskLevel.L3)
+                        self.assertEqual(route.profile, Profile.PREMIUM.value)
                     if route.allow_sol:
                         self.assertEqual(level, TaskLevel.L3)
+                        self.assertNotEqual(route.profile, Profile.PREMIUM.value)
 
     def test_red_pauses_complex_and_critical(self):
         self.assertFalse(route_for(QuotaBand.RED, TaskLevel.L1).pause)

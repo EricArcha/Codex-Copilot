@@ -30,11 +30,11 @@ _KNOWN_ROLES = {
 _PHASES = {"exploration", "implementation", "final_review"}
 _OUTCOMES = {"success", "failure"}
 _ROLE_CONFIGURATION = {
-    "copilot_scout": ("gpt-5.6-luna", "low"),
-    "copilot_investigator": ("gpt-5.6-terra", "medium"),
-    "copilot_worker": ("gpt-5.6-terra", "medium"),
-    "copilot_reviewer": ("gpt-5.6-terra", "high"),
-    "copilot_final_reviewer": ("gpt-5.6-sol", "high"),
+    "copilot_scout": ("gpt-6-luna", "low"),
+    "copilot_investigator": ("gpt-6-sol", "medium"),
+    "copilot_worker": ("gpt-6-sol", "medium"),
+    "copilot_reviewer": ("gpt-6-sol", "high"),
+    "copilot_final_reviewer": ("gpt-6-sol", "high"),
     "copilot_astra_final_reviewer": ("gpt-6-astra", "high"),
 }
 
@@ -97,7 +97,7 @@ def _valid_role_phase(level: TaskLevel, role: str, phase: str) -> bool:
 
 
 def _allow_role(
-    level: TaskLevel, band: QuotaBand, role: str, phase: str, count: int, sol_unavailable: bool, profile: Profile
+    level: TaskLevel, band: QuotaBand, role: str, phase: str, count: int, astra_unavailable: bool, profile: Profile
 ) -> bool:
     if not _valid_role_phase(level, role, phase):
         return False
@@ -111,12 +111,12 @@ def _allow_role(
                 return count <= 1
             if role == "copilot_astra_final_reviewer" and profile is Profile.PREMIUM:
                 return count <= 1
-            return role == "copilot_reviewer" and sol_unavailable and count <= 1
+            return role == "copilot_reviewer" and astra_unavailable and profile is Profile.PREMIUM and count <= 1
         if band is QuotaBand.YELLOW:
             return count == 0 and (
                 (role == "copilot_final_reviewer" and profile is not Profile.PREMIUM)
                 or (role == "copilot_astra_final_reviewer" and profile is Profile.PREMIUM)
-                or (role == "copilot_reviewer" and sol_unavailable)
+                or (role == "copilot_reviewer" and astra_unavailable and profile is Profile.PREMIUM)
             )
         if band is QuotaBand.UNKNOWN:
             return count == 0 and role == "copilot_reviewer"
@@ -131,7 +131,7 @@ def _allow_role(
 
 def dispatch(
     *, run_id: str, level: TaskLevel, role: str, phase: str, override: bool = False,
-    sol_unavailable: bool = False, profile: Profile | None = None, read_only: bool = False
+    astra_unavailable: bool = False, profile: Profile | None = None, read_only: bool = False
 ) -> dict[str, Any]:
     try:
         parsed_run_id = uuid.UUID(run_id)
@@ -150,7 +150,7 @@ def dispatch(
     current = QuotaBand(snapshot.band)
     effective = _effective_band(records, current)
     prior = _dispatched(records)
-    allowed = _allow_role(level, effective, role, phase, len(prior), sol_unavailable, selected_profile)
+    allowed = _allow_role(level, effective, role, phase, len(prior), astra_unavailable, selected_profile)
     if effective is QuotaBand.YELLOW and level in {TaskLevel.L1, TaskLevel.L2} and read_only:
         allowed = role in {"copilot_scout", "copilot_investigator"} and phase == "exploration" and not prior
     if not allowed and not override:

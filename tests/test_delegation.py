@@ -39,11 +39,11 @@ class DelegationTests(unittest.TestCase):
         agents = home / "agents"
         agents.mkdir(parents=True)
         specs = {
-            "copilot-scout": ("gpt-5.6-luna", "low"),
-            "copilot-investigator": ("gpt-5.6-terra", "medium"),
-            "copilot-worker": ("gpt-5.6-terra", "medium"),
-            "copilot-reviewer": ("gpt-5.6-terra", "high"),
-            "copilot-final-reviewer": ("gpt-5.6-sol", "high"),
+            "copilot-scout": ("gpt-6-luna", "low"),
+            "copilot-investigator": ("gpt-6-sol", "medium"),
+            "copilot-worker": ("gpt-6-sol", "medium"),
+            "copilot-reviewer": ("gpt-6-sol", "high"),
+            "copilot-final-reviewer": ("gpt-6-sol", "high"),
             "copilot-astra-final-reviewer": ("gpt-6-astra", "high"),
         }
         for name, (model, effort) in specs.items():
@@ -70,10 +70,10 @@ class DelegationTests(unittest.TestCase):
             with self.assertRaises(DelegationDenied):
                 dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role="copilot_reviewer", phase="final_review")
         result = trace(self.RUN_1)
-        self.assertEqual(first["subagent_model"], "gpt-5.6-terra")
+        self.assertEqual(first["subagent_model"], "gpt-6-sol")
         self.assertEqual(first["quota_source"], "test")
         self.assertEqual(result["compliance"], "COMPLIANT")
-        self.assertEqual(result["agents"][1]["model"], "gpt-5.6-sol")
+        self.assertEqual(result["agents"][1]["model"], "gpt-6-sol")
         self.assertEqual(result["agents"][1]["quota_source"], "test")
         self.assertEqual(result["agents"][1]["status"], "success")
 
@@ -127,7 +127,7 @@ class DelegationTests(unittest.TestCase):
 
     def test_modified_agent_policy_is_rejected(self):
         path = Path(os.environ["CODEX_HOME"]) / "agents" / "copilot-reviewer.toml"
-        path.write_text('model = "gpt-5.6-sol"\nmodel_reasoning_effort = "high"\n')
+        path.write_text('model = "gpt-5.6-terra"\nmodel_reasoning_effort = "high"\n')
         with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.YELLOW)):
             with self.assertRaises(DelegationDenied):
                 dispatch(run_id=self.RUN_1, level=TaskLevel.L1, role="copilot_reviewer", phase="final_review")
@@ -143,6 +143,18 @@ class DelegationTests(unittest.TestCase):
             )
         self.assertEqual(event["subagent_model"], "gpt-6-astra")
         self.assertEqual(event["profile"], "premium")
+
+    def test_astra_fallback_uses_the_standard_sol_reviewer(self):
+        with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.YELLOW)):
+            event = dispatch(
+                run_id=self.RUN_1,
+                level=TaskLevel.L3,
+                role="copilot_reviewer",
+                phase="final_review",
+                astra_unavailable=True,
+                profile=Profile.PREMIUM,
+            )
+        self.assertEqual(event["subagent_model"], "gpt-6-sol")
 
 
 if __name__ == "__main__":
