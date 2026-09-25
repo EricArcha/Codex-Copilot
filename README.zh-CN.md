@@ -10,6 +10,10 @@
 
 > 面向 macOS 或 Linux 上的 **Codex Desktop**。
 
+## 重要变更：GPT-6 路由
+
+Codex-Copilot 现已采用 GPT-6 分层路由：**Luna** 用于定向探索，也是默认子代理；**Sol** 负责常规开发与审查；**Astra** 仅用于 premium 的 L3 高风险任务和最终审查。已完成完整安装的用户，请再次运行 `./bin/codex-copilot install`，然后重启 Codex Desktop 并新开任务。
+
 ## 30 秒开始
 
 想先试试、又不想改任何设置？只安装 Skill 指令即可：

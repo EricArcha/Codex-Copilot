@@ -10,6 +10,10 @@
 
 > Made for **Codex Desktop** on macOS or Linux.
 
+## Important change — GPT-6 routing
+
+Codex-Copilot now routes work across the GPT-6 family: **Luna** handles focused exploration and is the default subagent, **Sol** handles normal development and review, and **Astra** is reserved for premium L3 high-risk work and final review. Existing full-install users should run `./bin/codex-copilot install` again, then restart Codex Desktop and open a new task.
+
 ## Start in 30 seconds
 
 Want to try the Skill with **zero settings changes**? Install just the instructions:
