@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from codex_copilot.metrics import metrics_path, project_hash, record, summarize
+from codex_copilot.metrics import metrics_path, project_hash, record, records_for_run, summarize
 
 
 class MetricsTests(unittest.TestCase):
@@ -29,10 +29,9 @@ class MetricsTests(unittest.TestCase):
                 self.assertNotIn("/private/example/project", text)
                 self.assertIn(hashed, text)
                 self.assertEqual(summarize(30)["records"], 1)
-                self.assertEqual(
-                    summarize(30)["average_primary_delta_observed"]["gpt-5.6-terra:medium"],
-                    2.0,
-                )
+                self.assertEqual(summarize(30)["tasks"], 0)
+                self.assertEqual(summarize(30)["legacy_incomplete"], 1)
+                self.assertEqual(summarize(30)["average_primary_delta_observed"], {})
 
     def test_rejects_prompt_or_path_fields(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -52,6 +51,26 @@ class MetricsTests(unittest.TestCase):
                 record({"event": "first"})
                 record({"event": "second"})
                 self.assertTrue(metrics_path().with_name("runs.jsonl.1").exists())
+
+    def test_trace_reads_retained_rotations(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}, clear=False), patch(
+                "codex_copilot.metrics.MAX_BYTES", 1
+            ):
+                run_id = "7c375692-c17d-43fa-b879-501a4d648d62"
+                record({"event": "measurement_begin", "run_id": run_id})
+                record({"event": "measurement_end", "run_id": run_id})
+                self.assertEqual(len(records_for_run(run_id)), 2)
+
+    def test_legacy_launch_route_is_reported_without_counting_a_task(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}, clear=False):
+                record({"event": "launch", "root_model": "gpt-6-sol",
+                        "root_effort": "medium", "outcome": "planned"})
+                result = summarize(30)
+                self.assertEqual(result["tasks"], 0)
+                self.assertEqual(result["planned_launches"], 1)
+                self.assertEqual(result["planned_routes"], {"gpt-6-sol:medium": 1})
 
 
 if __name__ == "__main__":

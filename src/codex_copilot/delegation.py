@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import tomllib
 import uuid
+import os
 from dataclasses import dataclass
 from typing import Any
 
-from .metrics import record, records_for_run
+from .metrics import project_hash, record, records_for_run
 from .paths import codex_home
 from .profile import active_profile
 from .quota import get_quota
@@ -165,6 +166,7 @@ def dispatch(
         "event": "subagent_dispatched",
         "run_id": run_id,
         "surface": "skill",
+        "project_hash": project_hash(os.getcwd()),
         "task_level": level.value,
         "quota_band": current.value,
         "quota_source": snapshot.source,

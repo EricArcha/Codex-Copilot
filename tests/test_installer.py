@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from codex_copilot.installer import (
     AGENT_FILES,
+    MEASUREMENT_NOTICE,
     RESTART_NOTICE,
     SYMLINK_RISK_WARNING,
     InstallError,
@@ -50,6 +51,8 @@ class InstallerTests(unittest.TestCase):
                 self.assertTrue(skill.is_dir())
                 self.assertFalse(skill.is_symlink())
                 self.assertIn(RESTART_NOTICE, first["warnings"])
+                self.assertIn(MEASUREMENT_NOTICE, first["warnings"])
+                self.assertIn(MEASUREMENT_NOTICE, second["warnings"])
                 result = uninstall()
                 self.assertTrue(result["changed"])
                 self.assertFalse(Path(env["CODEX_COPILOT_SHARE_DIR"]).exists())
@@ -64,6 +67,7 @@ class InstallerTests(unittest.TestCase):
                 result = install(mode="copy", dry_run=True)
                 self.assertTrue(result["dry_run"])
                 self.assertIn(RESTART_NOTICE, result["warnings"])
+                self.assertIn(MEASUREMENT_NOTICE, result["warnings"])
                 self.assertNotIn(SYMLINK_RISK_WARNING, result["warnings"])
                 self.assertFalse(Path(env["CODEX_COPILOT_STATE_DIR"]).exists())
                 install(mode="copy")

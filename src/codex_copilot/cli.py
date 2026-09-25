@@ -24,6 +24,7 @@ from .installer import (
     uninstall,
 )
 from .metrics import project_hash, record, summarize
+from .measurement import begin as begin_measurement, compare as compare_measurements, enabled as measurement_enabled, end as end_measurement, set_enabled as set_measurement_enabled
 from .paths import bin_dir, codex_home, skills_home
 from .profile import active_profile, set_profile
 from .quota import QuotaSnapshot, get_quota
@@ -64,6 +65,24 @@ def _parser() -> argparse.ArgumentParser:
     trace_parser = sub.add_parser("trace", help="Show the retained declared subagent trace")
     trace_parser.add_argument("--run")
     trace_parser.add_argument("--json", action="store_true")
+
+    measure_parser = sub.add_parser("measure", help="Opt-in task-level allowance measurement")
+    measure_parser.add_argument("action", choices=("on", "off", "status", "begin", "end", "compare"))
+    measure_parser.add_argument("--run-id")
+    measure_parser.add_argument("--variant", choices=("skill", "baseline"))
+    measure_parser.add_argument("--task-level", choices=tuple(level.value for level in TaskLevel))
+    measure_parser.add_argument("--task-kind", choices=("bugfix", "feature", "refactor", "maintenance"))
+    measure_parser.add_argument("--root-model")
+    measure_parser.add_argument("--project")
+    measure_parser.add_argument("--outcome", choices=("success", "failure", "paused"))
+    measure_parser.add_argument("--if-enabled", action="store_true")
+    measure_parser.add_argument("--primary-used", type=float)
+    measure_parser.add_argument("--secondary-used", type=float)
+    measure_parser.add_argument("--primary-reset", type=int)
+    measure_parser.add_argument("--secondary-reset", type=int)
+    measure_parser.add_argument("--skill-run")
+    measure_parser.add_argument("--baseline-run")
+    measure_parser.add_argument("--json", action="store_true")
 
     profile_parser = sub.add_parser("profile", help="Show or select a Codex-Copilot routing profile")
     profile_parser.add_argument("action", choices=("list", "show", "set"))
@@ -358,14 +377,19 @@ def main(argv: list[str] | None = None) -> int:
             if not args.yes and not _confirm_install():
                 print("Installation cancelled. No changes made.", file=sys.stderr)
                 return 2
-            _print_result(install(mode=args.mode, expected_plan_token=preview["plan_token"]))
+            result = install(mode=args.mode, expected_plan_token=preview["plan_token"])
+            _print_result({**result, "warnings": []})  # Already shown in the plan.
             return 0
         if args.command == "uninstall":
             _print_result(uninstall(dry_run=args.dry_run))
             return 0
         if args.command == "status":
             snapshot = get_quota(refresh=args.refresh)
-            print(json.dumps(snapshot.to_dict(), indent=2) if args.json else _status_text(snapshot))
+            if args.json:
+                print(json.dumps({**snapshot.to_dict(), "measurement_enabled": measurement_enabled()}, indent=2))
+            else:
+                print(_status_text(snapshot))
+                print(f"Measurement: {'on' if measurement_enabled() else 'off'}")
             return 0 if snapshot.band != QuotaBand.UNKNOWN.value else 1
         if args.command == "profile":
             if args.action == "set":
@@ -392,8 +416,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(json.dumps(result, indent=2))
             else:
                 print(f"Records ({args.days} days): {result['records']}")
+                print(f"Tasks: {result['tasks']} · complete samples: {result['complete_samples']} · legacy/incomplete: {result['legacy_incomplete']}")
+                print(f"Subagent dispatches: {result['subagent_dispatches']}")
                 for route, count in sorted(result["routes"].items()):
                     print(f"  {route}: {count}")
+                if result["planned_launches"]:
+                    print(f"Planned launches: {result['planned_launches']}")
+                    for route, count in sorted(result["planned_routes"].items()):
+                        print(f"  {route}: {count}")
                 print(result["note"])
             return 0
         if args.command == "trace":
@@ -403,6 +433,36 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 _human_trace(result)
             return 0 if result["found"] else 1
+        if args.command == "measure":
+            if args.action in {"on", "off"}:
+                set_measurement_enabled(args.action == "on")
+                result = {"measurement_enabled": measurement_enabled()}
+            elif args.action == "status":
+                result = {"measurement_enabled": measurement_enabled()}
+            elif args.action == "begin":
+                if not all((args.run_id, args.variant, args.task_level, args.task_kind, args.root_model)):
+                    raise ValueError("measure begin requires run ID, variant, task level, task kind, and root model")
+                result = begin_measurement(
+                    run_id=args.run_id, variant=args.variant, task_level=args.task_level,
+                    task_kind=args.task_kind, root_model=args.root_model,
+                    project=args.project or os.getcwd(), if_enabled=args.if_enabled,
+                    primary_used=args.primary_used, secondary_used=args.secondary_used,
+                    primary_reset=args.primary_reset, secondary_reset=args.secondary_reset,
+                )
+            elif args.action == "end":
+                if not args.run_id or not args.outcome:
+                    raise ValueError("measure end requires run ID and outcome")
+                result = end_measurement(
+                    run_id=args.run_id, outcome=args.outcome, variant=args.variant,
+                    primary_used=args.primary_used, secondary_used=args.secondary_used,
+                    primary_reset=args.primary_reset, secondary_reset=args.secondary_reset,
+                )
+            else:
+                if not args.skill_run or not args.baseline_run:
+                    raise ValueError("measure compare requires skill and baseline run IDs")
+                result = compare_measurements(args.skill_run, args.baseline_run)
+            print(json.dumps(result, indent=2) if args.json else json.dumps(result, ensure_ascii=False))
+            return 0
         if args.command == "_record":
             event = {
                 "event": args.event,

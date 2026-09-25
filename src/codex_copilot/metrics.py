@@ -42,6 +42,10 @@ ALLOWED_FIELDS = {
     "subagent_phase",
     "override",
     "profile",
+    "variant",
+    "task_kind",
+    "primary_resets_at",
+    "secondary_resets_at",
 }
 
 
@@ -101,31 +105,40 @@ def record(event: dict[str, Any]) -> None:
 
 def records_for_run(run_id: str) -> list[dict[str, Any]]:
     """Return privacy-safe events for one retained run, in write order."""
-    path = metrics_path()
-    if not path.exists():
-        return []
     records: list[dict[str, Any]] = []
-    for line in path.read_text().splitlines():
-        try:
-            item = json.loads(line)
-        except ValueError:
-            continue
-        if item.get("run_id") == run_id:
-            records.append(item)
+    for path in _retained_paths():
+        for line in path.read_text().splitlines():
+            try:
+                item = json.loads(line)
+            except ValueError:
+                continue
+            if item.get("run_id") == run_id:
+                records.append(item)
+    return records
+
+
+def _retained_paths() -> list[Path]:
+    path = metrics_path()
+    return [candidate for candidate in
+            [*(path.with_name(f"{path.name}.{index}") for index in range(ROTATIONS, 0, -1)), path]
+            if candidate.exists()]
+
+
+def retained_records() -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for path in _retained_paths():
+        for line in path.read_text().splitlines():
+            try:
+                records.append(json.loads(line))
+            except ValueError:
+                continue
     return records
 
 
 def latest_trace_run_id() -> str | None:
     """Find the most recently dispatched retained subagent run."""
-    path = metrics_path()
-    if not path.exists():
-        return None
     latest: str | None = None
-    for line in path.read_text().splitlines():
-        try:
-            item = json.loads(line)
-        except ValueError:
-            continue
+    for item in retained_records():
         if item.get("event") == "subagent_dispatched" and isinstance(item.get("run_id"), str):
             latest = item["run_id"]
     return latest
@@ -134,35 +147,58 @@ def latest_trace_run_id() -> str | None:
 def summarize(days: int) -> dict[str, Any]:
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     counts: Counter[str] = Counter()
+    planned_routes: Counter[str] = Counter()
     outcomes: Counter[str] = Counter()
     elapsed: defaultdict[str, list[float]] = defaultdict(list)
     primary_deltas: defaultdict[str, list[float]] = defaultdict(list)
     secondary_deltas: defaultdict[str, list[float]] = defaultdict(list)
-    records = 0
-    path = metrics_path()
-    if path.exists():
-        for line in path.read_text().splitlines():
-            try:
-                item = json.loads(line)
-                timestamp = datetime.fromisoformat(item["timestamp"])
-            except (ValueError, KeyError, TypeError):
-                continue
-            if timestamp < cutoff:
-                continue
-            records += 1
-            route = f"{item.get('root_model', 'unknown')}:{item.get('root_effort', 'unknown')}"
-            counts[route] += 1
-            outcomes[item.get("outcome", "unknown")] += 1
-            if isinstance(item.get("elapsed_seconds"), (int, float)):
-                elapsed[route].append(float(item["elapsed_seconds"]))
-            if isinstance(item.get("primary_delta_observed"), (int, float)):
-                primary_deltas[route].append(float(item["primary_delta_observed"]))
-            if isinstance(item.get("secondary_delta_observed"), (int, float)):
-                secondary_deltas[route].append(float(item["secondary_delta_observed"]))
+    recent: list[dict[str, Any]] = []
+    for item in retained_records():
+        try:
+            timestamp = datetime.fromisoformat(item["timestamp"])
+        except (ValueError, KeyError, TypeError):
+            continue
+        if timestamp.tzinfo is not None and timestamp >= cutoff:
+            recent.append(item)
+    groups: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+    legacy_without_id = 0
+    for item in recent:
+        if item.get("run_id"):
+            groups[item["run_id"]].append(item)
+        else:
+            legacy_without_id += 1
+            if item.get("event") == "launch":
+                planned_routes[f"{item.get('root_model', 'unknown')}:{item.get('root_effort', 'unknown')}"] += 1
+    complete_samples = 0
+    for events in groups.values():
+        begin = next((e for e in events if e.get("event") == "measurement_begin"), None)
+        end = next((e for e in events if e.get("event") == "measurement_end"), None)
+        root = begin or next((e for e in events if e.get("root_model")), events[0])
+        route = f"{root.get('root_model', 'unknown')}:{root.get('root_effort', 'unknown')}"
+        counts[route] += 1
+        final = end or next((e for e in events if e.get("event") == "complete"), None)
+        outcomes[final.get("outcome", "unknown") if final else "unknown"] += 1
+        if final and isinstance(final.get("elapsed_seconds"), (int, float)):
+            elapsed[route].append(float(final["elapsed_seconds"]))
+        if begin and end and end.get("outcome") == "success" and all(begin.get(k) is not None and end.get(k) is not None for k in
+                                 ("primary_used_percent", "secondary_used_percent", "primary_resets_at", "secondary_resets_at")):
+            if (begin["primary_resets_at"] == end["primary_resets_at"] and
+                begin["secondary_resets_at"] == end["secondary_resets_at"] and
+                end["primary_used_percent"] >= begin["primary_used_percent"] and
+                end["secondary_used_percent"] >= begin["secondary_used_percent"]):
+                complete_samples += 1
+                primary_deltas[route].append(end["primary_used_percent"] - begin["primary_used_percent"])
+                secondary_deltas[route].append(end["secondary_used_percent"] - begin["secondary_used_percent"])
     return {
         "days": days,
-        "records": records,
+        "records": len(recent),
+        "tasks": len(groups),
+        "complete_samples": complete_samples,
+        "legacy_incomplete": len(groups) - complete_samples + legacy_without_id,
+        "subagent_dispatches": sum(e.get("event") == "subagent_dispatched" for e in recent),
         "routes": dict(counts),
+        "planned_launches": sum(planned_routes.values()),
+        "planned_routes": dict(planned_routes),
         "outcomes": dict(outcomes),
         "average_elapsed_seconds": {
             route: round(sum(values) / len(values), 2) for route, values in elapsed.items()

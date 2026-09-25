@@ -27,7 +27,8 @@ Only the user may manually redeem a reset credit or reset opportunity. Never sug
    ```
    The complete installer shows every managed configuration change and requires confirmation. If a user manually deleted the Skill, explain that this does not restore Codex settings; `codex-copilot uninstall` safely removes managed artifacts and restores eligible settings. If its launcher is also gone, they can re-clone this repository and run `./bin/codex-copilot uninstall`; preserve `~/.codex-copilot` until recovery is complete. If the complete workflow is healthy, obtain a quota snapshot with `codex-copilot status --json` and read the active profile with `codex-copilot profile show`; balanced is the default. Use GPT-6 Luna for focused exploration, GPT-6 Sol for normal implementation and review, and reserve GPT-6 Astra for explicit premium L3 key work or final review. The reset-credit prohibition applies without exception.
 3. Classify the task as L0-L3 and choose the route in [routing.md](references/routing.md). If quota cannot be read, use the `unknown` route.
-4. State the task level, quota band, chosen route, and definition of done in one short update. Treat the route as a guardrail, not an exact cost prediction.
+4. State the task level, quota band, chosen route, and definition of done in one short update. If measurement is enabled, mention in that update that optional local allowance measurement is enabled. Treat the route as a guardrail, not an exact cost prediction.
+5. If `status --json` reports `measurement_enabled: true`, start one optional measurement using [metrics.md](references/metrics.md) and the same UUID for any later subagent dispatch. Do not add a quota read just for a skill-run start snapshot.
 
 ## Execute
 
@@ -46,4 +47,5 @@ Only the user may manually redeem a reset credit or reset opportunity. Never sug
 - Recheck only findings and affected paths after fixes unless new evidence justifies a full review.
 - Follow [context.md](references/context.md) when the thread grows or work must pause. Return a compact checkpoint when the remaining quota cannot safely carry the task through testing and review.
 - Record privacy-safe route metadata on a best-effort basis using [metrics.md](references/metrics.md); failure to record metrics must not fail the task.
+- If an optional measurement was started, end it once after the work finishes; allow at most one additional quota read. Measurement failure never blocks delivery.
 - When any subagent was dispatched, include one short `codex-copilot trace --run <run-id>` summary in the final response; do not expand it unless asked.

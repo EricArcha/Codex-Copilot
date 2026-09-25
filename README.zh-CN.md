@@ -86,9 +86,12 @@ codex-copilot uninstall
 codex-copilot doctor       # 都准备好了吗？
 codex-copilot status       # 额度还剩多少？
 codex-copilot profile show # 当前使用哪种路由风格？
+codex-copilot measure status # 可选额度测量是否开启？
+codex-copilot measure on     # 主动开启任务级测量
+codex-copilot measure off    # 停止新的自动测量
 ```
 
-Codex-Copilot 不会兑换用量重置额度。本地只保存私密的路由摘要：不记录提示词、代码、命令输出或原始项目路径。
+额度测量默认关闭。新安装和升级时，安装器会提示一次性开启命令；开启一次后，本地设置会持续生效。开启后，Skill 会简短提示正在记录，复用开始阶段的额度检查，完成时最多额外读取一次；关闭后历史记录仍保留。额度百分比只是观测值，并非精确账单或已证明的节省。Codex-Copilot 不会兑换用量重置额度。本地只保存私密的路由摘要：不记录提示词、代码、命令输出或原始项目路径。
 
 ## 贡献者
 

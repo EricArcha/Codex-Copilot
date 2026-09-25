@@ -37,6 +37,10 @@ SYMLINK_RISK_WARNING = (
     "codex-copilot install --mode copy"
 )
 RESTART_NOTICE = "Restart Codex Desktop and open a new task before using the installed agents."
+MEASUREMENT_NOTICE = (
+    "Optional allowance measurement is off by default. Run 'codex-copilot measure on' "
+    "once for future skill tasks; 'codex-copilot measure off' stops new automatic measurements."
+)
 IGNORED_FINGERPRINT_FILENAMES = {".DS_Store"}
 
 
@@ -254,7 +258,7 @@ def install(
     planned_changes = [asdict(change) for change in changes]
     actions = [f"{mode}: {source} -> {target}" for source, target, _ in planned]
     actions.append(f"merge managed settings: {config_path}")
-    warnings = [RESTART_NOTICE]
+    warnings = [RESTART_NOTICE, MEASUREMENT_NOTICE]
     if mode == "symlink":
         warnings.insert(0, SYMLINK_RISK_WARNING)
     _remove_stale_distribution(current, mode, actions, warnings, dry_run=True)

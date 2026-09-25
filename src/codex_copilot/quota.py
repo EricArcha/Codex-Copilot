@@ -164,6 +164,11 @@ def cache_path() -> Path:
     return state_dir() / "quota-cache.json"
 
 
+def cached_quota(*, ttl: int = 60) -> QuotaSnapshot | None:
+    """Reuse a recent live quota result without starting another app server."""
+    return _cached_snapshot(cache_path(), ttl, source="cache")
+
+
 def _cached_snapshot(cache: Path, ttl: int, *, source: str) -> QuotaSnapshot | None:
     """Load a recent successful app-server result and label its cache use."""
     if not cache.exists():

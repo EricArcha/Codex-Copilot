@@ -1,25 +1,24 @@
-# Privacy-safe metrics
+# Optional allowance measurement
 
-Metrics are optional and must never block development work. Generate a random run ID locally, then record a start and completion event with the installed CLI.
+Task-level measurement is off by default. `codex-copilot measure on|off|status` changes only a local preference. The existing subagent dispatch trace remains active for the delegation cap even when measurement is off. Turning measurement off does not delete history.
 
-Allowed values are route metadata only: run ID, event, surface, hashed project, task level, quota band, effective quota band, window percentages, root and subagent role/model/effort/ordinal/phase, subagent count, override flag, outcome, elapsed time, and a generic error category.
-
-Never pass a prompt, task summary, source text, file name, raw project path except through `--project` for local hashing, command, log, stack trace, model response, secret, or personal data.
-
-## Delegation trace
-
-Only create a trace when a subagent is actually dispatched. The delegation gate records the
-declared configuration on dispatch and its generic outcome on completion. Query the latest
-retained run with `codex-copilot trace`, or a specific run with `codex-copilot trace --run <run-id>`.
-The result is observed Skill activity, not backend billing telemetry.
-
-At completion, refresh quota once. `primary_delta_observed` and `secondary_delta_observed` are the after-minus-before changes in used percentage. They may include concurrent activity and must not be presented as exact task cost.
-
-Example shape:
+When `codex-copilot status --json` says `measurement_enabled: true`, generate one canonical UUID and run after the Start quota check. If quota status is unavailable, `codex-copilot measure status` reads this local preference without contacting the quota service:
 
 ```text
-codex-copilot _record --event complete --run-id <random-id> --surface skill \
-  --project <current-project-root> --task-level L1 --quota-band green \
-  --root-model gpt-6-sol --root-effort medium --subagent-count 1 \
-  --outcome success --elapsed-seconds 120
+codex-copilot measure begin --if-enabled --run-id <uuid> --variant skill \
+  --task-level L2 --task-kind bugfix --root-model gpt-6-sol --project <current-project-root>
 ```
+
+Use `bugfix`, `feature`, `refactor`, or `maintenance` as a coarse task kind. Reuse this UUID for any `_delegate` calls. A skill-run begin only uses the existing 60-second CLI quota cache; it never starts an extra quota read. If the Start snapshot came from the Codex app tool instead, pass only available numeric `usedPercent` and `resetsAt` values as `--primary-used`, `--secondary-used`, `--primary-reset`, and `--secondary-reset`. Missing values make the observation incomplete and exclude it from comparisons.
+
+At task completion, run once:
+
+```text
+codex-copilot measure end --run-id <uuid> --outcome success
+```
+
+This attempts one fresh quota read, with a five-second timeout. If the Codex app tool already supplied a completion snapshot, pass the same four numeric options and avoid the CLI read. Do not poll, retry for measurement alone, or dispatch agents to gather metrics. A measurement failure must not block the task.
+
+For a deliberately selected task without the skill, use `measure begin --variant baseline` and `measure end` with the same metadata. Explicit one-task commands work while the global preference is off. Compare two successful, comparable runs locally with `codex-copilot measure compare --skill-run <uuid> --baseline-run <uuid>`.
+
+Metrics save only opaque run IDs, hashed project roots, coarse task metadata, model declarations, agent routes, outcomes, and numeric allowance snapshots. Never save prompts, task summaries, source text, file names, raw project paths, commands, logs, model responses, secrets, or personal data. Window percentage changes are observations that may include concurrent activity; they are not exact task costs or proof of savings.

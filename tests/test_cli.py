@@ -16,6 +16,36 @@ from codex_copilot.quota import QuotaSnapshot, unknown_snapshot
 
 
 class CliTests(unittest.TestCase):
+    def test_measure_cli_is_opt_in_and_supports_one_time_comparison(self):
+        import uuid
+        with tempfile.TemporaryDirectory() as temp:
+            with patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}, clear=False):
+                output = StringIO()
+                with redirect_stdout(output):
+                    self.assertEqual(main(["measure", "status", "--json"]), 0)
+                self.assertFalse(json.loads(output.getvalue())["measurement_enabled"])
+                skill = str(uuid.uuid4())
+                baseline = str(uuid.uuid4())
+                for run_id, variant, start, finish in (
+                    (skill, "skill", 10, 12), (baseline, "baseline", 30, 34)
+                ):
+                    start_args = ["measure", "begin", "--run-id", run_id, "--variant", variant,
+                                  "--task-level", "L1", "--task-kind", "bugfix",
+                                  "--root-model", "gpt-6-sol", "--project", temp,
+                                  "--primary-used", str(start), "--secondary-used", "5",
+                                  "--primary-reset", "1000", "--secondary-reset", "2000"]
+                    end_args = ["measure", "end", "--run-id", run_id, "--outcome", "success",
+                                "--primary-used", str(finish), "--secondary-used", "6",
+                                "--primary-reset", "1000", "--secondary-reset", "2000"]
+                    with redirect_stdout(StringIO()):
+                        self.assertEqual(main(start_args), 0)
+                        self.assertEqual(main(end_args), 0)
+                output = StringIO()
+                with redirect_stdout(output):
+                    self.assertEqual(main(["measure", "compare", "--skill-run", skill,
+                                           "--baseline-run", baseline, "--json"]), 0)
+                self.assertEqual(json.loads(output.getvalue())["windows"]["primary"]["baseline_minus_skill_pp"], 2)
+
     def yellow_snapshot(self) -> QuotaSnapshot:
         return QuotaSnapshot(
             fetched_at=0,
@@ -123,6 +153,7 @@ class CliTests(unittest.TestCase):
                 with redirect_stdout(first_out), redirect_stderr(first_err):
                     self.assertEqual(main(["install", "--yes"]), 0)
                 self.assertIn("Managed settings", first_out.getvalue())
+                self.assertEqual(first_err.getvalue().count("Optional allowance measurement"), 1)
                 self.assertTrue((Path(env["CODEX_HOME"]) / "config.toml").exists())
 
                 second_out, second_err = StringIO(), StringIO()
