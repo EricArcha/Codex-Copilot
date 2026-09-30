@@ -6,7 +6,7 @@ When `codex-copilot status --json` says `measurement_enabled: true`, generate on
 
 ```text
 codex-copilot measure begin --if-enabled --run-id <uuid> --variant skill \
-  --task-level L2 --task-kind bugfix --root-model gpt-6-sol --project <current-project-root>
+  --task-level L2 --task-kind bugfix --root-model gpt-6.1-sol --project <current-project-root>
 ```
 
 Use `bugfix`, `feature`, `refactor`, or `maintenance` as a coarse task kind. Reuse this UUID for any `_delegate` calls. A skill-run begin only uses the existing 60-second CLI quota cache; it never starts an extra quota read. If the Start snapshot came from the Codex app tool instead, pass only available numeric `usedPercent` and `resetsAt` values as `--primary-used`, `--secondary-used`, `--primary-reset`, and `--secondary-reset`. Missing values make the observation incomplete and exclude it from comparisons.

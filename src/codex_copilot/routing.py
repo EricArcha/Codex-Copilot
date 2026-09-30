@@ -100,7 +100,7 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
     )
 
     if band is QuotaBand.GREEN:
-        root_model = "gpt-6-astra" if profile is Profile.PREMIUM and level is TaskLevel.L3 else "gpt-6-sol"
+        root_model = "gpt-6-astra" if profile is Profile.PREMIUM and level is TaskLevel.L3 else "gpt-6.1-sol"
         root_effort = "low" if profile is Profile.CONSERVATIVE else "medium"
         return Route(
             **base,
@@ -116,7 +116,7 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
     if band is QuotaBand.YELLOW:
         return Route(
             **base,
-            root_model="gpt-6-sol",
+            root_model="gpt-6.1-sol",
             root_effort="medium",
             max_subagents=0 if level is TaskLevel.L0 else 1,
             allow_sol=level is TaskLevel.L3 and profile is not Profile.PREMIUM,
@@ -129,7 +129,7 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
         paused = level in {TaskLevel.L2, TaskLevel.L3}
         return Route(
             **base,
-            root_model="gpt-6-luna" if level is TaskLevel.L0 else "gpt-6-sol",
+            root_model="gpt-6-luna" if level is TaskLevel.L0 else "gpt-6.1-sol",
             root_effort="low",
             max_subagents=0,
             allow_sol=False,
@@ -156,14 +156,14 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
         )
     return Route(
         **base,
-        root_model="gpt-6-sol",
+        root_model="gpt-6.1-sol",
         root_effort="medium",
         max_subagents=0 if level is TaskLevel.L0 else 1,
         allow_sol=False,
         allow_astra=False,
         allow_max_or_ultra=False,
         pause=False,
-        reason="Quota is unavailable; use a conservative GPT-6 Sol route and no premium escalation.",
+        reason="Quota is unavailable; use a conservative GPT-6.1 Sol route and no premium escalation.",
     )
 
 

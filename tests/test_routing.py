@@ -28,13 +28,13 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(band_for_windows(90, 19), QuotaBand.RED)
 
     def test_premium_uses_astra_only_for_l3_root_route(self):
-        self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L2, Profile.PREMIUM).root_model, "gpt-6-sol")
+        self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L2, Profile.PREMIUM).root_model, "gpt-6.1-sol")
         self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L3, Profile.PREMIUM).root_model, "gpt-6-astra")
 
     def test_balanced_routes_use_sol_and_luna_by_task_criticality(self):
-        self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L1).root_model, "gpt-6-sol")
+        self.assertEqual(route_for(QuotaBand.GREEN, TaskLevel.L1).root_model, "gpt-6.1-sol")
         self.assertEqual(route_for(QuotaBand.RED, TaskLevel.L0).root_model, "gpt-6-luna")
-        self.assertEqual(route_for(QuotaBand.RED, TaskLevel.L1).root_model, "gpt-6-sol")
+        self.assertEqual(route_for(QuotaBand.RED, TaskLevel.L1).root_model, "gpt-6.1-sol")
 
     def test_route_matrix_invariants(self):
         for band in QuotaBand:

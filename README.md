@@ -10,9 +10,9 @@
 
 > Made for **Codex Desktop** on macOS or Linux.
 
-## Important change — GPT-6 routing
+## Important change — GPT-6.1 Sol routing
 
-Codex-Copilot now routes work across the GPT-6 family: **Luna** handles focused exploration and is the default subagent, **Sol** handles normal development and review, and **Astra** is reserved for premium L3 high-risk work and final review. Existing full-install users should run `./bin/codex-copilot install` again, then restart Codex Desktop and open a new task.
+Codex-Copilot now routes work across the GPT-6 family: **Luna** handles focused exploration and is the default subagent, **GPT-6.1 Sol** handles normal development and review, and **Astra** is reserved for premium L3 high-risk work and final review. Existing full-install users should update their source checkout to this version, then run `./bin/codex-copilot install` again, then restart Codex Desktop and open a new task.
 
 ## Start in 30 seconds
 
@@ -91,7 +91,7 @@ codex-copilot measure on     # Opt in to task-level measurement
 codex-copilot measure off    # Stop new automatic measurement
 ```
 
-Allowance measurement is off by default. New installs and upgrades show the one-time opt-in command; enabling it once persists locally. When enabled, a skill task briefly notes that recording is on, reuses its start quota check, and makes at most one extra read at completion. Turning it off preserves prior records. Percentages are observations, not exact bills or proven savings. Codex-Copilot never redeems usage reset credits. Its GPT-6 routing uses Luna for focused exploration, Sol for standard coding and review, and Astra only for premium L3 work. It keeps local routing notes private: no prompts, code, command output, or raw project paths are stored.
+Allowance measurement is off by default. New installs and upgrades show the one-time opt-in command; enabling it once persists locally. When enabled, a skill task briefly notes that recording is on, reuses its start quota check, and makes at most one extra read at completion. Turning it off preserves prior records. Percentages are observations, not exact bills or proven savings. Codex-Copilot never redeems usage reset credits. Its GPT-6 routing uses Luna for focused exploration, GPT-6.1 Sol for standard coding and review, and Astra only for premium L3 work. It keeps local routing notes private: no prompts, code, command output, or raw project paths are stored.
 
 ## For contributors
 

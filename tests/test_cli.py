@@ -239,7 +239,7 @@ class CliTests(unittest.TestCase):
                     code = main(["launch", "--level", "complex", "--dry-run"])
                 self.assertEqual(code, 0)
                 data = json.loads(output.getvalue())
-                self.assertEqual(data["command"][2], "gpt-6-sol")
+                self.assertEqual(data["command"][2], "gpt-6.1-sol")
                 self.assertEqual(data["route"]["max_subagents"], 2)
 
     def test_trace_json_reports_retained_subagent_run(self):

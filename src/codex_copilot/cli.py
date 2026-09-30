@@ -335,7 +335,7 @@ def _launch(args: argparse.Namespace) -> int:
     model = route.root_model
     effort = route.root_effort
     if route.pause and args.override_quota and level.value in {"L2", "L3"}:
-        model, effort = "gpt-6-sol", "medium"
+        model, effort = "gpt-6.1-sol", "medium"
     extra = list(args.codex_args)
     if extra and extra[0] == "--":
         extra = extra[1:]

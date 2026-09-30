@@ -32,10 +32,10 @@ _PHASES = {"exploration", "implementation", "final_review"}
 _OUTCOMES = {"success", "failure"}
 _ROLE_CONFIGURATION = {
     "copilot_scout": ("gpt-6-luna", "low"),
-    "copilot_investigator": ("gpt-6-sol", "medium"),
-    "copilot_worker": ("gpt-6-sol", "medium"),
-    "copilot_reviewer": ("gpt-6-sol", "high"),
-    "copilot_final_reviewer": ("gpt-6-sol", "high"),
+    "copilot_investigator": ("gpt-6.1-sol", "medium"),
+    "copilot_worker": ("gpt-6.1-sol", "medium"),
+    "copilot_reviewer": ("gpt-6.1-sol", "high"),
+    "copilot_final_reviewer": ("gpt-6.1-sol", "high"),
     "copilot_astra_final_reviewer": ("gpt-6-astra", "high"),
 }
 
