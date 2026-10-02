@@ -12,7 +12,7 @@ If the CLI is missing, inspect the known launcher location or run diagnostics fr
 
 ## Install or upgrade when requested
 
-Clone `https://github.com/EricArcha/Codex-Copilot.git` and enter that directory. On Windows PowerShell:
+Clone `https://github.com/EricArcha/Codex-Copilot.git`, enter that directory and select the desired released tag (currently `git checkout v1.0.0`). For an existing checkout, preserve local work and fetch tags before selecting a release; do not overwrite or reset user changes. On Windows PowerShell:
 
 ```powershell
 .\bin\codex-copilot.cmd install --dry-run
@@ -47,6 +47,21 @@ $env:PATH = "$HOME\.local\bin;$env:PATH"
 For persistent Windows user PATH, preview and install with `--add-to-path`. It never edits system PATH and removes only its owned entry on uninstall. Open a new terminal after changing persistent PATH. Use the displayed bin directory if `CODEX_COPILOT_BIN_DIR` is set. On macOS/Linux configure your shell PATH yourself.
 
 Windows launcher discovers `py -3` or `python` and requires Python 3.11+. It records no version-specific Python directory. Runtime metadata supports custom share/bin locations. Codex must be on PATH as a native executable or a standard npm wrapper with Node and its adjacent JS entry. Arbitrary batch wrappers fail with an actionable diagnostic. Quote shell metacharacters as required by the calling shell.
+
+## Acceptance after install or upgrade
+
+Restart Codex Desktop and open a fresh chat to load updated roles. Verify the
+installed `--version` matches the selected release and `doctor --json` reports
+complete with intact managed files. Use the displayed launcher path if PATH is
+not configured. Repeating install from the same release should report no changes.
+A complete installation verifies artifacts/settings, not model entitlement.
+
+`status --refresh --json` must show real quota windows with source=app-server.
+For permission_denied, state_initialization_failed or state_write_failed, use
+[quota access](quota.md): command-scoped host-approved execution for necessary
+CLI/local-state access. Never change global sandbox policy. Resolve state access
+before trace-writing delegation; Desktop observations cannot replace that gate.
+Unresolved errors use unknown temporarily and are not successful quota acceptance.
 
 ## Quota and recovery
 
