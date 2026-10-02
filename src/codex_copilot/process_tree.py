@@ -34,6 +34,9 @@ def stop(proc: subprocess.Popen, job) -> None:
         if not close(job):
             raise ctypes.WinError(ctypes.get_last_error())
     else:
+        # Reap an already exited leader before signaling its group. On Darwin,
+        # a group containing only the zombie leader can report EPERM.
+        proc.poll()
         try:
             os.killpg(proc.pid, signal.SIGTERM)
         except ProcessLookupError:

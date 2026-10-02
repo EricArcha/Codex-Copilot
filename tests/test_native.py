@@ -79,6 +79,17 @@ class PipeTests(unittest.TestCase):
         with self.assertRaises(TimeoutError):
             self.rpc("import json; msg=json.dumps({'method':'notice'});\nwhile True: print(msg,flush=True)", timeout=0.3)
 
+    def test_cleanup_error_still_closes_pipes_and_reader(self):
+        from codex_copilot import process_tree
+        original_stop = process_tree.stop
+
+        def fail_after_stop(proc, job):
+            original_stop(proc, job)
+            raise OSError("cleanup error")
+
+        with patch("codex_copilot.quota.process_tree.stop", side_effect=fail_after_stop), self.assertRaisesRegex(OSError, "cleanup error"):
+            self.rpc("print('{\"id\":1,\"result\":{}}')")
+
     def test_child_holding_stdout_is_reaped_even_after_parent_eof(self):
         script = "import subprocess,sys; subprocess.Popen([sys.executable,'-c','import time;time.sleep(10)']); print('{\"id\":1,\"result\":{}}',flush=True)"
         started = time.monotonic()

@@ -206,10 +206,12 @@ def _read_rpc_result(timeout: float) -> dict[str, Any]:
                 return result
     finally:
         stop.set()
-        process_tree.stop(proc, job)
-        reader.join(timeout=1)
-        proc.stdin.close()
-        proc.stdout.close()
+        try:
+            process_tree.stop(proc, job)
+        finally:
+            reader.join(timeout=1)
+            proc.stdin.close()
+            proc.stdout.close()
         if reader.is_alive():
             raise RuntimeError("App Server stdout reader did not stop")
 
