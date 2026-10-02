@@ -10,7 +10,9 @@
 
 > Made for **Codex Desktop** on Windows, macOS and Linux. Requires Python 3.11+ and Codex CLI 0.147.0+.
 
-## Important change — GPT-6.1 Sol routing
+## Stable release: 1.0.0
+
+Codex-Copilot 1.0.0 establishes stable installation, CLI/JSON compatibility and release boundaries. See [release](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.0.0), [CHANGELOG](CHANGELOG.md), [compatibility](docs/compatibility.md), [release policy](docs/releasing.md) and [contributing](CONTRIBUTING.md).
 
 Codex-Copilot now routes work across the GPT-6 family: **Luna** handles focused exploration and is the default subagent, **GPT-6.1 Sol** handles normal development and review, and **Astra** is reserved for premium L3 high-risk work and final review. Existing full-install users should update their source checkout to this version, then run `./bin/codex-copilot install` again, then restart Codex Desktop and open a new task.
 
@@ -30,6 +32,8 @@ $codex-copilot help me build this feature end to end.
 
 That is it. No agents, CLI files, or Codex settings are added.
 
+Skill-only provides workflow instructions. Actual CLI quota reads, managed roles and the executable delegation gate require the full installation below.
+
 ## Want the full cockpit?
 
 The optional full install adds six custom agents, the `codex-copilot` command, and a few managed Codex settings for multi-agent work. Copy mode is the default and needs no administrator rights. On macOS/Linux:
@@ -37,6 +41,7 @@ The optional full install adds six custom agents, the `codex-copilot` command, a
 ```bash
 git clone https://github.com/EricArcha/Codex-Copilot.git
 cd Codex-Copilot
+git checkout v1.0.0
 ./bin/codex-copilot install --dry-run  # look first
 ./bin/codex-copilot install            # confirm in the terminal
 ```
@@ -46,6 +51,7 @@ On Windows PowerShell:
 ```powershell
 git clone https://github.com/EricArcha/Codex-Copilot.git
 cd Codex-Copilot
+git checkout v1.0.0
 .\bin\codex-copilot.cmd install --dry-run
 .\bin\codex-copilot.cmd install
 & "$HOME\.local\bin\codex-copilot.cmd" doctor --json
@@ -123,11 +129,11 @@ PowerShell: `$env:PYTHONPATH = 'src'`, then `python -m unittest discover -s test
 
 See [verification evidence and remaining limits](docs/verification.md) for the actual local results; consult PR checks for executed CI results.
 
-## Stable releases
 
-Current version: **1.0.0**. See [CHANGELOG](CHANGELOG.md),
-[compatibility](docs/compatibility.md), [release policy](docs/releasing.md) and
-[contributing](CONTRIBUTING.md). Update source, review `install --dry-run`, install,
-then restart Desktop and open a fresh chat. Quota queries blocked by the Desktop
-sandbox require command-scoped host-approved execution; see
-[quota access](skill/codex-copilot/references/quota.md).
+## Verify and upgrade
+
+For an existing source checkout, fetch tags and select the desired released tag after preserving local work. Review the platform installer dry-run, install, then restart Desktop and open a fresh chat. Verify the installed version is 1.0.0 and `doctor --json` reports complete. Use the displayed full launcher path if it is not on PATH.
+
+`status --refresh --json` must return real windows with source=app-server. A complete installation alone does not certify live quota or model access. For permission/state errors use command-scoped host-approved execution described in [quota access](skill/codex-copilot/references/quota.md). Unknown is temporary degradation; Desktop percentages do not replace the executable gate. A live cache-write warning preserves the observation but state access must be resolved before trace-writing commands.
+
+Detailed platform, upgrade, conflict and recovery instructions: [installation reference](skill/codex-copilot/references/installation.md).

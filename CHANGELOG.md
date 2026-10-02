@@ -3,6 +3,11 @@
 Dates identify source version changes; 0.1.x entries are historical source
 versions, not retroactively claimed GitHub releases.
 
+## [Unreleased]
+
+- Align README release entry points and Skill-only/full-install capability boundaries.
+- Expand installation acceptance and quota-permission guidance for the published 1.0.0 workflow.
+
 ## [1.0.0] - 2026-10-02
 
 - Establish a stable CLI, JSON, installation and persistent-data contract.

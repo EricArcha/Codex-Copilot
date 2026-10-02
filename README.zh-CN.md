@@ -10,7 +10,9 @@
 
 > 面向 Windows、macOS 和 Linux 上的 **Codex Desktop**。要求 Python 3.11+、Codex CLI 0.147.0+。
 
-## 重要变更：GPT-6.1 Sol 路由
+## 稳定版本：1.0.0
+
+Codex-Copilot 1.0.0 建立了安装、CLI/JSON 兼容性及发布边界。参见[正式版本](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.0.0)、[变更记录](CHANGELOG.md)、[兼容承诺](docs/compatibility.md)、[发布规则](docs/releasing.md)和[贡献入口](CONTRIBUTING.md)。
 
 Codex-Copilot 现已采用 GPT-6 分层路由：**Luna** 用于定向探索，也是默认子代理；**GPT-6.1 Sol** 负责常规开发与审查；**Astra** 仅用于 premium 的 L3 高风险任务和最终审查。已完成完整安装的用户，请先将源码仓库更新到此版本，再运行 `./bin/codex-copilot install`，然后重启 Codex Desktop 并新开任务。
 
@@ -30,6 +32,8 @@ $codex-copilot 帮我把这个功能从头做到验证完成。
 
 就这样。不会新增 agents、CLI 文件，也不会修改 Codex 设置。
 
+Skill-only 提供工作流指引。CLI 的真实额度查询、受管角色和可执行委派门禁需要下面的完整安装。
+
 ## 想开启完整驾驶舱？
 
 完整安装是可选的：它会加入六个自定义 agents、`codex-copilot` 命令，以及少量多代理所需的 Codex 受管设置。默认 copy 模式无需管理员权限。macOS/Linux 使用：
@@ -37,6 +41,7 @@ $codex-copilot 帮我把这个功能从头做到验证完成。
 ```bash
 git clone https://github.com/EricArcha/Codex-Copilot.git
 cd Codex-Copilot
+git checkout v1.0.0
 ./bin/codex-copilot install --dry-run  # 先看看会发生什么
 ./bin/codex-copilot install            # 在终端确认后安装
 ```
@@ -46,6 +51,7 @@ Windows PowerShell 使用：
 ```powershell
 git clone https://github.com/EricArcha/Codex-Copilot.git
 cd Codex-Copilot
+git checkout v1.0.0
 .\bin\codex-copilot.cmd install --dry-run
 .\bin\codex-copilot.cmd install
 & "$HOME\.local\bin\codex-copilot.cmd" doctor --json
@@ -123,10 +129,11 @@ PowerShell 先设置 `$env:PYTHONPATH = 'src'`，再执行 `python -m unittest d
 
 实际本地验证结果与未验证限制见 [验收记录](docs/verification.md)；已执行的 CI 结果以 PR checks 为准。
 
-## 稳定版本
 
-当前版本：**1.0.0**。参见[变更记录](CHANGELOG.md)、
-[兼容承诺](docs/compatibility.md)、[发布规则](docs/releasing.md)和
-[贡献入口](CONTRIBUTING.md)。更新源码，审阅 `install --dry-run` 后安装，
-再重启 Desktop 并新开聊天。沙箱阻挡额度查询时，按宿主审批机制对必要命令
-申请受控执行；参见[额度访问](skill/codex-copilot/references/quota.md)。
+## 安装验收与升级
+
+已有源码目录先保留本地改动，获取标签并选择目标正式版本，再按平台运行安装预览和安装。完成后重启 Desktop 并新开聊天；确认版本为 1.0.0，`doctor --json` 为 complete。启动器不在 PATH 时使用安装器展示的完整路径。
+
+`status --refresh --json` 应返回真实窗口且 source=app-server。安装完整不代表额度或模型权限已验证。权限或状态初始化失败时，按[额度访问](skill/codex-copilot/references/quota.md)对必要命令申请宿主受控执行；unknown 只用于临时降级，Desktop 百分比不能代替可执行门禁。缓存写入警告保留真实观测，但写 trace 前仍需解决状态目录访问。
+
+各平台升级、冲突和恢复步骤见[安装 reference](skill/codex-copilot/references/installation.md)。
