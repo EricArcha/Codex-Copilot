@@ -4,6 +4,31 @@ from __future__ import annotations
 import os
 import signal
 import subprocess
+import sys
+
+
+def _signal_group(pgid: int, signum: int) -> None:
+    try:
+        os.killpg(pgid, signum)
+    except ProcessLookupError:
+        pass
+    except PermissionError:
+        if sys.platform != "darwin":
+            raise
+        # Darwin excludes zombies from killpg's iteration and returns EPERM
+        # if none can be signaled. Confirm there are no live members rather
+        # than hiding a real permission error (XNU kern_sig.c: killpg1).
+        try:
+            result = subprocess.run(["/bin/ps", "-axo", "pgid=,stat="], capture_output=True,
+                                    text=True, encoding="utf-8", check=True, timeout=1)
+            members = [line.split() for line in result.stdout.splitlines() if line.strip()]
+            if any(len(fields) != 2 or not fields[0].isdigit() for fields in members):
+                raise ValueError("Invalid process-group state")
+            live = any(int(group) == pgid and not state.startswith("Z") for group, state in members)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            raise PermissionError("Could not verify denied process-group cleanup") from None
+        if live:
+            raise
 
 
 def start(command: list[str], **kwargs):
@@ -37,10 +62,7 @@ def stop(proc: subprocess.Popen, job) -> None:
         # Reap an already exited leader before signaling its group. On Darwin,
         # a group containing only the zombie leader can report EPERM.
         proc.poll()
-        try:
-            os.killpg(proc.pid, signal.SIGTERM)
-        except ProcessLookupError:
-            pass
+        _signal_group(proc.pid, signal.SIGTERM)
     try:
         proc.wait(timeout=1)
     except subprocess.TimeoutExpired:
@@ -49,10 +71,7 @@ def stop(proc: subprocess.Popen, job) -> None:
     finally:
         if os.name != "nt":
             # The parent may have exited while a child ignored SIGTERM.
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            _signal_group(proc.pid, signal.SIGKILL)
 
 
 def _windows_job(proc):

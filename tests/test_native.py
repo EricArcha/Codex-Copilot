@@ -92,9 +92,51 @@ class PipeTests(unittest.TestCase):
 
     def test_child_holding_stdout_is_reaped_even_after_parent_eof(self):
         script = "import subprocess,sys; subprocess.Popen([sys.executable,'-c','import time;time.sleep(10)']); print('{\"id\":1,\"result\":{}}',flush=True)"
+        # Exercise Darwin's asynchronous reaping race repeatedly on real pipes.
+        for attempt in range(10 if sys.platform == "darwin" else 1):
+            with self.subTest(attempt=attempt):
+                started = time.monotonic()
+                self.assertEqual(self.rpc(script), {})
+                self.assertLess(time.monotonic() - started, 3)
+
+    @unittest.skipIf(os.name == "nt", "POSIX signal behavior")
+    def test_child_ignoring_term_is_killed_with_inherited_pipe(self):
+        child = "import signal,time;signal.signal(signal.SIGTERM,signal.SIG_IGN);print('ready',flush=True);time.sleep(10)"
+        script = "import subprocess,sys; p=subprocess.Popen([sys.executable,'-u','-c'," + repr(child) + "],stdout=subprocess.PIPE,stderr=sys.stdout);p.stdout.readline();print('{\"id\":1,\"result\":{}}',flush=True)"
         started = time.monotonic()
         self.assertEqual(self.rpc(script), {})
         self.assertLess(time.monotonic() - started, 3)
+
+
+class ProcessGroupTests(unittest.TestCase):
+    def test_darwin_permission_error_requires_no_live_group_members(self):
+        from codex_copilot.process_tree import _signal_group
+        for output, rejected in [("42 Z\n43 S\n", False), ("43 S\n", False), ("42 S\n", True), ("unexpected\n", True)]:
+            with self.subTest(output=output), patch("codex_copilot.process_tree.sys.platform", "darwin"), patch(
+                "codex_copilot.process_tree.os.killpg", side_effect=PermissionError("denied"), create=True
+            ), patch("codex_copilot.process_tree.subprocess.run", return_value=subprocess.CompletedProcess([], 0, output, "")):
+                if rejected:
+                    with self.assertRaises(PermissionError):
+                        _signal_group(42, 15)
+                else:
+                    _signal_group(42, 15)
+
+    def test_other_platform_permission_errors_are_not_ignored(self):
+        from codex_copilot.process_tree import _signal_group
+        with patch("codex_copilot.process_tree.sys.platform", "linux"), patch(
+            "codex_copilot.process_tree.os.killpg", side_effect=PermissionError("denied"), create=True
+        ), patch("codex_copilot.process_tree.subprocess.run") as listing:
+            with self.assertRaises(PermissionError):
+                _signal_group(42, 15)
+            listing.assert_not_called()
+
+    def test_darwin_listing_failure_is_not_ignored(self):
+        from codex_copilot.process_tree import _signal_group
+        with patch("codex_copilot.process_tree.sys.platform", "darwin"), patch(
+            "codex_copilot.process_tree.os.killpg", side_effect=PermissionError("denied"), create=True
+        ), patch("codex_copilot.process_tree.subprocess.run", side_effect=subprocess.TimeoutExpired("ps", 1)):
+            with self.assertRaises(PermissionError):
+                _signal_group(42, 15)
 
 
 class NativeInstallTests(unittest.TestCase):

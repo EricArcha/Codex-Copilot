@@ -3,7 +3,7 @@
 Local validation on 2026-10-02 used Windows, Python 3.13.7 and Codex CLI 0.159.0-alpha.12.1.
 
 - Baseline at `8df44bb`: 71 tests, 5 failures and 13 errors. The full installer rejected Windows; one error independently demonstrated missing symlink privilege.
-- Updated full suite: 100 tests discovered; 95 passed and 5 skipped. Four skips require unavailable Windows symlink privilege; one executes the original POSIX-only 0.1.0 installer. Copy installation and business logic are not skipped. The final affected-module rerun also passed.
+- Updated full suite: 104 tests discovered; 98 passed and 6 skipped. Four skips require unavailable Windows symlink privilege; two exercise POSIX-only behavior (the original 0.1.0 installer and a child ignoring SIGTERM). Copy installation and business logic are not skipped. The final affected-module rerun also passed.
 - The installed Skill Creator `quick_validate.py` accepted the updated Skill.
 - Real app-server quota reads succeeded. Tests additionally verify unknown/cache degradation, malformed responses, EOF, timeout, partial lines and descendant cleanup. No quota fixture was used for the live check.
 - Real copy installation adopted the verified existing Skill registration after backing it up, installed all six regular agent files and managed settings, and reported `doctor: complete`. Upgrading to the reviewed source and a subsequent no-change installation succeeded. Persistent user PATH was not modified.
@@ -17,3 +17,5 @@ After the user restarted Codex Desktop on 2026-10-02, all six installed role typ
 Caught installation failures retain unique backups and a recovery journal. Forced process interruption and external file locks may require manual recovery. The persistent Windows PATH registry operation is opt-in and its lifecycle is tested using a mocked registry; no live user PATH write was performed during validation.
 
 The archived fixture in `tests/fixtures/release-0.1.0.zip` contains the original source components and MIT license from commit `8df44bb92beb45a7e387a4a2cd9d7fe381ea9662`, for offline upgrade testing.
+
+A later macOS CI run revealed the same Darwin EPERM edge on an exited descendant group during the final SIGKILL. The cleanup helper now checks /bin/ps group/state output only after Darwin denies a signal: it accepts an absent or zombie-only group, preserves denials for live members, and fails if inspection is unavailable or malformed. This follows [Apple XNU killpg1](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sig.c#L1612), which excludes zombies from group iteration. Regression checks include real TERM-ignoring descendants, ten repeated real descendant cleanups on macOS, and explicit live-member/inspection-error cases. The existing independent reviewer rechecked this affected finding without blocking findings.
