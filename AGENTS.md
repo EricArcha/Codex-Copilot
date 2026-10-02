@@ -32,3 +32,11 @@ python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_
 ```
 
 On Windows PowerShell, use `$env:PYTHONPATH = 'src'`, then `python -m unittest discover -s tests -v` and `python -X utf8 "$HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py" skill/codex-copilot` (respect `CODEX_HOME` when set). PyYAML is needed only by the external Skill validator. Probe symlink capability; skip only tests requiring unavailable privilege, never copy-mode or business failures. Perform installation experiments with all five path overrides in isolated directories and no persistent user PATH changes.
+
+## Governance
+
+Follow [CONTRIBUTING.md](CONTRIBUTING.md), [release policy](docs/releasing.md) and
+[compatibility contract](docs/compatibility.md). `VERSION` is authoritative; run
+`python3 scripts/check_release.py` before completion and with `--tag v<version>`
+before release. Update CHANGELOG for user-facing changes. Permission, installation
+/migration and delegation changes require L3 independent final review.

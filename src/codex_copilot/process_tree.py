@@ -43,7 +43,7 @@ def start(command: list[str], **kwargs):
     except Exception:
         proc.kill()
         proc.wait(timeout=2)
-        for pipe in (proc.stdin, proc.stdout):
+        for pipe in (proc.stdin, proc.stdout, proc.stderr):
             if pipe:
                 pipe.close()
         raise

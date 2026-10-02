@@ -191,7 +191,10 @@ def _status_text(snapshot: QuotaSnapshot) -> str:
     if snapshot.reset_credits_available:
         lines.append(f"Available reset credits: {snapshot.reset_credits_available} (never redeemed automatically)")
     if snapshot.error:
-        lines.append(f"Quota unavailable: {snapshot.error}")
+        label = "Quota unavailable" if snapshot.source == "unavailable" else "Quota warning"
+        lines.append(f"{label}: {snapshot.error}")
+        if snapshot.error_category:
+            lines.append(f"Error category: {snapshot.error_category}; retryable: {snapshot.retryable}")
     return "\n".join(lines)
 
 
@@ -292,6 +295,9 @@ def doctor() -> dict[str, Any]:
     quota_detail = quota.error or _status_text(quota).splitlines()[0]
     if quota.band == QuotaBand.UNKNOWN.value:
         warnings.append(f"Quota check unavailable: {quota_detail}")
+        add("quota", True, quota_detail, severity="warning")
+    elif quota.error:
+        warnings.append(f"Quota warning: {quota_detail}")
         add("quota", True, quota_detail, severity="warning")
     else:
         add("quota", True, quota_detail)

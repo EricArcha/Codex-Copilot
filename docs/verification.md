@@ -19,3 +19,14 @@ Caught installation failures retain unique backups and a recovery journal. Force
 The archived fixture in `tests/fixtures/release-0.1.0.zip` contains the original source components and MIT license from commit `8df44bb92beb45a7e387a4a2cd9d7fe381ea9662`, for offline upgrade testing.
 
 A later macOS CI run revealed the same Darwin EPERM edge on an exited descendant group during the final SIGKILL. The cleanup helper now checks /bin/ps group/state output only after Darwin denies a signal: it accepts an absent or zombie-only group, preserves denials for live members, and fails if inspection is unavailable or malformed. This follows [Apple XNU killpg1](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_sig.c#L1612), which excludes zombies from group iteration. Regression checks include real TERM-ignoring descendants, ten repeated real descendant cleanups on macOS, and explicit live-member/inspection-error cases. The existing independent reviewer rechecked this affected finding without blocking findings.
+
+## 1.0.0 release validation (2026-10-02)
+
+- Source baseline: main 8f6e23e, 104 tests passed locally on macOS (7 platform-specific skips); Skill validator passed.
+- Immutable 0.1.1 upgrade fixture is an archive of src, skill, agents, bin, VERSION and LICENSE from 8f6e23e3e2cca89cbcc81278380074c0220f2ebf. The existing 0.1.0 fixture is unchanged.
+- Real restricted-host query returns unknown with state_initialization_failed; no raw stderr is emitted or saved. The same host-approved query returns real windows with source=app-server.
+- The actual L3 balanced final-review gate refreshed live quota with source=app-server and retained its cumulative budget. Trace run 3793b6b4-9036-4488-9bca-f9d0e6f4a5af records the declared review.
+- User-install dry-run upgrades only managed artifacts; all six managed settings are unchanged. Actual installation is performed only after release verification.
+- Version metadata and v1.0.0 tag checks pass. Cross-platform CI and final review evidence are recorded in the release PR. Restart-dependent fresh-chat role loading requires the user to restart Desktop; this running chat cannot certify a future restart.
+
+- Final local suite: 114 tests passed with 7 platform-specific skips; Skill and release metadata validators passed. Independent GPT-6.1 Sol High review found one denied-cache exception leak. The cache existence probe was removed; refresh/non-refresh regressions now pass. The reviewer rechecked affected paths (26 tests) and reported no blocking findings.

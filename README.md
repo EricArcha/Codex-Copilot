@@ -122,3 +122,12 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 PowerShell: `$env:PYTHONPATH = 'src'`, then `python -m unittest discover -s tests -v`. Also run the Skill Creator `quick_validate.py` as specified in [AGENTS.md](AGENTS.md). Product code uses only the standard library; PyYAML is only for the external validator. CI covers Python 3.11–3.14 on all three platforms. Symlink tests probe actual capability; ordinary-user Windows copy installation remains fully tested.
 
 See [verification evidence and remaining limits](docs/verification.md) for the actual local results; consult PR checks for executed CI results.
+
+## Stable releases
+
+Current version: **1.0.0**. See [CHANGELOG](CHANGELOG.md),
+[compatibility](docs/compatibility.md), [release policy](docs/releasing.md) and
+[contributing](CONTRIBUTING.md). Update source, review `install --dry-run`, install,
+then restart Desktop and open a fresh chat. Quota queries blocked by the Desktop
+sandbox require command-scoped host-approved execution; see
+[quota access](skill/codex-copilot/references/quota.md).

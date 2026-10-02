@@ -40,6 +40,8 @@ class QuotaSnapshot:
     spend_control_reached: bool
     source: str
     error: str | None = None
+    error_category: str | None = None
+    retryable: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -101,7 +103,51 @@ def snapshot_from_result(result: dict[str, Any], source: str = "app-server") -> 
     )
 
 
-def unknown_snapshot(error: str) -> QuotaSnapshot:
+_DIAGNOSTICS = {
+    "permission_denied": ("Quota query was denied permission; use host-approved execution for this command.", True),
+    "state_initialization_failed": ("App Server could not initialize local state; check host permissions and state availability.", True),
+    "process_exit": ("App Server exited before returning quota; check the Codex installation.", True),
+    "authentication_failed": ("Quota query requires a valid ChatGPT login.", False),
+    "initialization_failed": ("App Server initialization failed.", False),
+    "timeout": ("App Server quota query timed out.", True),
+    "protocol_error": ("App Server returned an invalid quota response.", False),
+    "state_write_failed": ("Quota was read, but its local cache could not be written; use host-approved execution for local state access.", True),
+}
+
+
+class QuotaReadError(RuntimeError):
+    """A fixed diagnostic; raw child output must never leave the reader."""
+
+    def __init__(self, category: str):
+        self.category = category
+        super().__init__(_DIAGNOSTICS[category][0])
+
+
+def _failure_category(exc: Exception) -> str:
+    if isinstance(exc, QuotaReadError):
+        return exc.category
+    if isinstance(exc, PermissionError):
+        return "permission_denied"
+    if isinstance(exc, (TimeoutError, subprocess.TimeoutExpired)):
+        return "timeout"
+    if isinstance(exc, (ValueError, KeyError, TypeError)):
+        return "protocol_error"
+    return "process_exit"
+
+
+def _stderr_category(raw: bytes, default: str = "process_exit") -> str:
+    # Inspect only the bounded in-memory tail. Never return or persist its text.
+    text = raw.decode("utf-8", errors="replace").lower()
+    if "failed to initialize sqlite state runtime" in text or "failed to initialize state runtime" in text:
+        return "state_initialization_failed"
+    if "permission denied" in text or "operation not permitted" in text or "access is denied" in text:
+        return "permission_denied"
+    if "not logged in" in text or "authentication required" in text or "unauthorized" in text:
+        return "authentication_failed"
+    return default
+
+
+def unknown_snapshot(error: str, *, category: str | None = None) -> QuotaSnapshot:
     return QuotaSnapshot(
         fetched_at=int(time.time()),
         band=QuotaBand.UNKNOWN.value,
@@ -115,6 +161,8 @@ def unknown_snapshot(error: str) -> QuotaSnapshot:
         spend_control_reached=False,
         source="unavailable",
         error=error,
+        error_category=category,
+        retryable=_DIAGNOSTICS[category][1] if category else None,
     )
 
 
@@ -130,7 +178,7 @@ def _read_rpc_result(timeout: float) -> dict[str, Any]:
         codex_command(["app-server", "--listen", "stdio://"]),
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",
         errors="strict",
@@ -138,6 +186,7 @@ def _read_rpc_result(timeout: float) -> dict[str, Any]:
     )
     assert proc.stdin is not None
     assert proc.stdout is not None
+    assert proc.stderr is not None
     messages = [
         {
             "method": "initialize",
@@ -174,6 +223,29 @@ def _read_rpc_result(timeout: float) -> dict[str, Any]:
         except (OSError, ValueError) as exc:
             deliver("error", exc)
 
+    stderr_tail = bytearray()
+    stderr_lock = threading.Lock()
+
+    def read_stderr() -> None:
+        try:
+            while True:
+                chunk = proc.stderr.buffer.read1(4096)
+                if not chunk:
+                    return
+                with stderr_lock:
+                    stderr_tail.extend(chunk)
+                    del stderr_tail[:-8192]
+        except (OSError, ValueError):
+            return
+
+    def child_failure(default: str = "process_exit") -> QuotaReadError:
+        stderr_reader.join(timeout=0.1)
+        with stderr_lock:
+            return QuotaReadError(_stderr_category(bytes(stderr_tail), default))
+
+    stderr_reader = threading.Thread(target=read_stderr, name="codex-copilot-quota-stderr", daemon=True)
+    stderr_reader.start()
+
     reader = threading.Thread(target=read_stdout, name="codex-copilot-quota-reader", daemon=True)
     reader.start()
     try:
@@ -189,31 +261,38 @@ def _read_rpc_result(timeout: float) -> dict[str, Any]:
             except queue.Empty:
                 raise TimeoutError(f"App Server did not return quota within {timeout:g}s") from None
             if kind == "eof":
-                raise RuntimeError("App Server closed stdout before returning quota")
+                raise child_failure()
             if kind == "error":
-                raise RuntimeError("App Server stdout could not be read") from line
-            message = json.loads(line)
+                raise QuotaReadError("protocol_error") from None
+            try:
+                message = json.loads(line)
+            except ValueError:
+                raise QuotaReadError("protocol_error") from None
             if not isinstance(message, dict):
-                raise RuntimeError("App Server returned a non-object response")
+                raise QuotaReadError("protocol_error")
             if message.get("id") == 0 and "error" in message:
-                raise RuntimeError(f"App Server initialization failed: {message['error']}")
+                raise QuotaReadError("initialization_failed")
             if message.get("id") == 1:
                 if "error" in message:
-                    raise RuntimeError(str(message["error"]))
+                    raise QuotaReadError(_stderr_category(json.dumps(message["error"]).encode(), "protocol_error"))
                 result = message.get("result")
                 if not isinstance(result, dict):
-                    raise RuntimeError("App Server returned an invalid quota result")
+                    raise QuotaReadError("protocol_error")
                 return result
+    except BrokenPipeError:
+        raise child_failure() from None
     finally:
         stop.set()
         try:
             process_tree.stop(proc, job)
         finally:
             reader.join(timeout=1)
+            stderr_reader.join(timeout=1)
             proc.stdin.close()
             proc.stdout.close()
-        if reader.is_alive():
-            raise RuntimeError("App Server stdout reader did not stop")
+            proc.stderr.close()
+        if reader.is_alive() or stderr_reader.is_alive():
+            raise QuotaReadError("process_exit")
 
 
 def cache_path() -> Path:
@@ -227,8 +306,6 @@ def cached_quota(*, ttl: int = 60) -> QuotaSnapshot | None:
 
 def _cached_snapshot(cache: Path, ttl: int, *, source: str) -> QuotaSnapshot | None:
     """Load a recent successful app-server result and label its cache use."""
-    if not cache.exists():
-        return None
     try:
         raw = json.loads(cache.read_text(encoding="utf-8"))
         age = time.time() - raw["fetched_at"]
@@ -253,17 +330,24 @@ def get_quota(*, refresh: bool = False, timeout: float = 20.0, ttl: int = 60) ->
             return cached
     try:
         snapshot = snapshot_from_result(_read_rpc_result(timeout))
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        _atomic_json(cache, snapshot.to_dict())
+        try:
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            _atomic_json(cache, snapshot.to_dict())
+        except OSError:
+            # A successful live observation remains authoritative even if caching fails.
+            return replace(snapshot, error=_DIAGNOSTICS["state_write_failed"][0],
+                           error_category="state_write_failed", retryable=True)
         return snapshot
     except (OSError, ValueError, KeyError, TypeError, RuntimeError, TimeoutError, subprocess.SubprocessError) as exc:
         # A live read remains authoritative. A transient failure may reuse only
         # the tool's own very recent successful result, never caller-provided
         # quota input. The source and error make the degraded mode explicit.
+        category = _failure_category(exc)
+        message, retryable = _DIAGNOSTICS[category]
         cached = _cached_snapshot(cache, ttl, source="cache-fallback")
         if cached:
-            return replace(cached, error=f"Fresh quota read failed: {exc}")
-        return unknown_snapshot(str(exc))
+            return replace(cached, error=message, error_category=category, retryable=retryable)
+        return unknown_snapshot(message, category=category)
 
 
 def _snapshot_from_dict(raw: dict[str, Any]) -> QuotaSnapshot:
