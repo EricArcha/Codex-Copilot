@@ -19,3 +19,13 @@ tests and material limitations. Keep relevant evidence in docs/verification.md;
 never include secrets or raw authentication/error output. Update CHANGELOG for
 user-facing changes. Do not create new governance documents when an existing
 rule can be clarified in its current home.
+
+## Change boundary checklist
+
+Each PR includes three brief statements: responsibility owner, interfaces/trust
+boundaries changed, and exclusions. Explain why a new file belongs to that owner.
+Keep normative rules in their owner documents listed in AGENTS.md; link instead
+of duplicating. Verification records report evidence rather than setting policy.
+For a proposed expansion outside Desktop orchestration, stop scope creep and
+obtain explicit user requirements before implementation. Do not silently add a
+service, permission grant, background task or installed artifact.

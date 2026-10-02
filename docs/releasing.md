@@ -21,6 +21,8 @@ MAJOR. The existing 0.1.0 and 0.1.1 source versions were not tagged GitHub relea
    Merge only after checks on its latest commit and required review pass.
 5. Wait for verification on the resulting main commit. Run
    `python3 scripts/check_release.py --tag v<version>` on that exact commit.
+   Tag validation also rejects uncommitted/untracked content in product trees;
+   root-level user files outside those trees remain excluded from installation.
 6. Create an annotated `v<version>` tag pointing to that main commit, push it,
    and wait for tag verification. Publish a non-draft, non-prerelease GitHub
    Release with the changelog entry, upgrade instructions and known limitations.
@@ -33,3 +35,6 @@ version/tag. For a release defect, publish a new PATCH or MINOR as appropriate;
 stop distribution of a faulty release and document recovery. Keep verification
 and review evidence in the PR and docs/verification.md. CI enforcement supplements
 this policy; no branch-protection setting change is implied.
+
+Release-source checks also reject ignored non-runtime files inside product trees
+(e.g. credentials); generated .pyc/.pyo, which the installer omits, are the only exceptions.
