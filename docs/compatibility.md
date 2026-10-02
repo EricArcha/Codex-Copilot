@@ -68,9 +68,14 @@ disabled. Reset credits are never suggested or redeemed by this Skill.
 ## Distribution and authority boundaries
 
 The copied user runtime contains only src, skill, agents, bin and VERSION.
-Repository governance, CI scripts, tests/fixtures, evidence and untracked user
-files are not installed. Agent files declare validated roles; they cannot expand
+Repository-root governance, CI scripts, tests/fixtures, evidence and user files
+outside those product trees are not installed. The product trees are copied
+recursively; they must contain only product content. Tag validation refuses
+uncommitted/untracked content in those trees, preventing accidental release of
+local additions. This is a release-source fence, not a Git-based runtime filter. Agent files declare validated roles; they cannot expand
 model, effort, phase or host permissions independently of the runtime gate.
 Documentation explains contracts; verification evidence cannot create policy.
 Diagnostic recovery guidance requests command-specific host approval and never
 performs privilege escalation itself. Measurement observes; delegation authorizes.
+
+See [release-source checks](releasing.md) for ignored-file exclusions.

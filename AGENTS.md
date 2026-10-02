@@ -56,7 +56,9 @@ before release. Update CHANGELOG for user-facing changes. Permission, installati
   privacy-safe observations. Diagnostics and measurements never authorize dispatch.
 - Repository governance stays in AGENTS/CONTRIBUTING and docs, not in the runtime
   dependency graph. Only src, skill, agents, bin and VERSION enter the copied
-  distribution; repository docs, scripts, tests, fixtures and user files do not.
+  distribution; repository-root docs, scripts, tests, fixtures and user files
+  outside those trees do not. Their contents are copied recursively: keep those
+  trees product-only, and reject uncommitted/untracked product content at release.
 - Document owners: AGENTS = mandatory contributor fences; CONTRIBUTING = workflow
   entry; compatibility = supported/stable behavior; releasing = publication gates;
   CHANGELOG = user-visible version history; verification = dated evidence, never
@@ -69,3 +71,5 @@ before release. Update CHANGELOG for user-facing changes. Permission, installati
   requirements, compatibility impact, relevant regressions and L3 final review.
   No silent automatic install/escalation, caller-provided quota authorization,
   periodic quota polling, extra telemetry or destructive recovery.
+
+See [release-source checks](docs/releasing.md) for ignored-file exclusions.

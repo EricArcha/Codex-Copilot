@@ -32,7 +32,7 @@ class InstallerTests(unittest.TestCase):
             "CODEX_COPILOT_STATE_DIR": str(base / ".codex-copilot"),
         }
 
-    def test_repository_governance_and_user_files_are_not_installed(self):
+    def test_repository_root_non_product_files_are_not_installed(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
             install()
             runtime = Path(os.environ["CODEX_COPILOT_SHARE_DIR"])
