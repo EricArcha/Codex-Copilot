@@ -64,3 +64,13 @@ Child stderr is bounded in memory and discarded after classification. Raw stderr
 RPC errors, account secrets, paths and prompts must never enter metrics/trace or
 persisted diagnostics. Measurement remains opt-in and does not erase records when
 disabled. Reset credits are never suggested or redeemed by this Skill.
+
+## Distribution and authority boundaries
+
+The copied user runtime contains only src, skill, agents, bin and VERSION.
+Repository governance, CI scripts, tests/fixtures, evidence and untracked user
+files are not installed. Agent files declare validated roles; they cannot expand
+model, effort, phase or host permissions independently of the runtime gate.
+Documentation explains contracts; verification evidence cannot create policy.
+Diagnostic recovery guidance requests command-specific host approval and never
+performs privilege escalation itself. Measurement observes; delegation authorizes.

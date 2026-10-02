@@ -12,6 +12,8 @@ versions, not retroactively claimed GitHub releases.
 - Define command-scoped host-approved execution for Desktop sandbox restrictions;
   unknown routing remains a temporary failure mode, not the expected happy path.
 - Add release metadata checks, tag verification and release/contribution governance.
+- Fence document ownership, runtime responsibilities, trust sources and installed
+  artifacts; regression-check that repository/user files stay out of installations.
 - Verify upgrades from immutable 0.1.0 and 0.1.1 source snapshots.
 
 ## [0.1.1] - 2026-10-02

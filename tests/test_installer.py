@@ -32,6 +32,18 @@ class InstallerTests(unittest.TestCase):
             "CODEX_COPILOT_STATE_DIR": str(base / ".codex-copilot"),
         }
 
+    def test_repository_governance_and_user_files_are_not_installed(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            install()
+            runtime = Path(os.environ["CODEX_COPILOT_SHARE_DIR"])
+            self.assertEqual({item.name for item in runtime.iterdir()},
+                             {"src", "skill", "agents", "bin", "VERSION"})
+            skill = Path(os.environ["CODEX_COPILOT_SKILLS_HOME"]) / "codex-copilot"
+            for name in ("docs", "scripts", "tests", "videos", "AGENTS.md", "CONTRIBUTING.md", "CHANGELOG.md"):
+                self.assertFalse((runtime / name).exists())
+                self.assertFalse((skill / name).exists())
+            self.assertFalse(install()["changed"])
+
     def test_default_copy_install_is_idempotent_and_uninstalls(self):
         with tempfile.TemporaryDirectory() as temp:
             env = self.environment(temp)

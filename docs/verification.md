@@ -30,3 +30,5 @@ A later macOS CI run revealed the same Darwin EPERM edge on an exited descendant
 - Version metadata and v1.0.0 tag checks pass. Cross-platform CI and final review evidence are recorded in the release PR. Restart-dependent fresh-chat role loading requires the user to restart Desktop; this running chat cannot certify a future restart.
 
 - Final local suite: 114 tests passed with 7 platform-specific skips; Skill and release metadata validators passed. Independent GPT-6.1 Sol High review found one denied-cache exception leak. The cache existence probe was removed; refresh/non-refresh regressions now pass. The reviewer rechecked affected paths (26 tests) and reported no blocking findings.
+
+- Pre-release boundary follow-up defines responsibility owners and scope fences in existing governance files. A copy-install regression verifies the runtime contains only src/skill/agents/bin/VERSION and excludes repository governance, tests, scripts and user files.

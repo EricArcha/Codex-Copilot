@@ -40,3 +40,32 @@ Follow [CONTRIBUTING.md](CONTRIBUTING.md), [release policy](docs/releasing.md) a
 `python3 scripts/check_release.py` before completion and with `--tag v<version>`
 before release. Update CHANGELOG for user-facing changes. Permission, installation
 /migration and delegation changes require L3 independent final review.
+
+## Responsibility boundaries and change fences
+
+- Product scope is Codex Desktop development orchestration: allowance-aware routing,
+  bounded delegation, safe managed installation and privacy-safe measurement.
+  Do not expand it into a general agent framework, billing service, credential
+  manager, global sandbox configurator or telemetry collector.
+- `skill/codex-copilot/SKILL.md` is the short workflow entry point; references contain
+  conditional operator guidance. Instructions cannot grant host permissions or
+  bypass runtime validation. Do not make every task load every reference.
+- `src/` owns executable enforcement. Quota owns trusted acquisition/diagnostics,
+  routing owns policy, delegation owns cumulative dispatch authorization,
+  installer owns managed artifact transactions, metrics/measurement own opt-in
+  privacy-safe observations. Diagnostics and measurements never authorize dispatch.
+- Repository governance stays in AGENTS/CONTRIBUTING and docs, not in the runtime
+  dependency graph. Only src, skill, agents, bin and VERSION enter the copied
+  distribution; repository docs, scripts, tests, fixtures and user files do not.
+- Document owners: AGENTS = mandatory contributor fences; CONTRIBUTING = workflow
+  entry; compatibility = supported/stable behavior; releasing = publication gates;
+  CHANGELOG = user-visible version history; verification = dated evidence, never
+  new policy. README summarizes and links. Keep each rule in its owner's document.
+- Every PR states its responsibility owner, interfaces/trust boundaries touched
+  and explicit exclusions. New files must have a current requirement and owner;
+  amend an existing owner document before creating another governance document.
+- Changes to trust sources, sandbox access, installed artifacts/settings, schema,
+  model/effort permissions, delegation budget or data collection need explicit
+  requirements, compatibility impact, relevant regressions and L3 final review.
+  No silent automatic install/escalation, caller-provided quota authorization,
+  periodic quota polling, extra telemetry or destructive recovery.
