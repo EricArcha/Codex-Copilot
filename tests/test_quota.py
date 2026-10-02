@@ -64,7 +64,56 @@ class QuotaTests(unittest.TestCase):
                 ):
                     snapshot = get_quota(refresh=True)
                     self.assertEqual(snapshot.band, "unknown")
-                    self.assertIn(str(failure), snapshot.error)
+                    self.assertIsNotNone(snapshot.error_category)
+                    self.assertNotIn("secret-token", snapshot.error)
+
+    def test_cache_write_failure_preserves_live_quota_and_sanitizes_error(self):
+        fixture = json.loads((Path(__file__).parent / "fixtures" / "quota-green.json").read_text())["result"]
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}), patch(
+            "codex_copilot.quota._read_rpc_result", return_value=fixture
+        ), patch("codex_copilot.quota._atomic_json", side_effect=PermissionError("secret/path")):
+            snapshot = get_quota(refresh=True)
+        self.assertEqual(snapshot.band, "green")
+        self.assertEqual(snapshot.source, "app-server")
+        self.assertEqual(snapshot.error_category, "state_write_failed")
+        self.assertTrue(snapshot.retryable)
+        self.assertNotIn("secret", json.dumps(snapshot.to_dict()))
+
+    def test_denied_cache_reads_never_escape_or_leak_paths(self):
+        for refresh in (False, True):
+            with self.subTest(refresh=refresh), tempfile.TemporaryDirectory() as temp, patch.dict(
+                os.environ, {"CODEX_COPILOT_STATE_DIR": temp}
+            ), patch("codex_copilot.quota.Path.read_text", side_effect=PermissionError("/secret/quota-cache.json")), patch(
+                "codex_copilot.quota._read_rpc_result", side_effect=TimeoutError("secret-token")
+            ):
+                snapshot = get_quota(refresh=refresh)
+            self.assertEqual(snapshot.band, "unknown")
+            self.assertEqual(snapshot.error_category, "timeout")
+            self.assertNotIn("secret", json.dumps(snapshot.to_dict()))
+
+    def test_old_cache_without_diagnostics_is_readable(self):
+        fixture = json.loads((Path(__file__).parent / "fixtures" / "quota-green.json").read_text())["result"]
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}), patch(
+            "codex_copilot.quota._read_rpc_result", return_value=fixture
+        ):
+            get_quota(refresh=True)
+            path = Path(temp) / "quota-cache.json"
+            raw = json.loads(path.read_text())
+            raw.pop("error_category"); raw.pop("retryable")
+            path.write_text(json.dumps(raw))
+            snapshot = get_quota()
+        self.assertEqual(snapshot.source, "cache")
+        self.assertIsNone(snapshot.error_category)
+
+    def test_rpc_authentication_error_is_sanitized(self):
+        from codex_copilot.quota import QuotaReadError
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {"CODEX_COPILOT_STATE_DIR": temp}), patch(
+            "codex_copilot.quota._read_rpc_result", side_effect=QuotaReadError("authentication_failed")
+        ):
+            snapshot = get_quota(refresh=True)
+        self.assertEqual(snapshot.band, "unknown")
+        self.assertFalse(snapshot.retryable)
+        self.assertEqual(snapshot.error_category, "authentication_failed")
 
     def test_fixture_and_cache(self):
         root = Path(__file__).parent
@@ -101,7 +150,7 @@ class QuotaTests(unittest.TestCase):
                 snapshot = get_quota(refresh=True)
         self.assertEqual(snapshot.band, "green")
         self.assertEqual(snapshot.source, "cache-fallback")
-        self.assertEqual(snapshot.error, "Fresh quota read failed: timed out")
+        self.assertEqual(snapshot.error_category, "timeout")
 
     def test_refresh_failure_rejects_stale_or_non_successful_cache(self):
         fixture = Path(__file__).parent / "fixtures" / "quota-green.json"

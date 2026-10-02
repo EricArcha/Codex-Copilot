@@ -122,3 +122,11 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 PowerShell 先设置 `$env:PYTHONPATH = 'src'`，再执行 `python -m unittest discover -s tests -v`。还需按 [AGENTS.md](AGENTS.md) 运行 Skill Creator 的 `quick_validate.py`。产品运行时仅依赖标准库；PyYAML 只用于外部 Skill 验证器。CI 覆盖三平台的 Python 3.11–3.14。符号链接测试按真实能力处理，普通 Windows 用户的 copy 安装仍完整验证。
 
 实际本地验证结果与未验证限制见 [验收记录](docs/verification.md)；已执行的 CI 结果以 PR checks 为准。
+
+## 稳定版本
+
+当前版本：**1.0.0**。参见[变更记录](CHANGELOG.md)、
+[兼容承诺](docs/compatibility.md)、[发布规则](docs/releasing.md)和
+[贡献入口](CONTRIBUTING.md)。更新源码，审阅 `install --dry-run` 后安装，
+再重启 Desktop 并新开聊天。沙箱阻挡额度查询时，按宿主审批机制对必要命令
+申请受控执行；参见[额度访问](skill/codex-copilot/references/quota.md)。

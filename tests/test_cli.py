@@ -17,6 +17,17 @@ from codex_copilot.quota import QuotaSnapshot, unknown_snapshot
 
 
 class CliTests(unittest.TestCase):
+    def test_live_quota_cache_warning_is_not_reported_as_unavailable(self):
+        from dataclasses import replace
+        from codex_copilot.cli import _status_text
+        from codex_copilot.quota import snapshot_from_result
+        snapshot = replace(snapshot_from_result({"rateLimits": {"primary": {"usedPercent": 10}}}),
+                           error="Cache unavailable", error_category="state_write_failed", retryable=True)
+        text = _status_text(snapshot)
+        self.assertIn("Quota warning", text)
+        self.assertNotIn("Quota unavailable", text)
+        self.assertIn("state_write_failed", text)
+
     def test_measure_cli_is_opt_in_and_supports_one_time_comparison(self):
         import uuid
         with tempfile.TemporaryDirectory() as temp:

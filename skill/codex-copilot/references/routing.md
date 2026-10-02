@@ -76,3 +76,7 @@ For Green/standard L3, use at most one read-only investigator before implementat
 - Every delegated prompt must name its bounded question, read/write authority, completion condition, and compact output shape.
 - Start subagents with the narrowest available context (`fork_turns: none` for a fresh bounded child) unless the task genuinely depends on recent parent turns.
 - Do not let subagents recursively delegate.
+
+For sandbox permission or local-state failures, use the command-scoped host
+approval procedure in [quota.md](quota.md). Desktop observations never replace
+the CLI gate. A rejected approval does not authorize a dispatch.

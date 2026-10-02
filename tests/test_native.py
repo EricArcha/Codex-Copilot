@@ -56,9 +56,38 @@ class PipeTests(unittest.TestCase):
                 self.assertTrue(processes[0].stdout.closed)
                 self.assertFalse(any(t.name == "codex-copilot-quota-reader" for t in threading.enumerate()))
 
+    def test_bounded_stderr_is_classified_without_exposing_secrets(self):
+        from codex_copilot.quota import QuotaReadError
+        cases = [
+            ("failed to initialize sqlite state runtime under /secret/home", "state_initialization_failed"),
+            ("Permission denied /secret/home", "permission_denied"),
+            ("not logged in token=secret", "authentication_failed"),
+            ("unexpected token=secret", "process_exit"),
+        ]
+        for text, category in cases:
+            script = "import sys; sys.stderr.write('x'*100000+" + repr(text) + "); sys.stderr.flush()"
+            with self.subTest(category=category), self.assertRaises(QuotaReadError) as caught:
+                self.rpc(script)
+            self.assertEqual(caught.exception.category, category)
+            self.assertNotIn("secret", str(caught.exception))
+            self.assertFalse(any(t.name == "codex-copilot-quota-stderr" for t in threading.enumerate()))
+
     def test_buffered_consecutive_responses_and_unicode(self):
         script = "import sys,json,time; [sys.stdin.readline() for _ in range(3)]; print(json.dumps({'id':0,'result':{}})); print(json.dumps({'method':'notice'})); print(json.dumps({'id':1,'result':{'name':'中文','rateLimits':{}}})); time.sleep(10)"
         self.assertEqual(self.rpc(script)["name"], "中文")
+
+    def test_rpc_error_categories_never_expose_raw_payload(self):
+        from codex_copilot.quota import QuotaReadError
+        for request_id, message, category in [
+            (0, "token=secret", "initialization_failed"),
+            (1, "codex account authentication required token=secret", "authentication_failed"),
+            (1, "unexpected response token=secret", "protocol_error"),
+        ]:
+            response = json.dumps({"id": request_id, "error": {"message": message}})
+            with self.subTest(category=category), self.assertRaises(QuotaReadError) as caught:
+                self.rpc("print(" + repr(response) + ")")
+            self.assertEqual(caught.exception.category, category)
+            self.assertNotIn("secret", str(caught.exception))
 
     def test_timeout_and_partial_line_have_bounded_cleanup(self):
         for script in ("import time; time.sleep(10)", "import sys,time; sys.stdout.write('{'); sys.stdout.flush(); time.sleep(10)"):
@@ -151,7 +180,7 @@ class NativeInstallTests(unittest.TestCase):
             command = [sys.executable, str(Path(os.environ["CODEX_COPILOT_BIN_DIR"]) / ("codex-copilot.py" if os.name == "nt" else "codex-copilot")), "--version"]
             response = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", timeout=10)
             self.assertEqual(response.returncode, 0, response.stderr)
-            self.assertIn("0.1.1", response.stdout)
+            self.assertIn(__import__("codex_copilot").VERSION, response.stdout)
             self.assertFalse(installer.install()["changed"])
             with patch("codex_copilot.installer.VERSION", "0.1.2"):
                 self.assertTrue(installer.install()["changed"])
@@ -213,7 +242,7 @@ class NativeInstallTests(unittest.TestCase):
                 archive.extractall(original)
             config = Path(os.environ["CODEX_HOME"]) / "config.toml"
             config.parent.mkdir(parents=True)
-            config.write_text('service_tier = "original"\n', encoding="utf-8")
+            config.write_text('service_tier = "original"\nmodel = "initial-choice"\n', encoding="utf-8")
             run = subprocess.run([sys.executable, str(original / "bin" / "codex-copilot"), "install", "--yes"], capture_output=True, text=True, encoding="utf-8", timeout=15)
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(installer.load_manifest()["schema"], 1)
@@ -225,6 +254,28 @@ class NativeInstallTests(unittest.TestCase):
             self.assertEqual(installer.load_manifest()["schema"], 2)
             installer.uninstall()
             self.assertEqual(tomllib.loads(config.read_text(encoding="utf-8"))["service_tier"], "original")
+
+    def test_actual_v011_release_upgrades_and_preserves_user_settings(self):
+        from codex_copilot import VERSION
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, environment(temp)):
+            original = Path(temp) / "old-source"
+            with zipfile.ZipFile(Path(__file__).parent / "fixtures" / "release-0.1.1.zip") as archive:
+                archive.extractall(original)
+            config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            config.parent.mkdir(parents=True)
+            config.write_text('service_tier = "original"\nmodel = "initial-choice"\n', encoding="utf-8")
+            run = subprocess.run([sys.executable, str(original / "bin" / "codex-copilot.py"), "install", "--yes"],
+                                 capture_output=True, text=True, encoding="utf-8", timeout=15)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(installer.load_manifest()["version"], "0.1.1")
+            self.assertTrue(installer.install()["changed"])
+            self.assertEqual(installer.load_manifest()["version"], VERSION)
+            self.assertFalse(installer.install()["changed"])
+            config.write_text(config.read_text(encoding="utf-8").replace('model = "initial-choice"', 'model = "user-choice"'), encoding="utf-8")
+            installer.uninstall()
+            restored = tomllib.loads(config.read_text(encoding="utf-8"))
+            self.assertEqual(restored["service_tier"], "original")
+            self.assertEqual(restored["model"], "user-choice")
 
     def test_schema_one_distribution_fingerprint_migrates(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, environment(temp)):
