@@ -5,6 +5,7 @@ import tomllib
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from platform_support import require_symlinks
 
 from codex_copilot.installer import (
     AGENT_FILES,
@@ -100,6 +101,7 @@ class InstallerTests(unittest.TestCase):
 
     def test_symlink_mode_warns_and_can_be_replaced_by_copy(self):
         with tempfile.TemporaryDirectory() as temp:
+            require_symlinks(self, temp)
             env = self.environment(temp)
             with patch.dict(os.environ, env, clear=False):
                 preview = install(mode="symlink", dry_run=True)
@@ -129,7 +131,7 @@ class InstallerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             env = self.environment(temp)
             with patch.dict(os.environ, env, clear=False):
-                install(mode="symlink")
+                install(mode="copy")
                 config = Path(env["CODEX_HOME"]) / "config.toml"
                 config.write_text('model = "custom"\n' + config.read_text())
                 result = uninstall()

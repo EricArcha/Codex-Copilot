@@ -13,7 +13,20 @@ def codex_home() -> Path:
 
 
 def skills_home() -> Path:
-    return Path(os.environ.get("CODEX_COPILOT_SKILLS_HOME", Path.home() / ".agents" / "skills")).expanduser()
+    override = os.environ.get("CODEX_COPILOT_SKILLS_HOME")
+    if override:
+        return Path(override).expanduser()
+    existing = codex_home() / "skills" / "codex-copilot"
+    if existing.exists() or existing.is_symlink():
+        return existing.parent
+    return Path.home() / ".agents" / "skills"
+
+
+def skill_locations() -> list[Path]:
+    candidates = [skills_home() / "codex-copilot", codex_home() / "skills" / "codex-copilot"]
+    if codex_home().resolve() == (Path.home() / ".codex").resolve():
+        candidates.append(Path.home() / ".agents" / "skills" / "codex-copilot")
+    return list(dict.fromkeys(candidates))
 
 
 def bin_dir() -> Path:
