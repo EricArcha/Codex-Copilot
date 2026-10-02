@@ -8,6 +8,7 @@ from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+from platform_support import require_symlinks
 
 from codex_copilot.cli import doctor, main
 from codex_copilot.installer import CONFIG_UPDATES, SYMLINK_RISK_WARNING, install
@@ -84,6 +85,7 @@ class CliTests(unittest.TestCase):
                 self.assertIn("regular file", copied_checks["copilot-scout.toml"]["detail"])
                 self.assertFalse(any(SYMLINK_RISK_WARNING in warning for warning in copied["warnings"]))
 
+                require_symlinks(self, temp)
                 install(mode="symlink")
                 linked = doctor()
                 linked_checks = {check["name"]: check for check in linked["checks"]}
@@ -139,7 +141,7 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             env = self.environment(temp)
             stdout, stderr = StringIO(), StringIO()
-            with patch.dict(os.environ, env, clear=False), redirect_stdout(stdout), redirect_stderr(stderr):
+            with patch.dict(os.environ, env, clear=False), patch("codex_copilot.cli.sys.stdin", SimpleNamespace(isatty=lambda: False)), redirect_stdout(stdout), redirect_stderr(stderr):
                 code = main(["install"])
             self.assertEqual(code, 2)
             self.assertIn("without --yes", stderr.getvalue())
@@ -174,6 +176,7 @@ class CliTests(unittest.TestCase):
                 self.assertIn("remove obsolete copied distribution", stdout.getvalue())
                 self.assertTrue(distribution.exists())
 
+                require_symlinks(self, temp)
                 with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
                     self.assertEqual(main(["install", "--mode", "symlink", "--yes"]), 0)
                 self.assertFalse(distribution.exists())

@@ -8,7 +8,7 @@
 
 [English](README.md)
 
-> 面向 macOS 或 Linux 上的 **Codex Desktop**。
+> 面向 Windows、macOS 和 Linux 上的 **Codex Desktop**。要求 Python 3.11+、Codex CLI 0.147.0+。
 
 ## 重要变更：GPT-6.1 Sol 路由
 
@@ -32,7 +32,7 @@ $codex-copilot 帮我把这个功能从头做到验证完成。
 
 ## 想开启完整驾驶舱？
 
-完整安装是可选的：它会加入六个自定义 agents、`codex-copilot` 命令，以及少量多代理所需的 Codex 受管设置。
+完整安装是可选的：它会加入六个自定义 agents、`codex-copilot` 命令，以及少量多代理所需的 Codex 受管设置。默认 copy 模式无需管理员权限。macOS/Linux 使用：
 
 ```bash
 git clone https://github.com/EricArcha/Codex-Copilot.git
@@ -40,6 +40,22 @@ cd Codex-Copilot
 ./bin/codex-copilot install --dry-run  # 先看看会发生什么
 ./bin/codex-copilot install            # 在终端确认后安装
 ```
+
+Windows PowerShell 使用：
+
+```powershell
+git clone https://github.com/EricArcha/Codex-Copilot.git
+cd Codex-Copilot
+.\bin\codex-copilot.cmd install --dry-run
+.\bin\codex-copilot.cmd install
+& "$HOME\.local\bin\codex-copilot.cmd" doctor --json
+```
+
+Windows 启动器动态发现 `py -3` 或 `python`，不嵌入特定版本的解释器目录；请保留可用的 Python 3.11+。Codex 通过 PATH 发现，支持原生可执行文件或具有 Node 及相邻 JS 入口的标准 npm 包装器。包含 shell 特殊字符的参数须按当前 shell 规则引用。
+
+默认安装不修改 PATH。可以使用展示的启动器完整路径，或执行 `$env:PATH = "$HOME\.local\bin;$env:PATH"`，仅对当前 PowerShell 会话生效。要持久管理 **Windows 用户 PATH**，在预览和安装命令中都加 `--add-to-path`，之后新开终端；不会修改系统 PATH。macOS/Linux 请自行配置 shell PATH。
+
+安装器优先沿用已有的 `$CODEX_HOME/skills/codex-copilot`，否则默认安装到 `~/.agents/skills`。只有与当前源码或已知发行版本内容一致的 Skill 才能备份后接管。未知文件、被修改的受管文件和重复注册会阻止安装；请备份并解决冲突。可通过 `CODEX_COPILOT_SKILLS_HOME`、`CODEX_COPILOT_BIN_DIR`、`CODEX_COPILOT_SHARE_DIR`、`CODEX_COPILOT_STATE_DIR` 分别覆盖目录；`CODEX_HOME` 指定 Codex 配置位置。支持自定义运行时位置。变更配置目录、Skill 注册目录或已持久管理 PATH 的 bin 目录前，须先卸载；迁移注册前还需处理卸载所恢复的原始 Skill。
 
 安装器会在改动前展示每个文件动作和全部六项受管设置。脚本或 CI 中，请先审阅 dry-run，再加 `--yes` 确认。
 
@@ -70,7 +86,7 @@ Codex-Copilot 有一点固执：它宁愿把一个改动扎实地做完，也不
 codex-copilot uninstall
 ```
 
-它只删除自己安装的文件；某项设置只有在你安装后没有再修改时，才会被还原。
+先运行 `uninstall --dry-run` 预览。卸载删除未修改的受管产物；设置仍等于安装值时才恢复。接管前的 Skill 会从备份恢复。被用户修改的文件会保留，并留下恢复清单；解决后从源码目录再次卸载。备份与测量记录不会被清除。
 
 **手动删除 `~/.agents/skills/codex-copilot` 只会移除 Skill，不会还原 Codex 设置。** 请运行 `codex-copilot uninstall`。如果这个命令也没有了，重新 clone 本仓库后运行：
 
@@ -78,7 +94,11 @@ codex-copilot uninstall
 ./bin/codex-copilot uninstall
 ```
 
+Windows 对应命令为 `.\bin\codex-copilot.cmd uninstall`。升级时更新源码 checkout，再使用对应平台的 `install --dry-run` 和 `install`；原始设置恢复记录会保留。安装和卸载通过唯一备份、暂存与回滚处理捕获到的错误；文件锁也可能阻碍回滚，此时保留报告的备份目录，根据 `recovery.json` 恢复。进程被强制中断时可能需要手动恢复。
+
 恢复完成前请保留 `~/.codex-copilot`——里面有逐项安全还原所需的记录。
+
+`doctor --json` 明确区分 `skill-only`、`complete`、`incomplete`。它验证配置与文件；agent 配置存在不等于模型运行权限已验证。额度查询失败时只允许复用 TTL 内最近成功的缓存，否则使用 `unknown` 路线。管道读取具有超时和子进程清理。更多引导见 [安装与恢复 reference](skill/codex-copilot/references/installation.md)。
 
 ## 常用命令
 
@@ -98,3 +118,7 @@ codex-copilot measure off    # 停止新的自动测量
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
+
+PowerShell 先设置 `$env:PYTHONPATH = 'src'`，再执行 `python -m unittest discover -s tests -v`。还需按 [AGENTS.md](AGENTS.md) 运行 Skill Creator 的 `quick_validate.py`。产品运行时仅依赖标准库；PyYAML 只用于外部 Skill 验证器。CI 覆盖三平台的 Python 3.11–3.14。符号链接测试按真实能力处理，普通 Windows 用户的 copy 安装仍完整验证。
+
+实际本地验证结果与未验证限制见 [验收记录](docs/verification.md)；已执行的 CI 结果以 PR checks 为准。

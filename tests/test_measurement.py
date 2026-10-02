@@ -5,6 +5,7 @@ import unittest
 import uuid
 from pathlib import Path
 from unittest.mock import patch
+from platform_support import require_symlinks
 
 from codex_copilot.measurement import begin, compare, enabled, end, set_enabled, settings_path
 from codex_copilot.metrics import metrics_path, summarize
@@ -138,6 +139,7 @@ class MeasurementTests(unittest.TestCase):
         sentinel = Path(self.temp.name) / "sentinel"
         sentinel.write_text("keep")
         path = settings_path()
+        require_symlinks(self, self.temp.name)
         path.symlink_to(sentinel)
         with self.assertRaises(ValueError):
             set_enabled(True)

@@ -4,6 +4,7 @@ import argparse
 import builtins
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -12,10 +13,11 @@ from pathlib import Path
 from typing import Any
 
 from . import VERSION
-from .config_edit import parse_toml
+from .config_edit import MISSING, get_path, parse_toml
 from .delegation import DelegationDenied, complete as complete_delegation, dispatch as dispatch_delegation, trace
 from .installer import (
     AGENT_FILES,
+    CONFIG_UPDATES,
     SYMLINK_RISK_WARNING,
     InstallError,
     artifact_matches,
@@ -25,7 +27,9 @@ from .installer import (
 )
 from .metrics import project_hash, record, summarize
 from .measurement import begin as begin_measurement, compare as compare_measurements, enabled as measurement_enabled, end as end_measurement, set_enabled as set_measurement_enabled
-from .paths import bin_dir, codex_home, skills_home
+from .paths import bin_dir, codex_home, skill_locations, skills_home
+from .process import codex_command, run_codex
+from .user_path import normalize
 from .profile import active_profile, set_profile
 from .quota import QuotaSnapshot, get_quota
 from .routing import Profile, QuotaBand, TaskLevel, launch_level, route_for
@@ -40,6 +44,7 @@ def _parser() -> argparse.ArgumentParser:
     install_parser.add_argument("--mode", choices=("symlink", "copy"), default="copy")
     install_parser.add_argument("--dry-run", action="store_true")
     install_parser.add_argument("--yes", action="store_true", help="Confirm the displayed installation plan")
+    install_parser.add_argument("--add-to-path", action="store_true", help="Opt in to managed Windows user PATH changes")
 
     uninstall_parser = sub.add_parser("uninstall", help="Remove managed installation artifacts")
     uninstall_parser.add_argument("--dry-run", action="store_true")
@@ -191,13 +196,8 @@ def _status_text(snapshot: QuotaSnapshot) -> str:
 
 
 def _version_tuple(text: str) -> tuple[int, ...] | None:
-    for token in text.split():
-        if token[0:1].isdigit():
-            try:
-                return tuple(int(part) for part in token.split(".")[:3])
-            except ValueError:
-                continue
-    return None
+    match = re.search(r"\b(\d+)\.(\d+)\.(\d+)(?:[-+.][\w.-]+)?", text)
+    return tuple(map(int, match.groups())) if match else None
 
 
 def doctor() -> dict[str, Any]:
@@ -206,32 +206,37 @@ def doctor() -> dict[str, Any]:
     def add(name: str, ok: bool, detail: str, severity: str = "ok") -> None:
         checks.append({"name": name, "ok": ok, "detail": detail, "severity": severity})
 
-    if os.name == "nt":
-        add("platform", False, "Windows is not supported in v0.1")
-    else:
-        add("platform", True, sys.platform)
+    add("platform", os.name in {"nt", "posix"}, sys.platform)
+    add("python", sys.version_info >= (3, 11), sys.version.split()[0])
 
     codex = shutil.which("codex")
     if not codex:
         add("codex", False, "codex executable not found")
     else:
-        completed = subprocess.run([codex, "--version"], capture_output=True, text=True, timeout=5)
-        version_text = (completed.stdout or completed.stderr).strip()
-        version = _version_tuple(version_text)
-        add("codex", bool(version and version >= (0, 147, 0)), version_text)
-
-        login = subprocess.run([codex, "login", "status"], capture_output=True, text=True, timeout=30)
-        login_text = (login.stdout or login.stderr).strip()
-        add("chatgpt_login", login.returncode == 0 and "ChatGPT" in login_text, login_text)
+        try:
+            completed = run_codex(["--version"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5)
+            version_text = (completed.stdout or completed.stderr).strip()
+            version = _version_tuple(version_text)
+            add("codex", completed.returncode == 0 and bool(version and version >= (0, 147, 0)), version_text)
+            login = run_codex(["login", "status"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
+            logged_in = login.returncode == 0 and "ChatGPT" in (login.stdout or login.stderr)
+            add("chatgpt_login", logged_in, "ChatGPT login detected" if logged_in else "ChatGPT login not detected")
+        except (OSError, subprocess.SubprocessError) as exc:
+            add("codex", False, str(exc))
 
     config_path = codex_home() / "config.toml"
     try:
-        parse_toml(config_path.read_text() if config_path.exists() else "")
+        config = parse_toml(config_path.read_text(encoding="utf-8") if config_path.exists() else "")
         add("config", True, str(config_path))
     except (OSError, ValueError) as exc:
         add("config", False, str(exc))
+        config = {}
 
-    manifest = load_manifest()
+    try:
+        manifest = load_manifest()
+    except (OSError, ValueError, InstallError) as exc:
+        manifest = None
+        add("manifest_read", False, str(exc))
     add("manifest", manifest is not None, str(manifest and manifest.get("version") or "not installed"))
     if manifest:
         mismatches = []
@@ -244,6 +249,9 @@ def doctor() -> dict[str, Any]:
             "all recorded links/copies match" if not mismatches else f"mismatch: {', '.join(mismatches)}",
         )
     skill = skills_home() / "codex-copilot" / "SKILL.md"
+    if manifest:
+        settings_ok = all(get_path(config, key, MISSING) == value for key, value in CONFIG_UPDATES.items())
+        add("managed_config", settings_ok, "managed settings match" if settings_ok else "managed settings differ; review before reinstalling")
     add("skill", skill.exists(), str(skill))
     symlinked_agents = []
     for name in AGENT_FILES:
@@ -261,10 +269,15 @@ def doctor() -> dict[str, Any]:
         warnings.append(
             f"{SYMLINK_RISK_WARNING}. Detected: {', '.join(symlinked_agents)}"
         )
-    executable = bin_dir() / "codex-copilot"
+    executable = bin_dir() / ("codex-copilot.cmd" if os.name == "nt" else "codex-copilot")
     add("launcher", executable.exists(), str(executable))
-    path_entries = {str(Path(item).expanduser()) for item in os.environ.get("PATH", "").split(os.pathsep)}
-    add("path", str(bin_dir()) in path_entries, f"{bin_dir()} in PATH")
+    if os.name == "nt":
+        add("launcher_python_entry", (bin_dir() / "codex-copilot.py").is_file(), str(bin_dir() / "codex-copilot.py"))
+    path_entries = {normalize(item) for item in os.environ.get("PATH", "").split(os.pathsep) if item}
+    in_path = normalize(str(bin_dir())) in path_entries
+    add("path", in_path, f"{bin_dir()} in current process PATH", severity="ok" if in_path else "warning")
+    registered = [p for p in skill_locations() if (p / "SKILL.md").exists()]
+    add("skill_registration", len(registered) <= 1, "single registration" if len(registered) <= 1 else "duplicate Skill registrations detected")
     quota = get_quota(refresh=True)
     profile = active_profile()
     add("profile", True, profile.value)
@@ -287,7 +300,11 @@ def doctor() -> dict[str, Any]:
             "Codex-Copilot installation residue detected: the Skill is missing, but managed settings may remain. "
             "Run 'codex-copilot uninstall' to remove managed artifacts and restore eligible settings."
         )
-    return {"ok": all(check["ok"] for check in checks), "checks": checks, "warnings": warnings}
+    installation_names = {"manifest", "installation_integrity", "managed_config", "skill", "launcher", "launcher_python_entry", "skill_registration", *AGENT_FILES}
+    complete = bool(manifest) and manifest.get("status") != "uninstall-residue" and all(c["ok"] for c in checks if c["name"] in installation_names)
+    residue = bool(manifest) or any((codex_home() / "agents" / name).exists() for name in AGENT_FILES) or executable.exists() or any(not c["ok"] for c in checks if c["name"] == "manifest_read")
+    state = "complete" if complete else "incomplete" if residue else "skill-only"
+    return {"ok": all(c["ok"] or c.get("severity") == "warning" for c in checks), "installation_state": state, "checks": checks, "warnings": warnings}
 
 
 def _human_doctor(result: dict[str, Any]) -> None:
@@ -359,7 +376,10 @@ def _launch(args: argparse.Namespace) -> int:
     if args.dry_run:
         print(json.dumps({"command": command, "quota": snapshot.to_dict(), "route": route.to_dict()}, indent=2))
         return 0
-    os.execvp(command[0], command)
+    resolved = codex_command(command[1:])
+    if os.name == "nt":
+        return subprocess.run(resolved).returncode
+    os.execvp(resolved[0], resolved)
     return 127
 
 
@@ -367,7 +387,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "install":
-            preview = install(mode=args.mode, dry_run=True)
+            preview = install(mode=args.mode, dry_run=True, add_to_path=args.add_to_path)
             _print_install_plan(preview)
             if args.dry_run:
                 print("Dry run: no changes made.")
@@ -377,7 +397,7 @@ def main(argv: list[str] | None = None) -> int:
             if not args.yes and not _confirm_install():
                 print("Installation cancelled. No changes made.", file=sys.stderr)
                 return 2
-            result = install(mode=args.mode, expected_plan_token=preview["plan_token"])
+            result = install(mode=args.mode, expected_plan_token=preview["plan_token"], add_to_path=args.add_to_path)
             _print_result({**result, "warnings": []})  # Already shown in the plan.
             return 0
         if args.command == "uninstall":

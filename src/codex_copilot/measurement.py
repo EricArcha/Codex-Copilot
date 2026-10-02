@@ -27,7 +27,7 @@ def settings_path() -> Path:
 
 def enabled() -> bool:
     try:
-        return json.loads(settings_path().read_text()).get("enabled") is True
+        return json.loads(settings_path().read_text(encoding="utf-8")).get("enabled") is True
     except (OSError, ValueError, TypeError, AttributeError):
         return False
 
@@ -40,7 +40,7 @@ def set_enabled(value: bool) -> None:
         raise ValueError("measurement preference is an unexpected symlink")
     if path.exists():
         try:
-            existing = json.loads(path.read_text())
+            existing = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
             raise ValueError("measurement preference is not a recognized JSON file") from exc
         if not isinstance(existing, dict) or not isinstance(existing.get("enabled"), bool):

@@ -6,7 +6,7 @@ This repository is the source of truth for the Codex-Copilot skill, custom agent
 
 ## Development rules
 
-- Support Python 3.11+ on macOS and Linux using only the standard library.
+- Support Python 3.11+ on Windows, macOS and Linux using only the standard library.
 - Never overwrite unknown user files or replace an entire Codex configuration.
 - Keep prompts, source code, paths, command output, and secrets out of metrics.
 - Keep allowance measurement opt-in and off by default. Store its preference locally, preserve
@@ -27,6 +27,8 @@ This repository is the source of truth for the Codex-Copilot skill, custom agent
 Run before considering a change complete:
 
 ```bash
-python3 -m unittest discover -s tests -v
+PYTHONPATH=src python3 -m unittest discover -s tests -v
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skill/codex-copilot
 ```
+
+On Windows PowerShell, use `$env:PYTHONPATH = 'src'`, then `python -m unittest discover -s tests -v` and `python -X utf8 "$HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py" skill/codex-copilot` (respect `CODEX_HOME` when set). PyYAML is needed only by the external Skill validator. Probe symlink capability; skip only tests requiring unavailable privilege, never copy-mode or business failures. Perform installation experiments with all five path overrides in isolated directories and no persistent user PATH changes.

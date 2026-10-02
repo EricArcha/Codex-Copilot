@@ -62,7 +62,7 @@ def dispatch_spec(role: str, profile: Profile) -> DispatchSpec:
         raise DelegationDenied("Astra final review requires the premium profile")
     path = _agent_path(role)
     try:
-        raw = tomllib.loads(path.read_text())
+        raw = tomllib.loads(path.read_text(encoding="utf-8"))
         model = raw["model"]
         effort = raw["model_reasoning_effort"]
     except (OSError, ValueError, KeyError, TypeError) as exc:

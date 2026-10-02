@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import secrets
 import uuid
 from collections import Counter, defaultdict
@@ -57,9 +58,10 @@ def _salt() -> str:
     path = state_dir() / "metrics" / ".salt"
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(secrets.token_hex(32))
-        path.chmod(0o600)
-    return path.read_text().strip()
+        path.write_text(secrets.token_hex(32), encoding="utf-8")
+        if os.name != "nt":
+            path.chmod(0o600)
+    return path.read_text(encoding="utf-8").strip()
 
 
 def project_hash(path: str | None) -> str | None:
@@ -107,7 +109,7 @@ def records_for_run(run_id: str) -> list[dict[str, Any]]:
     """Return privacy-safe events for one retained run, in write order."""
     records: list[dict[str, Any]] = []
     for path in _retained_paths():
-        for line in path.read_text().splitlines():
+        for line in path.read_text(encoding="utf-8").splitlines():
             try:
                 item = json.loads(line)
             except ValueError:
@@ -127,7 +129,7 @@ def _retained_paths() -> list[Path]:
 def retained_records() -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for path in _retained_paths():
-        for line in path.read_text().splitlines():
+        for line in path.read_text(encoding="utf-8").splitlines():
             try:
                 records.append(json.loads(line))
             except ValueError:

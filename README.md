@@ -8,7 +8,7 @@
 
 [简体中文](README.zh-CN.md)
 
-> Made for **Codex Desktop** on macOS or Linux.
+> Made for **Codex Desktop** on Windows, macOS and Linux. Requires Python 3.11+ and Codex CLI 0.147.0+.
 
 ## Important change — GPT-6.1 Sol routing
 
@@ -32,7 +32,7 @@ That is it. No agents, CLI files, or Codex settings are added.
 
 ## Want the full cockpit?
 
-The optional full install adds six custom agents, the `codex-copilot` command, and a few managed Codex settings for multi-agent work.
+The optional full install adds six custom agents, the `codex-copilot` command, and a few managed Codex settings for multi-agent work. Copy mode is the default and needs no administrator rights. On macOS/Linux:
 
 ```bash
 git clone https://github.com/EricArcha/Codex-Copilot.git
@@ -40,6 +40,22 @@ cd Codex-Copilot
 ./bin/codex-copilot install --dry-run  # look first
 ./bin/codex-copilot install            # confirm in the terminal
 ```
+
+On Windows PowerShell:
+
+```powershell
+git clone https://github.com/EricArcha/Codex-Copilot.git
+cd Codex-Copilot
+.\bin\codex-copilot.cmd install --dry-run
+.\bin\codex-copilot.cmd install
+& "$HOME\.local\bin\codex-copilot.cmd" doctor --json
+```
+
+The Windows launcher discovers `py -3` or `python`; no version-specific interpreter path is embedded. Keep a Python 3.11+ installation available. Codex is discovered on PATH; native executables and standard npm wrappers with Node/the adjacent JS entry are supported. Quote shell metacharacters in arguments.
+
+Default installation does not edit PATH. Use the displayed full launcher path, or set `$env:PATH = "$HOME\.local\bin;$env:PATH"` for a PowerShell session. Add `--add-to-path` to both preview and install to manage persistent **Windows user PATH** explicitly; open a new terminal afterward. It never changes system PATH. Configure your shell PATH yourself on macOS/Linux.
+
+An existing `$CODEX_HOME/skills/codex-copilot` registration is reused; otherwise the default is `~/.agents/skills`. Verified current/known release instructions can be backed up and adopted. Unknown files, edited managed artifacts and duplicate registrations block installation. Resolve conflicts after backing them up. `CODEX_COPILOT_SKILLS_HOME`, `CODEX_COPILOT_BIN_DIR`, `CODEX_COPILOT_SHARE_DIR` and `CODEX_COPILOT_STATE_DIR` override their respective locations; `CODEX_HOME` selects Codex configuration. Custom runtime locations are supported. Uninstall before changing configuration/Skill directories or a bin directory with owned persistent PATH; resolve any restored original Skill registration before moving it.
 
 Before changing anything, the installer shows every file action and all six settings it manages. For scripts or CI, review the dry run and add `--yes` to confirm.
 
@@ -70,7 +86,7 @@ Use this when you want to uninstall the complete workflow:
 codex-copilot uninstall
 ```
 
-It removes only the files it installed and restores a setting only if you have not changed it since installation.
+Preview with `uninstall --dry-run`. Uninstall removes unchanged managed artifacts and restores a setting only while it still equals the installed value. An unchanged adopted Skill is restored from backup. Modified artifacts remain with a recovery manifest; resolve them and rerun uninstall from a source checkout. Backups and measurement records are retained.
 
 **Deleting `~/.agents/skills/codex-copilot` by hand only removes the Skill. It does not restore Codex settings.** Run `codex-copilot uninstall` instead. If that command is gone too, clone this repository again and run:
 
@@ -78,7 +94,11 @@ It removes only the files it installed and restores a setting only if you have n
 ./bin/codex-copilot uninstall
 ```
 
+On Windows use `.\bin\codex-copilot.cmd uninstall`. Upgrade by updating the source checkout and using the same platform's `install --dry-run` and `install` commands. Upgrades preserve the original restoration records. Unique backups and staging allow rollback on caught errors; file locks may also prevent rollback, in which case preserve the reported backup directory and recover from its `recovery.json`. An interrupted process may require manual recovery.
+
 Keep `~/.codex-copilot` until recovery is finished—it contains the safe, per-setting restoration record.
+
+`doctor --json` distinguishes `skill-only`, `complete` and `incomplete` installations. It checks configuration and artifacts, but installed agent files do not prove runtime model entitlement. Quota errors use a recent successful cache only within the existing TTL; otherwise the route is `unknown`. Reads time out and reap their subprocess. See the [installation reference](skill/codex-copilot/references/installation.md) for recovery and platform commands.
 
 ## Handy commands
 
@@ -98,3 +118,7 @@ Allowance measurement is off by default. New installs and upgrades show the one-
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
+
+PowerShell: `$env:PYTHONPATH = 'src'`, then `python -m unittest discover -s tests -v`. Also run the Skill Creator `quick_validate.py` as specified in [AGENTS.md](AGENTS.md). Product code uses only the standard library; PyYAML is only for the external validator. CI covers Python 3.11–3.14 on all three platforms. Symlink tests probe actual capability; ordinary-user Windows copy installation remains fully tested.
+
+See [verification evidence and remaining limits](docs/verification.md) for the actual local results; consult PR checks for executed CI results.
