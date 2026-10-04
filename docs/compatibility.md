@@ -79,3 +79,42 @@ Diagnostic recovery guidance requests command-specific host approval and never
 performs privilege escalation itself. Measurement observes; delegation authorizes.
 
 See [release-source checks](releasing.md) for ignored-file exclusions.
+
+## Diagnostics and preference ownership from 1.0.1
+
+`service_tier` is a user preference, not a Copilot dispatch requirement. Installation
+never creates or changes it. Upgrades move prior ownership records into optional
+`retired_config_changes` in manifest schema 2; missing means an empty list. Records
+and backups remain available, but retired settings are not restored on uninstall.
+Existing 0.1.x migrations retain their current tier rather than restoring the
+pre-install value recorded by the old installer.
+
+Required agent settings and `features.fast_mode=false` remain managed. Doctor
+adds `config_checks` with key, expected/actual, missing, matches, impact and blocking;
+only known related settings are displayed. Installation state describes managed
+artifacts and required settings; `runtime_available` independently describes CLI,
+Python, login and parseable configuration. It does not guarantee model entitlement
+or available quota. Missing launcher PATH is an independent warning.
+
+Doctor and status add `quota_status`: read_success, available, source, cache_status,
+error_category, retryable, phase, process_exit_code and next_step. Doctor's warning
+check `ok=true` means the diagnostic can continue, not that quota was obtained.
+A live empty-window response can have read_success=true and available=false.
+Cached observations always have read_success=false. Cache status is valid, expired,
+missing, invalid, unreadable, write_failed or not_checked. Failure phase is startup,
+initialize, quota_read or cache_write; a null exit code means no natural exit was
+observed before cleanup. Successful reads have no failure phase. These diagnostics
+are not serialized into quota-cache records and never enter metrics or trace.
+
+Dispatch checks required settings before any quota override and verifies the
+selected managed agent artifact when an installation manifest exists. Run-wide
+cumulative authorization, model/effort policy and trusted quota acquisition remain
+independent of diagnostic status. Diagnostic output does not grant host permissions.
+
+New symlinked agent records also carry optional content_fingerprint in schema 2.
+Link address and dereferenced instructions must both match. Legacy link-only agent
+records cannot authorize dispatch: an upgrade can adopt them only when link identity
+still matches and content equals the reviewed source, then records the content hash.
+Copy mode keeps its existing whole-file fingerprints. Doctor checks that every
+required artifact has a manifest record, including the runtime pointer. Direct
+uninstall through 1.0.1 also preserves a tier still actively recorded by an old manifest.

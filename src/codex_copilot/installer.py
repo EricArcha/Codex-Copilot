@@ -16,16 +16,10 @@ from .config_edit import MISSING, apply_updates, get_path, parse_toml, restore_u
 from .paths import bin_dir, codex_home, repo_root, share_dir, skill_locations, skills_home, state_dir
 from .known_skills import KNOWN_DISTRIBUTION_DIGESTS, KNOWN_SKILL_DIGESTS
 from . import user_path
+from .config_policy import REQUIRED_CONFIG, config_checks
 
 
-CONFIG_UPDATES: dict[str, Any] = {
-    "service_tier": "standard",
-    "features.multi_agent": True,
-    "agents.max_concurrent_threads_per_session": 3,
-    "agents.default_subagent_model": "gpt-6-luna",
-    "agents.default_subagent_reasoning_effort": "low",
-    "features.fast_mode": False,
-}
+CONFIG_UPDATES: dict[str, Any] = REQUIRED_CONFIG
 AGENT_FILES = (
     "copilot-scout.toml",
     "copilot-investigator.toml",
@@ -68,10 +62,13 @@ def load_manifest() -> dict[str, Any] | None:
     if valid:
         valid = all(isinstance(a, dict) and isinstance(a.get("target"), str) and bool(a["target"])
                     and isinstance(a.get("fingerprint"), str) and isinstance(a.get("kind"), str)
+                    and ("content_fingerprint" not in a or isinstance(a["content_fingerprint"], str))
                     and (not a.get("previous_backup") or isinstance(a["previous_backup"], str)) for a in manifest["artifacts"])
+        retired = manifest.get("retired_config_changes", [])
+        valid = valid and isinstance(retired, list)
         valid = valid and all(isinstance(c, dict) and isinstance(c.get("path"), str)
                               and isinstance(c.get("previous_present"), bool) and "previous_value" in c and "installed_value" in c
-                              for c in manifest["config_changes"])
+                              for c in [*manifest["config_changes"], *retired])
     path = manifest.get("user_path")
     if path is not None:
         valid = valid and isinstance(path, dict) and isinstance(path.get("entry"), str) and isinstance(path.get("added"), bool)
@@ -142,6 +139,13 @@ def artifact_fingerprint_for(item: dict[str, Any]) -> str:
 
 
 def artifact_matches(item: dict[str, Any]) -> bool:
+    target = Path(item["target"])
+    if item.get("kind") == "agent" and target.is_symlink():
+        # Link identity alone cannot prove the instructions behind it are unchanged.
+        if not item.get("content_fingerprint") or not target.is_file():
+            return False
+        if hashlib.sha256(target.read_bytes()).hexdigest() != item["content_fingerprint"]:
+            return False
     if item.get("kind") == "distribution":
         target = Path(item["target"])
         if target.exists() and any(p.name not in {"src", "skill", "agents", "bin", "VERSION", ".DS_Store"} for p in target.iterdir()):
@@ -191,16 +195,34 @@ def _planned() -> list[tuple[Path, Path, str]]:
     ]
 
 
+def expected_artifact_targets(mode: str) -> set[str]:
+    targets = {str(target) for _, target, _ in _planned()} | {str(bin_dir() / "codex-copilot.runtime.json")}
+    if mode == "copy":
+        targets.add(str(share_dir()))
+    return targets
+
+
+def _legacy_agent_matches(item: dict[str, Any], source: Path | None) -> bool:
+    """Upgrade old link-only records only when content matches the reviewed source."""
+    target = Path(item["target"])
+    return (item.get("kind") == "agent" and "content_fingerprint" not in item
+            and target.is_symlink() and source is not None and source.is_file()
+            and target.is_file() and artifact_fingerprint(target) == item["fingerprint"]
+            and target.read_bytes() == source.read_bytes())
+
+
 def _is_current_install(manifest: dict[str, Any] | None, mode: str, config: dict[str, Any]) -> bool:
     if not manifest or manifest.get("status") == "uninstall-residue" or manifest.get("mode") != mode or manifest.get("version") != VERSION:
         return False
-    if any(get_path(config, path, MISSING) != value for path, value in CONFIG_UPDATES.items()):
+    if any(item["blocking"] for item in config_checks(config)):
+        return False
+    if any(c["path"] == "service_tier" for c in manifest.get("config_changes", [])):
         return False
     artifacts = manifest.get("artifacts", [])
     if not artifacts or any(not artifact_matches(item) for item in artifacts):
         return False
     targets = {item.get("target") for item in artifacts}
-    expected = {str(target) for _, target, _ in _planned()} | {str(bin_dir() / "codex-copilot.runtime.json")}
+    expected = expected_artifact_targets(mode)
     if not expected.issubset(targets):
         return False
     if mode == "copy":
@@ -326,7 +348,7 @@ def _preflight(target: Path, source: Path | None, kind: str, managed: dict[str, 
         return False
     item = managed.get(str(target))
     if item:
-        if not artifact_matches(item):
+        if not artifact_matches(item) and not _legacy_agent_matches(item, source):
             raise InstallError(f"Refusing to overwrite modified managed path: {target}. Back up and resolve the conflict first.")
         return False
     if kind == "skill" and source:
@@ -394,7 +416,8 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
     adopted = {str(target) for source, target, kind in preflight if _preflight(target, source, kind, managed)}
     for item in (current or {}).get("artifacts", []):
         target = Path(item["target"])
-        if (target.exists() or target.is_symlink()) and not artifact_matches(item):
+        source = next((s for s, t, _ in planned if t == target), None)
+        if (target.exists() or target.is_symlink()) and not artifact_matches(item) and not _legacy_agent_matches(item, source):
             raise InstallError(f"Refusing upgrade with modified managed path: {target}")
     path_before = path_after = ownership = None
     if add_to_path:
@@ -442,6 +465,8 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
             if kind == "executable" and os.name != "nt" and not target.is_symlink():
                 target.chmod(target.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
             item = {"kind": kind, "source": str(actual_source), "target": str(target), "fingerprint": artifact_fingerprint(target)}
+            if kind == "agent" and target.is_symlink():
+                item["content_fingerprint"] = hashlib.sha256(target.read_bytes()).hexdigest()
             previous_backup = managed.get(str(target), {}).get("previous_backup")
             if previous_backup or str(target) in adopted:
                 item["previous_backup"] = previous_backup or str(previous)
@@ -455,6 +480,9 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
                 transaction.remove(Path(item["target"]))
         transaction.text(config_path, updated)
         original_changes = (current or {}).get("config_changes", [])
+        retired_changes = [*(current or {}).get("retired_config_changes", []),
+                           *[c for c in original_changes if c["path"] == "service_tier"]]
+        original_changes = [c for c in original_changes if c["path"] != "service_tier"]
         owned_paths = {change["path"] for change in original_changes}
         original_changes = [*original_changes, *[asdict(c) for c in changes if c.path not in owned_paths]]
         previous_path = (current or {}).get("user_path")
@@ -466,6 +494,7 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
         manifest = {"schema": 2, "version": VERSION, "mode": mode, "installed_at": int(time.time()), "repo_root": str(repo_root()),
                     "artifacts": artifacts, "config_path": str(config_path), "config_backup": str(transaction.originals.get(config_path)),
                     "config_changes": original_changes, "user_path": previous_path if previous_path and previous_path.get("added") else ownership,
+                    "retired_config_changes": retired_changes,
                     "backup_dir": str(transaction.root)}
         transaction.text(manifest_path(), json.dumps(manifest, indent=2, sort_keys=True) + "\n", 0o600)
     except Exception as exc:
@@ -494,7 +523,7 @@ def uninstall(*, dry_run: bool = False) -> dict[str, Any]:
         removable.append(item)
     config_path = Path(manifest["config_path"])
     config_text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
-    restored, config_warnings = restore_updates(config_text, manifest.get("config_changes", []))
+    restored, config_warnings = restore_updates(config_text, [c for c in manifest.get("config_changes", []) if c["path"] != "service_tier"])
     warnings.extend(config_warnings)
     actions.append(f"restore managed settings: {config_path}")
     path_before = path_after = None

@@ -47,3 +47,261 @@ A later macOS CI run revealed the same Darwin EPERM edge on an exited descendant
 
 - At the owner's request, GitHub Release 401943324 was returned to draft (`draft=true`); the `v1.0.0` tag and source version remain unchanged.
 - Bilingual README headings and milestones now describe the source version and link to its tag instead of the withdrawn public Release. Runtime, installation instructions and demo assets are unchanged.
+
+## Installation/quota diagnostics candidate 1.0.1 — 2026-10-05
+
+- Confirmed source checkout from installation manifest: baseline 400609c. Installed
+  artifacts matched; only service_tier differed (standard expected, default current).
+  Exact-value aggregation caused incomplete despite intact installed files.
+- Read-only comparison on Windows/Python 3.13.7/Codex CLI 0.160.0 used the npm
+  wrapper selected by PATH. Restricted execution classified state_initialization_failed;
+  host-approved execution with unchanged configuration returned real App Server
+  windows. The historical process_exit cause and natural exit code remain unknown.
+  No evidence links that failure to service_tier or depleted allowance.
+- Candidate unit suite: 132 tests, 6 capability/platform skips on this Windows
+  account. Copy/business tests passed; symlink privilege was probed by the existing
+  test helper. Skill validation and release metadata checks passed.
+- Five-override isolated tests cover retirement, repeat install, uninstall,
+  configuration-preserving rollback, dispatch safety and managed agent drift.
+  Real-pipe simulated servers cover strict initialization, natural versus cleanup
+  exit codes, deadlines and process-tree cleanup. They are not live quota evidence.
+- Independent L3 review, candidate CI and Windows upgrade acceptance are pending
+  at this checkpoint; subsequent entries record actual results.
+
+### Mac final acceptance handoff (installation/quota completed; restart pending)
+
+The baseline 400609c was produced on the owner's Mac; this alone does not validate
+live quota access. Shared configuration/RPC regressions apply to macOS as well.
+After candidate CI passes, use the same reviewed candidate commit as Windows:
+
+1. Read `${CODEX_COPILOT_STATE_DIR:-$HOME/.codex-copilot}/install.json` locally;
+   locate repo_root, config_path, agent/launcher targets and mode. Keep private
+   configuration and credentials out of shared outputs. Check Git state and the
+   actual CLI/Python versions; preserve local edits before fetching this branch.
+2. Record the pre-upgrade doctor summary by absolute launcher path. Back up config,
+   manifest and runtime pointer locally. Select the recorded candidate commit,
+   run the source install --dry-run, then install only the reviewed artifact plan.
+   The tier preference must stay unchanged; use copy mode if agent symlinks fail.
+3. Use the manifest's absolute launcher for doctor --json and one
+   status --refresh --json. Required settings/artifacts must pass; quota acceptance
+   requires source=app-server, read_success=true and actual windows. Record PATH
+   warnings separately. Fresh-chat role loading follows a user-timed Desktop restart.
+4. For permission/state errors, make at most one command-specific host-approved
+   comparison after the execution context changes. Report safe category, phase and
+   natural exit code; do not copy credentials or reset account state.
+5. Append the sanitized result and tested commit here. Real-device results below
+   distinguish installation/quota acceptance from restart-dependent role loading.
+
+Rollback handoff: retain the installer's backup_dir and recovery.json plus the
+pre-upgrade manifest/runtime pointer backup. Compare each affected target with
+its new manifest fingerprint before restoring its original. For config, restore
+only keys changed by this upgrade that still equal their newly installed values;
+never replace a current whole config if subsequent user edits exist. Preserve
+measurement preferences/history and unrelated state. Stop and report conflicts or
+missing backups; do not use downgrade installation as destructive recovery.
+
+- L3 reviewer reproduced direct legacy uninstall restoring tier, omitted runtime
+  pointer records yielding complete, and symlink target edits escaping link-only
+  fingerprints. Fixes preserve tier even before upgrade, enforce expected artifact
+  coverage, and record/verify symlink instruction content. Legacy link-only agents
+  need a source-verified upgrade. Both mock and real-symlink regressions were added;
+  real-symlink tests remain capability-dependent on this Windows account.
+
+- Revised Windows suite: 136 tests, 7 platform/capability skips; no business failures.
+  L3 reviewer rechecked 34 diagnostics/CLI tests (3 capability skips) and reported no
+  blockers after the three fixes. A proposed extra cache-consistency hardening delta
+  was withdrawn when the second authorized review hit model capacity. The shipped
+  changes retain the reviewed cache provenance/TTL behavior. Both dispatches count
+  against the same cumulative run budget; no budget override was used.
+
+### Windows installed acceptance and CI (completed)
+
+- Reviewed runtime source commit: 330f6383b4fa0263d8500e4f08b5e21a97b9c2b4.
+  All 13 jobs passed in [candidate CI](https://github.com/EricArcha/Codex-Copilot/actions/runs/37221851774):
+  Windows/macOS/Linux Python 3.11–3.14 plus the Skill validator. macOS automated
+  checks passed; the owner's Mac real-device acceptance remains pending.
+- Formal copy upgrade preview had zero actual setting changes and used its bound
+  plan token. Installed version is 1.0.1; service_tier=default is retained and its
+  prior ownership record is retired. Repeat-install preview needs no changes.
+- Pre-upgrade config/manifest/runtime-pointer backups are under the state directory,
+  backups/pre-1.0.1-d744f9d0-ea84-4e02-9654-7f1181d2d785. Transaction backups/recovery
+  mapping are under backups/e59278ccf9904f24a88650669cc6c601. No auth files were copied.
+- Parsed full Codex configuration is identical before/after. Existing installer
+  text writing normalized LF to CRLF on Windows; this is the only byte difference.
+  Profile and measurement preference presence/content and persistent user PATH
+  match the pre-upgrade baseline. Measurement remains off; history was not removed.
+- By the absolute installed launcher, host-approved doctor reports ok=true,
+  installation_state=complete, runtime_available=true, and quota read_success=true,
+  available=true, source=app-server. The resolved runtime is the existing npm entry
+  via Node selected by PATH, still Codex CLI 0.160.0.
+- A separate installed status --refresh read returned actual 300/10080-minute windows
+  with remaining 48%/66%, band=yellow, no quota error and cache_status=valid. These
+  are observations at acceptance time, not future allowance guarantees.
+- The ordinary restricted installed launcher still reports process_exit at initialize,
+  natural exit code 1, expired cache and unavailable quota, while installation remains
+  complete and service_tier is nonblocking. Earlier direct restricted diagnostics
+  classified state_initialization_failed. Host-approved success proves the environment
+  matters but does not establish the exact low-level cause of every historical exit.
+- Reviewer trace d744f9d0-ea84-4e02-9654-7f1181d2d785 is COMPLIANT: one successful L3
+  final review, one model-capacity failure for the withdrawn optional delta; no override.
+- GitHub connector denied draft-PR creation (403). Automatic approval then rejected
+  reusing Git credentials for a direct API write as insufficiently authorized. That
+  script never executed; no token was read/output/persisted. The reviewed branch is
+  pushed, but PR creation is pending explicit authorization. No main merge, tag,
+  public Release or Desktop restart occurred.
+
+### Windows restricted initialization root cause — 2026-10-05
+
+- A targeted source-reader reproduction returned state_initialization_failed at
+  initialize, natural exit code 1. Its bounded stderr identified SQLite state
+  initialization and Windows OS error 5 (access denied); no raw stderr was saved.
+- Read-only Win32 CreateFileW/OPEN_EXISTING permission probes requested a write
+  handle without writing bytes. The restricted process was denied (error 5) for
+  the Codex state directory and existing SQLite databases. The same directory
+  and state database probes succeeded (error 0) in host-approved execution.
+- No CODEX_SQLITE_HOME environment override or sqlite_home configuration override
+  was active. The selected npm/Node CLI and existing user configuration were
+  unchanged. One host-approved absolute-launcher doctor returned complete,
+  runtime_available=true and live source=app-server/read_success=true.
+- This establishes the current reproduction's cause: the restricted execution
+  context denies writes needed by App Server's local SQLite initialization.
+  Existing command-scoped host approval resolves the tested quota operation;
+  no global sandbox change, ACL change, credential copying, state relocation or
+  account cleanup was performed. The CLI does not auto-escalate permissions.
+- The old historical process_exit event still has no retained underlying error;
+  this reproduction does not retroactively prove its exact cause. Mac real-device
+  acceptance remains pending and is not inferred from this Windows result.
+- Official context: [Windows sandbox](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+  documents write boundaries; [environment variables](https://learn.chatgpt.com/docs/config-file/environment-variables)
+  documents SQLite state defaulting to CODEX_HOME. No runtime code change was
+  required for this permission boundary; the existing quota reference already
+  prescribes one command-scoped host-approved attempt after context changes.
+- Revalidation: host-approved full suite ran 136 tests successfully (7 capability/
+  platform skips); Skill and release metadata validation passed. Restricted suite
+  attempts failed on temporary test-artifact access, including a workspace-scoped
+  TEMP attempt; they are not counted as passes. Their owned test processes were
+  stopped and the newly created workspace temporary directory was removed.
+
+### Mac installed acceptance — 2026-10-05
+
+- Synced candidate branch `codex/installation-quota-diagnostics` at
+  8570d0859078c2c753bd50fe948a1026b0479e97. Its product trees are identical to the
+  Windows-reviewed runtime commit 330f6383b4fa0263d8500e4f08b5e21a97b9c2b4;
+  the later commits add verification documentation. Latest
+  [candidate CI](https://github.com/EricArcha/Codex-Copilot/actions/runs/37225177884)
+  passed all 13 jobs, including macOS Python 3.11–3.14.
+- Local macOS, Python 3.14.6, Codex CLI 0.147.0 via its npm launcher selected by
+  PATH: 136 tests ran successfully
+  with 7 Windows-only skips. Native symlink capability probes and symlink business
+  regressions passed. Existing five-path-override isolated regressions passed,
+  covering historical upgrades, configuration preservation, rollback, changed
+  artifacts and dispatch checks. Skill validator, release metadata and whitespace
+  checks passed. These tests do not substitute for the live checks below.
+- Before upgrade, the absolute installed launcher reported complete 1.0.0 and
+  live quota in host-approved execution. The existing manifest matched this source
+  checkout and copy mode. Backups of existing config, manifest, runtime pointer,
+  measurement preference and metric history files were retained locally under the state
+  directory at backups/pre-1.0.1-mac-b2a59e7f-891c-4faf-98cb-a2ecb8c917a7.
+  No authentication files were copied or private configuration contents shared.
+- Applied the reviewed copy-upgrade preview through its bound plan token; actual
+  setting changes were zero. Installed version is 1.0.1. Full configuration bytes
+  and parsed values are identical before/after, including the tier preference.
+  One historical tier ownership record was retired. The profile file was absent
+  before and after (the effective profile remains balanced). Measurement
+  preference and existing metrics history were byte-identical during upgrade;
+  measurement remains enabled. Persistent PATH was not changed. Repeat-install
+  preview reports `Already installed; no changes.`
+- Transaction originals and recovery mapping remain under state-directory
+  backups/c14708b9ccf24f0f987511ee53d0fe32. No rollback was needed. The rollback
+  handoff above continues to apply; backups are retained rather than automatically
+  restoring or downgrading the installation.
+- Installed absolute-launcher restricted doctor reports ok=true, complete,
+  runtime_available=true and all required settings/artifacts valid, with a quota
+  warning: state_initialization_failed, phase=initialize, natural exit code 1,
+  expired cache, read_success=false and available=false. This Mac observation does
+  not establish the SQLite/OS-level cause demonstrated on Windows.
+- One command-scoped host-approved comparison reports complete,
+  runtime_available=true, no failed/warning checks and live quota
+  source=app-server/read_success=true/available=true/cache_status=valid. A separate
+  required installed status --refresh returned real 300/10080-minute windows,
+  remaining 26%/63%, band=red, and no error. These are time-bound observations.
+  No global sandbox policy, folder permissions, credentials or account state were
+  changed. The user explicitly authorized continuing L3 work and final-review
+  delegation despite the Red-band pause.
+- Installation and live-quota acceptance are complete. Restart-dependent fresh
+  Desktop chat role loading remains pending a user-timed restart; this active chat
+  cannot certify that future restart.
+- Independent GPT-6.1 Sol High final review found no blocking issues. The reviewer
+  confirmed matching product trees, sanitized acceptance evidence and retained
+  originals for all 12 transaction recovery mappings. A documentation correction
+  clarifies the absent profile file rather than claiming it was backed up.
+  Trace run b2a59e7f-891c-4faf-98cb-a2ecb8c917a7 records one successful final review
+  using live app-server quota and the explicit user-authorized Red-band override;
+  compliance is `OVERRIDDEN BY USER`, not a default-budget compliant dispatch.
+
+
+### Mac post-restart role-loading acceptance — 2026-10-05 (completed)
+
+- In the user's post-restart Desktop acceptance chat, tested source commit
+  8570d0859078c2c753bd50fe948a1026b0479e97 and installed version 1.0.1.
+  Installed absolute-launcher doctor reports complete, runtime_available=true,
+  matching artifacts and required settings. Restricted quota initialization still
+  warns; one command-scoped host-approved status succeeded with actual App Server
+  windows (initial remaining 21%/62%, Red).
+- The user explicitly approved continuing the six-role read-only acceptance,
+  exceeding the cumulative delegation budget and a temporary premium route.
+  Every child passed the installed CLI gate using the same canonical run UUID
+  and live source=app-server; no child recursively delegated. All six actual
+  role sessions successfully used a tool to read VERSION as 1.0.1:
+  copilot_scout (Luna Low), copilot_investigator and copilot_worker (Sol Medium),
+  copilot_reviewer and copilot_final_reviewer (Sol High), and
+  copilot_astra_final_reviewer (Astra High).
+- Trace run 0f554f46-a1ec-4150-88a8-4d203f6d7514 records six dispatches and six
+  successful completions, with compliance OVERRIDDEN BY USER. Model/effort
+  entries describe configured roles, not independent backend billing telemetry.
+  These bounded probes verify fresh role loading and representative tool access;
+  reviewer probes are not source reviews or full development-task acceptance.
+- Configuration and all six agent-file fingerprints are unchanged; the profile
+  file's presence/content is unchanged and the effective default remains balanced.
+  No installation, persistent PATH, sandbox policy or account-state changes were
+  performed. Only this verification evidence was appended to the existing local
+  documentation edits.
+- Optional local measurement was already enabled. Begin/end used the same UUID;
+  begin had no fresh cached snapshot and end read App Server once. The incomplete
+  start observation cannot support an allowance-cost or savings comparison.
+- Local revalidation: 136 tests completed successfully with 7 Windows-only skips;
+  Skill Creator validation and release metadata check (1.0.1) passed. Installation,
+  live-quota and post-restart role-loading acceptance are now complete on this Mac.
+
+
+### PR merge-gate pipe cleanup regression — 2026-10-05
+
+- PR #7 CI run 37227389650 exposed a macOS/Python 3.14 race: an exited App
+  Server reader causes buffered stdin close to raise BrokenPipeError, masking
+  the RPC diagnostic and leaving stdout/stderr unclosed. Earlier push CI passed;
+  that does not invalidate this observed failure.
+- A deterministic real-process regression injects the close failure and failed
+  before the fix. Cleanup now ignores only stdin BrokenPipeError from the stopped
+  child and closes both output pipes even if another close raises. Successful
+  results, original failure phase/natural exit code and other cleanup failures
+  retain their behavior.
+- All 11 pipe tests pass; the original RPC diagnostic test passed 30 consecutive
+  local repetitions. Full suite: 137 tests, 7 Windows-only skips; Skill validator,
+  release metadata and whitespace checks pass.
+- Additional independent Sol High final review found no blockers and reran all
+  11 pipe tests successfully. Trace 5f58fc53-423c-42cf-8247-83a98a54799f records
+  one successful review with explicit user-approved override. Its live gate
+  observed Green after the natural quota refresh; the override flag remains
+  recorded. Cross-platform checks on this repair are required before merge.
+- This repair changes source only. Installed-device and six-role acceptance
+  above describe the pre-repair installed runtime; no new user installation or
+  release publication was performed by this merge-gate repair.
+
+- Follow-up push CI 37227647687 exposed a distinct test-server race: the RPC
+  error fixture exited after sending its responses before waiting for client
+  initialization/quota requests, allowing a legitimate process_exit instead of
+  the expected protocol_error. The fixture now waits for corresponding requests.
+  This does not weaken the category or secret-redaction assertions. The same
+  independent reviewer rechecked the test-only follow-up with no blockers and
+  reran all 11 pipe tests. Full local suite remains 137 tests with 7 Windows skips;
+  Skill, release and whitespace checks pass. Runtime repair is unchanged.

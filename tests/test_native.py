@@ -54,6 +54,7 @@ class PipeTests(unittest.TestCase):
                 self.assertIsNotNone(processes[0].poll())
                 self.assertTrue(processes[0].stdin.closed)
                 self.assertTrue(processes[0].stdout.closed)
+                self.assertTrue(processes[0].stderr.closed)
                 self.assertFalse(any(t.name == "codex-copilot-quota-reader" for t in threading.enumerate()))
 
     def test_bounded_stderr_is_classified_without_exposing_secrets(self):
@@ -73,7 +74,7 @@ class PipeTests(unittest.TestCase):
             self.assertFalse(any(t.name == "codex-copilot-quota-stderr" for t in threading.enumerate()))
 
     def test_buffered_consecutive_responses_and_unicode(self):
-        script = "import sys,json,time; [sys.stdin.readline() for _ in range(3)]; print(json.dumps({'id':0,'result':{}})); print(json.dumps({'method':'notice'})); print(json.dumps({'id':1,'result':{'name':'中文','rateLimits':{}}})); time.sleep(10)"
+        script = "import sys,json,time; sys.stdin.readline(); print(json.dumps({'id':0,'result':{}}),flush=True); [sys.stdin.readline() for _ in range(2)]; print(json.dumps({'method':'notice'})); print(json.dumps({'id':1,'result':{'name':'中文','rateLimits':{}}})); time.sleep(10)"
         self.assertEqual(self.rpc(script)["name"], "中文")
 
     def test_rpc_error_categories_never_expose_raw_payload(self):
@@ -85,7 +86,9 @@ class PipeTests(unittest.TestCase):
         ]:
             response = json.dumps({"id": request_id, "error": {"message": message}})
             with self.subTest(category=category), self.assertRaises(QuotaReadError) as caught:
-                self.rpc("print(" + repr(response) + ")")
+                self.rpc("import sys;sys.stdin.readline();" +
+                         ("print('{\"id\":0,\"result\":{}}',flush=True);sys.stdin.readline();sys.stdin.readline();" if request_id == 1 else "") +
+                         "print(" + repr(response) + ",flush=True)")
             self.assertEqual(caught.exception.category, category)
             self.assertNotIn("secret", str(caught.exception))
 
@@ -117,10 +120,34 @@ class PipeTests(unittest.TestCase):
             raise OSError("cleanup error")
 
         with patch("codex_copilot.quota.process_tree.stop", side_effect=fail_after_stop), self.assertRaisesRegex(OSError, "cleanup error"):
-            self.rpc("print('{\"id\":1,\"result\":{}}')")
+            self.rpc("import sys;sys.stdin.readline();print('{\"id\":0,\"result\":{}}',flush=True);sys.stdin.readline();sys.stdin.readline();print('{\"id\":1,\"result\":{}}')")
+
+    def test_broken_pipe_on_stdin_close_preserves_result_and_diagnostic(self):
+        from codex_copilot import process_tree
+        from codex_copilot.quota import QuotaReadError
+        original_start = process_tree.start
+
+        def start_with_broken_close(*args, **kwargs):
+            proc, job = original_start(*args, **kwargs)
+            original_close = proc.stdin.close
+
+            def broken_close():
+                original_close()
+                raise BrokenPipeError("simulated exited input reader")
+
+            proc.stdin.close = broken_close
+            return proc, job
+
+        with patch("codex_copilot.quota.process_tree.start", side_effect=start_with_broken_close):
+            with self.assertRaises(QuotaReadError) as caught:
+                self.rpc("pass")
+            self.assertEqual(caught.exception.category, "process_exit")
+            self.assertEqual(caught.exception.exit_code, 0)
+            self.assertEqual(caught.exception.phase, "initialize")
+            self.assertEqual(self.rpc("import sys;sys.stdin.readline();print('{\"id\":0,\"result\":{}}',flush=True);sys.stdin.readline();sys.stdin.readline();print('{\"id\":1,\"result\":{}}')"), {})
 
     def test_child_holding_stdout_is_reaped_even_after_parent_eof(self):
-        script = "import subprocess,sys; subprocess.Popen([sys.executable,'-c','import time;time.sleep(10)']); print('{\"id\":1,\"result\":{}}',flush=True)"
+        script = "import subprocess,sys; subprocess.Popen([sys.executable,'-c','import time;time.sleep(10)']); print('{\"id\":0,\"result\":{}}',flush=True);sys.stdin.readline();sys.stdin.readline();print('{\"id\":1,\"result\":{}}',flush=True)"
         # Exercise Darwin's asynchronous reaping race repeatedly on real pipes.
         for attempt in range(10 if sys.platform == "darwin" else 1):
             with self.subTest(attempt=attempt):
@@ -131,7 +158,7 @@ class PipeTests(unittest.TestCase):
     @unittest.skipIf(os.name == "nt", "POSIX signal behavior")
     def test_child_ignoring_term_is_killed_with_inherited_pipe(self):
         child = "import signal,time;signal.signal(signal.SIGTERM,signal.SIG_IGN);print('ready',flush=True);time.sleep(10)"
-        script = "import subprocess,sys; p=subprocess.Popen([sys.executable,'-u','-c'," + repr(child) + "],stdout=subprocess.PIPE,stderr=sys.stdout);p.stdout.readline();print('{\"id\":1,\"result\":{}}',flush=True)"
+        script = "import subprocess,sys; p=subprocess.Popen([sys.executable,'-u','-c'," + repr(child) + "],stdout=subprocess.PIPE,stderr=sys.stdout);p.stdout.readline();print('{\"id\":0,\"result\":{}}',flush=True);sys.stdin.readline();sys.stdin.readline();print('{\"id\":1,\"result\":{}}',flush=True)"
         started = time.monotonic()
         self.assertEqual(self.rpc(script), {})
         self.assertLess(time.monotonic() - started, 3)
@@ -253,7 +280,7 @@ class NativeInstallTests(unittest.TestCase):
             self.assertTrue(installer.install()["changed"])
             self.assertEqual(installer.load_manifest()["schema"], 2)
             installer.uninstall()
-            self.assertEqual(tomllib.loads(config.read_text(encoding="utf-8"))["service_tier"], "original")
+            self.assertEqual(tomllib.loads(config.read_text(encoding="utf-8"))["service_tier"], "standard")
 
     def test_actual_v011_release_upgrades_and_preserves_user_settings(self):
         from codex_copilot import VERSION
@@ -274,7 +301,7 @@ class NativeInstallTests(unittest.TestCase):
             config.write_text(config.read_text(encoding="utf-8").replace('model = "initial-choice"', 'model = "user-choice"'), encoding="utf-8")
             installer.uninstall()
             restored = tomllib.loads(config.read_text(encoding="utf-8"))
-            self.assertEqual(restored["service_tier"], "original")
+            self.assertEqual(restored["service_tier"], "standard")
             self.assertEqual(restored["model"], "user-choice")
 
     def test_schema_one_distribution_fingerprint_migrates(self):
@@ -384,7 +411,7 @@ class NativeInstallTests(unittest.TestCase):
             self.assertEqual(config.read_bytes(), config_bytes)
             self.assertEqual(installer.manifest_path().read_bytes(), manifest_bytes)
             self.assertTrue(all(installer.artifact_matches(a) for a in installer.load_manifest()["artifacts"]))
-            config.write_text(config.read_text(encoding="utf-8").replace('service_tier = "standard"', 'service_tier = "custom"'), encoding="utf-8")
+            config.write_text('service_tier = "custom"\n' + config.read_text(encoding="utf-8"), encoding="utf-8")
             installer.uninstall()
             self.assertEqual(tomllib.loads(config.read_text(encoding="utf-8"))["service_tier"], "custom")
             self.assertIn("中文", config.read_text(encoding="utf-8"))
@@ -429,6 +456,7 @@ class NativeInstallTests(unittest.TestCase):
             "codex_copilot.cli.get_quota", return_value=unknown_snapshot("unavailable")
         ), patch("codex_copilot.cli.codex_command", side_effect=lambda args: [sys.executable, "-c", "import sys;sys.exit(17)", *args]):
             args = argparse.Namespace(level="routine", profile=None, override_quota=False, dry_run=False, codex_args=["--", "中文 path"])
+            installer.install()
             self.assertEqual(_launch(args), 17)
 
     def test_missing_codex_is_an_actionable_error(self):
