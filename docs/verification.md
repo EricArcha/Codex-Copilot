@@ -113,3 +113,39 @@ missing backups; do not use downgrade installation as destructive recovery.
   was withdrawn when the second authorized review hit model capacity. The shipped
   changes retain the reviewed cache provenance/TTL behavior. Both dispatches count
   against the same cumulative run budget; no budget override was used.
+
+### Windows installed acceptance and CI (completed)
+
+- Reviewed runtime source commit: 330f6383b4fa0263d8500e4f08b5e21a97b9c2b4.
+  All 13 jobs passed in [candidate CI](https://github.com/EricArcha/Codex-Copilot/actions/runs/37221851774):
+  Windows/macOS/Linux Python 3.11–3.14 plus the Skill validator. macOS automated
+  checks passed; the owner's Mac real-device acceptance remains pending.
+- Formal copy upgrade preview had zero actual setting changes and used its bound
+  plan token. Installed version is 1.0.1; service_tier=default is retained and its
+  prior ownership record is retired. Repeat-install preview needs no changes.
+- Pre-upgrade config/manifest/runtime-pointer backups are under the state directory,
+  backups/pre-1.0.1-d744f9d0-ea84-4e02-9654-7f1181d2d785. Transaction backups/recovery
+  mapping are under backups/e59278ccf9904f24a88650669cc6c601. No auth files were copied.
+- Parsed full Codex configuration is identical before/after. Existing installer
+  text writing normalized LF to CRLF on Windows; this is the only byte difference.
+  Profile and measurement preference presence/content and persistent user PATH
+  match the pre-upgrade baseline. Measurement remains off; history was not removed.
+- By the absolute installed launcher, host-approved doctor reports ok=true,
+  installation_state=complete, runtime_available=true, and quota read_success=true,
+  available=true, source=app-server. The resolved runtime is the existing npm entry
+  via Node selected by PATH, still Codex CLI 0.160.0.
+- A separate installed status --refresh read returned actual 300/10080-minute windows
+  with remaining 48%/66%, band=yellow, no quota error and cache_status=valid. These
+  are observations at acceptance time, not future allowance guarantees.
+- The ordinary restricted installed launcher still reports process_exit at initialize,
+  natural exit code 1, expired cache and unavailable quota, while installation remains
+  complete and service_tier is nonblocking. Earlier direct restricted diagnostics
+  classified state_initialization_failed. Host-approved success proves the environment
+  matters but does not establish the exact low-level cause of every historical exit.
+- Reviewer trace d744f9d0-ea84-4e02-9654-7f1181d2d785 is COMPLIANT: one successful L3
+  final review, one model-capacity failure for the withdrawn optional delta; no override.
+- GitHub connector denied draft-PR creation (403). Automatic approval then rejected
+  reusing Git credentials for a direct API write as insufficiently authorized. That
+  script never executed; no token was read/output/persisted. The reviewed branch is
+  pushed, but PR creation is pending explicit authorization. No main merge, tag,
+  public Release or Desktop restart occurred.
