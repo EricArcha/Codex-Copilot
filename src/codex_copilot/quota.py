@@ -328,9 +328,18 @@ def _read_rpc_result(timeout: float) -> dict[str, Any]:
         finally:
             reader.join(timeout=1)
             stderr_reader.join(timeout=1)
-            proc.stdin.close()
-            proc.stdout.close()
-            proc.stderr.close()
+            try:
+                try:
+                    proc.stdin.close()
+                except BrokenPipeError:
+                    # The stopped child may have closed its input before the
+                    # buffered writer flushes. Preserve the RPC result/error.
+                    pass
+            finally:
+                try:
+                    proc.stdout.close()
+                finally:
+                    proc.stderr.close()
         if reader.is_alive() or stderr_reader.is_alive():
             raise QuotaReadError("process_exit")
 

@@ -21,6 +21,8 @@ versions, not retroactively claimed GitHub releases.
 - Verify required manifest coverage and symlinked agent instruction content.
 - Require safe settings and unchanged managed agent artifacts before delegation;
   quota overrides cannot bypass these checks.
+- Preserve quota results and diagnostics when closing an exited App Server input
+  raises a broken-pipe error; always close the remaining output pipes.
 - Wait for App Server initialization before reading quota; report failure phase,
   natural exit code, cache state and live-read/availability separately.
 - Keep command-scoped host approval, bounded child cleanup and 60-second successful

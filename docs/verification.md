@@ -272,3 +272,27 @@ missing backups; do not use downgrade installation as destructive recovery.
 - Local revalidation: 136 tests completed successfully with 7 Windows-only skips;
   Skill Creator validation and release metadata check (1.0.1) passed. Installation,
   live-quota and post-restart role-loading acceptance are now complete on this Mac.
+
+
+### PR merge-gate pipe cleanup regression — 2026-10-05
+
+- PR #7 CI run 37227389650 exposed a macOS/Python 3.14 race: an exited App
+  Server reader causes buffered stdin close to raise BrokenPipeError, masking
+  the RPC diagnostic and leaving stdout/stderr unclosed. Earlier push CI passed;
+  that does not invalidate this observed failure.
+- A deterministic real-process regression injects the close failure and failed
+  before the fix. Cleanup now ignores only stdin BrokenPipeError from the stopped
+  child and closes both output pipes even if another close raises. Successful
+  results, original failure phase/natural exit code and other cleanup failures
+  retain their behavior.
+- All 11 pipe tests pass; the original RPC diagnostic test passed 30 consecutive
+  local repetitions. Full suite: 137 tests, 7 Windows-only skips; Skill validator,
+  release metadata and whitespace checks pass.
+- Additional independent Sol High final review found no blockers and reran all
+  11 pipe tests successfully. Trace 5f58fc53-423c-42cf-8247-83a98a54799f records
+  one successful review with explicit user-approved override. Its live gate
+  observed Green after the natural quota refresh; the override flag remains
+  recorded. Cross-platform checks on this repair are required before merge.
+- This repair changes source only. Installed-device and six-role acceptance
+  above describe the pre-repair installed runtime; no new user installation or
+  release publication was performed by this merge-gate repair.

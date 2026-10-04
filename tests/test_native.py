@@ -54,6 +54,7 @@ class PipeTests(unittest.TestCase):
                 self.assertIsNotNone(processes[0].poll())
                 self.assertTrue(processes[0].stdin.closed)
                 self.assertTrue(processes[0].stdout.closed)
+                self.assertTrue(processes[0].stderr.closed)
                 self.assertFalse(any(t.name == "codex-copilot-quota-reader" for t in threading.enumerate()))
 
     def test_bounded_stderr_is_classified_without_exposing_secrets(self):
@@ -118,6 +119,30 @@ class PipeTests(unittest.TestCase):
 
         with patch("codex_copilot.quota.process_tree.stop", side_effect=fail_after_stop), self.assertRaisesRegex(OSError, "cleanup error"):
             self.rpc("import sys;sys.stdin.readline();print('{\"id\":0,\"result\":{}}',flush=True);sys.stdin.readline();sys.stdin.readline();print('{\"id\":1,\"result\":{}}')")
+
+    def test_broken_pipe_on_stdin_close_preserves_result_and_diagnostic(self):
+        from codex_copilot import process_tree
+        from codex_copilot.quota import QuotaReadError
+        original_start = process_tree.start
+
+        def start_with_broken_close(*args, **kwargs):
+            proc, job = original_start(*args, **kwargs)
+            original_close = proc.stdin.close
+
+            def broken_close():
+                original_close()
+                raise BrokenPipeError("simulated exited input reader")
+
+            proc.stdin.close = broken_close
+            return proc, job
+
+        with patch("codex_copilot.quota.process_tree.start", side_effect=start_with_broken_close):
+            with self.assertRaises(QuotaReadError) as caught:
+                self.rpc("pass")
+            self.assertEqual(caught.exception.category, "process_exit")
+            self.assertEqual(caught.exception.exit_code, 0)
+            self.assertEqual(caught.exception.phase, "initialize")
+            self.assertEqual(self.rpc("import sys;sys.stdin.readline();print('{\"id\":0,\"result\":{}}',flush=True);sys.stdin.readline();sys.stdin.readline();print('{\"id\":1,\"result\":{}}')"), {})
 
     def test_child_holding_stdout_is_reaped_even_after_parent_eof(self):
         script = "import subprocess,sys; subprocess.Popen([sys.executable,'-c','import time;time.sleep(10)']); print('{\"id\":0,\"result\":{}}',flush=True);sys.stdin.readline();sys.stdin.readline();print('{\"id\":1,\"result\":{}}',flush=True)"
