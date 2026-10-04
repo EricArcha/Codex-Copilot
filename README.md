@@ -10,11 +10,42 @@
 
 > Made for **Codex Desktop** on Windows, macOS and Linux. Requires Python 3.11+ and Codex CLI 0.147.0+.
 
+## Project demo
+
+<p align="center">
+  <a href="https://github.com/EricArcha/Codex-Copilot/raw/refs/heads/main/videos/codex-copilot-demo/exports/codex-copilot-intro-web.mp4">
+    <img src="videos/codex-copilot-demo/exports/codex-copilot-intro.gif" width="800" alt="Codex-Copilot workflow: allowance-aware routing, bounded delegation and independent verification">
+  </a>
+</p>
+<p align="center">
+  <a href="https://github.com/EricArcha/Codex-Copilot/raw/refs/heads/main/videos/codex-copilot-demo/exports/codex-copilot-intro-web.mp4"><strong>Watch with sound · MP4</strong></a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/EricArcha/Codex-Copilot/raw/refs/heads/main/videos/codex-copilot-demo/exports/codex-copilot-intro-master.mp4">1080p · 60fps</a>
+</p>
+<p align="center"><sub>24 seconds. A clear route from request to evidence. The GIF preview is silent.</sub></p>
+
 ## Stable release: 1.0.0
 
 Codex-Copilot 1.0.0 establishes stable installation, CLI/JSON compatibility and release boundaries. See [release](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.0.0), [CHANGELOG](CHANGELOG.md), [compatibility](docs/compatibility.md), [release policy](docs/releasing.md) and [contributing](CONTRIBUTING.md).
 
 Codex-Copilot now routes work across the GPT-6 family: **Luna** handles focused exploration and is the default subagent, **GPT-6.1 Sol** handles normal development and review, and **Astra** is reserved for premium L3 high-risk work and final review. Existing full-install users should update their source checkout to this version, then run `./bin/codex-copilot install` again, then restart Codex Desktop and open a new task.
+
+## Project milestones
+
+Source-history milestones; 0.1.x were source versions, not tagged GitHub releases.
+
+| Date | Milestone | What changed |
+| --- | --- | --- |
+| 2026-09-05 | Initial foundation | Quota-aware orchestration, managed roles and installation. |
+| 2026-09-07 | Delegation guardrails | Executable dispatch checks and bounded subagent work. |
+| 2026-09-12 | Routing profiles | Conservative, balanced and premium routes. |
+| 2026-09-16 | Guided installation | Preview and confirmation for managed installation. |
+| 2026-09-25 | Optional measurement | Opt-in local allowance observations and GPT-6 routing. |
+| 2026-09-30 | Standard-route update | Normal development and review moved to GPT-6.1 Sol. |
+| 2026-10-02 | Native Windows support | Cross-platform installation, process handling and CI. |
+| 2026-10-02 | [First stable release: 1.0.0](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.0.0) | Compatibility contract, upgrade verification and release boundaries. |
+
+See [CHANGELOG](CHANGELOG.md) for version details.
 
 ## Start in 30 seconds
 

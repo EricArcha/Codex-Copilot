@@ -10,11 +10,42 @@
 
 > 面向 Windows、macOS 和 Linux 上的 **Codex Desktop**。要求 Python 3.11+、Codex CLI 0.147.0+。
 
+## 项目演示
+
+<p align="center">
+  <a href="https://github.com/EricArcha/Codex-Copilot/raw/refs/heads/main/videos/codex-copilot-demo/exports/codex-copilot-intro-web.mp4">
+    <img src="videos/codex-copilot-demo/exports/codex-copilot-intro.gif" width="800" alt="Codex-Copilot 工作流：额度感知路由、有界委派与独立验证">
+  </a>
+</p>
+<p align="center">
+  <a href="https://github.com/EricArcha/Codex-Copilot/raw/refs/heads/main/videos/codex-copilot-demo/exports/codex-copilot-intro-web.mp4"><strong>播放有声版 · MP4</strong></a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/EricArcha/Codex-Copilot/raw/refs/heads/main/videos/codex-copilot-demo/exports/codex-copilot-intro-master.mp4">1080p · 60fps</a>
+</p>
+<p align="center"><sub>24 秒，从任务请求走到有证据的交付。GIF 预览无声。</sub></p>
+
 ## 稳定版本：1.0.0
 
 Codex-Copilot 1.0.0 建立了安装、CLI/JSON 兼容性及发布边界。参见[正式版本](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.0.0)、[变更记录](CHANGELOG.md)、[兼容承诺](docs/compatibility.md)、[发布规则](docs/releasing.md)和[贡献入口](CONTRIBUTING.md)。
 
 Codex-Copilot 现已采用 GPT-6 分层路由：**Luna** 用于定向探索，也是默认子代理；**GPT-6.1 Sol** 负责常规开发与审查；**Astra** 仅用于 premium 的 L3 高风险任务和最终审查。已完成完整安装的用户，请先将源码仓库更新到此版本，再运行 `./bin/codex-copilot install`，然后重启 Codex Desktop 并新开任务。
+
+## 项目里程碑
+
+以下为源码演进节点；0.1.x 是历史源码版本，并非带标签的 GitHub 正式发布。
+
+| 日期 | 里程碑 | 主要变化 |
+| --- | --- | --- |
+| 2026-09-05 | 初始基础 | 配额感知编排、受管角色与安装。 |
+| 2026-09-07 | 委派护栏 | 可执行委派检查与有界子代理工作。 |
+| 2026-09-12 | 路由配置 | conservative、balanced、premium 三档路线。 |
+| 2026-09-16 | 引导式安装 | 受管安装的预览与确认流程。 |
+| 2026-09-25 | 可选用量测量 | 主动开启的本地额度观测与 GPT-6 路由。 |
+| 2026-09-30 | 常规路线升级 | 常规开发与审查迁移到 GPT-6.1 Sol。 |
+| 2026-10-02 | Windows 原生支持 | 跨平台安装、进程处理与 CI。 |
+| 2026-10-02 | [首个稳定版本：1.0.0](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.0.0) | 兼容承诺、升级验证与发布边界。 |
+
+版本详情见[变更记录](CHANGELOG.md)。
 
 ## 30 秒开始
 

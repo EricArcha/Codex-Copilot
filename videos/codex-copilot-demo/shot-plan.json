@@ -1,0 +1,26 @@
+{
+  "duration_s": 24,
+  "fps": 60,
+  "canvas": {
+    "w": 1920,
+    "h": 1080
+  },
+  "language": "English with short Chinese supporting lines",
+  "beats": [
+    0,
+    4,
+    8.5,
+    13,
+    18,
+    24
+  ],
+  "scenes": [
+    "Give big tasks a flight plan",
+    "Route by allowance",
+    "Delegate with boundaries",
+    "Verify before delivery",
+    "Codex-Copilot"
+  ],
+  "sound": "BGM plus restrained cue SFX",
+  "runtime": "huashu-design deterministic seek"
+}
