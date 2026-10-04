@@ -24,9 +24,9 @@
 </p>
 <p align="center"><sub>24 seconds. A clear route from request to evidence. The GIF preview is silent.</sub></p>
 
-## Stable release: 1.0.0
+## Current source version: 1.0.0
 
-Codex-Copilot 1.0.0 establishes stable installation, CLI/JSON compatibility and release boundaries. See [release](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.0.0), [CHANGELOG](CHANGELOG.md), [compatibility](docs/compatibility.md), [release policy](docs/releasing.md) and [contributing](CONTRIBUTING.md).
+Codex-Copilot 1.0.0 establishes stable installation, CLI/JSON compatibility and release boundaries. The GitHub Release has been withdrawn; the source version and tag remain available. See [CHANGELOG](CHANGELOG.md), [compatibility](docs/compatibility.md), [release policy](docs/releasing.md) and [contributing](CONTRIBUTING.md).
 
 Codex-Copilot now routes work across the GPT-6 family: **Luna** handles focused exploration and is the default subagent, **GPT-6.1 Sol** handles normal development and review, and **Astra** is reserved for premium L3 high-risk work and final review. Existing full-install users should update their source checkout to this version, then run `./bin/codex-copilot install` again, then restart Codex Desktop and open a new task.
 
@@ -43,7 +43,7 @@ Source-history milestones; 0.1.x were source versions, not tagged GitHub release
 | 2026-09-25 | Optional measurement | Opt-in local allowance observations and GPT-6 routing. |
 | 2026-09-30 | Standard-route update | Normal development and review moved to GPT-6.1 Sol. |
 | 2026-10-02 | Native Windows support | Cross-platform installation, process handling and CI. |
-| 2026-10-02 | [First stable release: 1.0.0](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.0.0) | Compatibility contract, upgrade verification and release boundaries. |
+| 2026-10-02 | [Source version: 1.0.0](https://github.com/EricArcha/Codex-Copilot/tree/v1.0.0) | Compatibility contract, upgrade verification and release boundaries. |
 
 See [CHANGELOG](CHANGELOG.md) for version details.
 
@@ -163,7 +163,7 @@ See [verification evidence and remaining limits](docs/verification.md) for the a
 
 ## Verify and upgrade
 
-For an existing source checkout, fetch tags and select the desired released tag after preserving local work. Review the platform installer dry-run, install, then restart Desktop and open a fresh chat. Verify the installed version is 1.0.0 and `doctor --json` reports complete. Use the displayed full launcher path if it is not on PATH.
+For an existing source checkout, fetch tags and select the desired source tag after preserving local work. Review the platform installer dry-run, install, then restart Desktop and open a fresh chat. Verify the installed version is 1.0.0 and `doctor --json` reports complete. Use the displayed full launcher path if it is not on PATH.
 
 `status --refresh --json` must return real windows with source=app-server. A complete installation alone does not certify live quota or model access. For permission/state errors use command-scoped host-approved execution described in [quota access](skill/codex-copilot/references/quota.md). Unknown is temporary degradation; Desktop percentages do not replace the executable gate. A live cache-write warning preserves the observation but state access must be resolved before trace-writing commands.
 

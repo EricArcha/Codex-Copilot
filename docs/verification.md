@@ -42,3 +42,8 @@ A later macOS CI run revealed the same Darwin EPERM edge on an exited descendant
 - Verified seven representative frames, deterministic seeks, playback controls and phone-size scaling with zero browser errors. Chromium loads and plays the web H.264/AAC export. Both MP4s are 24 seconds with an audio stream; final web audio measured -17.2 LUFS and -1.5 dBFS true peak.
 - README uses a centered, linked GIF preview with separate web/master MP4 entry points. No embedded player HTML is required in GitHub Markdown.
 - Local repository suite: 118 tests run, 7 Windows-specific tests skipped on macOS; Skill validator, release metadata and whitespace checks pass. Runtime, agent configurations, installation and permission behavior are unchanged.
+
+## GitHub Release withdrawal (2026-10-05)
+
+- At the owner's request, GitHub Release 401943324 was returned to draft (`draft=true`); the `v1.0.0` tag and source version remain unchanged.
+- Bilingual README headings and milestones now describe the source version and link to its tag instead of the withdrawn public Release. Runtime, installation instructions and demo assets are unchanged.

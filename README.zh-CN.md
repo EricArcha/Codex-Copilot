@@ -24,9 +24,9 @@
 </p>
 <p align="center"><sub>24 秒，从任务请求走到有证据的交付。GIF 预览无声。</sub></p>
 
-## 稳定版本：1.0.0
+## 当前源码版本：1.0.0
 
-Codex-Copilot 1.0.0 建立了安装、CLI/JSON 兼容性及发布边界。参见[正式版本](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.0.0)、[变更记录](CHANGELOG.md)、[兼容承诺](docs/compatibility.md)、[发布规则](docs/releasing.md)和[贡献入口](CONTRIBUTING.md)。
+Codex-Copilot 1.0.0 建立了安装、CLI/JSON 兼容性及发布边界。GitHub Release 已撤回，源码版本和标签保留。参见[变更记录](CHANGELOG.md)、[兼容承诺](docs/compatibility.md)、[发布规则](docs/releasing.md)和[贡献入口](CONTRIBUTING.md)。
 
 Codex-Copilot 现已采用 GPT-6 分层路由：**Luna** 用于定向探索，也是默认子代理；**GPT-6.1 Sol** 负责常规开发与审查；**Astra** 仅用于 premium 的 L3 高风险任务和最终审查。已完成完整安装的用户，请先将源码仓库更新到此版本，再运行 `./bin/codex-copilot install`，然后重启 Codex Desktop 并新开任务。
 
@@ -43,7 +43,7 @@ Codex-Copilot 现已采用 GPT-6 分层路由：**Luna** 用于定向探索，�
 | 2026-09-25 | 可选用量测量 | 主动开启的本地额度观测与 GPT-6 路由。 |
 | 2026-09-30 | 常规路线升级 | 常规开发与审查迁移到 GPT-6.1 Sol。 |
 | 2026-10-02 | Windows 原生支持 | 跨平台安装、进程处理与 CI。 |
-| 2026-10-02 | [首个稳定版本：1.0.0](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.0.0) | 兼容承诺、升级验证与发布边界。 |
+| 2026-10-02 | [源码版本：1.0.0](https://github.com/EricArcha/Codex-Copilot/tree/v1.0.0) | 兼容承诺、升级验证与发布边界。 |
 
 版本详情见[变更记录](CHANGELOG.md)。
 
@@ -163,7 +163,7 @@ PowerShell 先设置 `$env:PYTHONPATH = 'src'`，再执行 `python -m unittest d
 
 ## 安装验收与升级
 
-已有源码目录先保留本地改动，获取标签并选择目标正式版本，再按平台运行安装预览和安装。完成后重启 Desktop 并新开聊天；确认版本为 1.0.0，`doctor --json` 为 complete。启动器不在 PATH 时使用安装器展示的完整路径。
+已有源码目录先保留本地改动，获取标签并选择目标源码版本，再按平台运行安装预览和安装。完成后重启 Desktop 并新开聊天；确认版本为 1.0.0，`doctor --json` 为 complete。启动器不在 PATH 时使用安装器展示的完整路径。
 
 `status --refresh --json` 应返回真实窗口且 source=app-server。安装完整不代表额度或模型权限已验证。权限或状态初始化失败时，按[额度访问](skill/codex-copilot/references/quota.md)对必要命令申请宿主受控执行；unknown 只用于临时降级，Desktop 百分比不能代替可执行门禁。缓存写入警告保留真实观测，但写 trace 前仍需解决状态目录访问。
 
