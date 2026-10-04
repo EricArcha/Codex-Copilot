@@ -149,3 +149,35 @@ missing backups; do not use downgrade installation as destructive recovery.
   script never executed; no token was read/output/persisted. The reviewed branch is
   pushed, but PR creation is pending explicit authorization. No main merge, tag,
   public Release or Desktop restart occurred.
+
+### Windows restricted initialization root cause — 2026-10-05
+
+- A targeted source-reader reproduction returned state_initialization_failed at
+  initialize, natural exit code 1. Its bounded stderr identified SQLite state
+  initialization and Windows OS error 5 (access denied); no raw stderr was saved.
+- Read-only Win32 CreateFileW/OPEN_EXISTING permission probes requested a write
+  handle without writing bytes. The restricted process was denied (error 5) for
+  the Codex state directory and existing SQLite databases. The same directory
+  and state database probes succeeded (error 0) in host-approved execution.
+- No CODEX_SQLITE_HOME environment override or sqlite_home configuration override
+  was active. The selected npm/Node CLI and existing user configuration were
+  unchanged. One host-approved absolute-launcher doctor returned complete,
+  runtime_available=true and live source=app-server/read_success=true.
+- This establishes the current reproduction's cause: the restricted execution
+  context denies writes needed by App Server's local SQLite initialization.
+  Existing command-scoped host approval resolves the tested quota operation;
+  no global sandbox change, ACL change, credential copying, state relocation or
+  account cleanup was performed. The CLI does not auto-escalate permissions.
+- The old historical process_exit event still has no retained underlying error;
+  this reproduction does not retroactively prove its exact cause. Mac real-device
+  acceptance remains pending and is not inferred from this Windows result.
+- Official context: [Windows sandbox](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+  documents write boundaries; [environment variables](https://learn.chatgpt.com/docs/config-file/environment-variables)
+  documents SQLite state defaulting to CODEX_HOME. No runtime code change was
+  required for this permission boundary; the existing quota reference already
+  prescribes one command-scoped host-approved attempt after context changes.
+- Revalidation: host-approved full suite ran 136 tests successfully (7 capability/
+  platform skips); Skill and release metadata validation passed. Restricted suite
+  attempts failed on temporary test-artifact access, including a workspace-scoped
+  TEMP attempt; they are not counted as passes. Their owned test processes were
+  stopped and the newly created workspace temporary directory was removed.
