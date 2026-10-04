@@ -86,7 +86,9 @@ class PipeTests(unittest.TestCase):
         ]:
             response = json.dumps({"id": request_id, "error": {"message": message}})
             with self.subTest(category=category), self.assertRaises(QuotaReadError) as caught:
-                self.rpc(("import sys;sys.stdin.readline();print('{\"id\":0,\"result\":{}}',flush=True);" if request_id == 1 else "") + "print(" + repr(response) + ")")
+                self.rpc("import sys;sys.stdin.readline();" +
+                         ("print('{\"id\":0,\"result\":{}}',flush=True);sys.stdin.readline();sys.stdin.readline();" if request_id == 1 else "") +
+                         "print(" + repr(response) + ",flush=True)")
             self.assertEqual(caught.exception.category, category)
             self.assertNotIn("secret", str(caught.exception))
 

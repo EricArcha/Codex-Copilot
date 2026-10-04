@@ -296,3 +296,12 @@ missing backups; do not use downgrade installation as destructive recovery.
 - This repair changes source only. Installed-device and six-role acceptance
   above describe the pre-repair installed runtime; no new user installation or
   release publication was performed by this merge-gate repair.
+
+- Follow-up push CI 37227647687 exposed a distinct test-server race: the RPC
+  error fixture exited after sending its responses before waiting for client
+  initialization/quota requests, allowing a legitimate process_exit instead of
+  the expected protocol_error. The fixture now waits for corresponding requests.
+  This does not weaken the category or secret-redaction assertions. The same
+  independent reviewer rechecked the test-only follow-up with no blockers and
+  reran all 11 pipe tests. Full local suite remains 137 tests with 7 Windows skips;
+  Skill, release and whitespace checks pass. Runtime repair is unchanged.
