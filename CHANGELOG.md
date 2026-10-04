@@ -5,6 +5,8 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+- Withdraw the public 1.0.0 GitHub Release to draft at the owner's request; retain the source version and tag, and correct README release claims.
+
 - Add source-history milestones to both README files and complete the project introduction demo.
 
 - Align README release entry points and Skill-only/full-install capability boundaries.
