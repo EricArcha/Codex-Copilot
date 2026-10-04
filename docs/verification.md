@@ -47,3 +47,69 @@ A later macOS CI run revealed the same Darwin EPERM edge on an exited descendant
 
 - At the owner's request, GitHub Release 401943324 was returned to draft (`draft=true`); the `v1.0.0` tag and source version remain unchanged.
 - Bilingual README headings and milestones now describe the source version and link to its tag instead of the withdrawn public Release. Runtime, installation instructions and demo assets are unchanged.
+
+## Installation/quota diagnostics candidate 1.0.1 — 2026-10-05
+
+- Confirmed source checkout from installation manifest: baseline 400609c. Installed
+  artifacts matched; only service_tier differed (standard expected, default current).
+  Exact-value aggregation caused incomplete despite intact installed files.
+- Read-only comparison on Windows/Python 3.13.7/Codex CLI 0.160.0 used the npm
+  wrapper selected by PATH. Restricted execution classified state_initialization_failed;
+  host-approved execution with unchanged configuration returned real App Server
+  windows. The historical process_exit cause and natural exit code remain unknown.
+  No evidence links that failure to service_tier or depleted allowance.
+- Candidate unit suite: 132 tests, 6 capability/platform skips on this Windows
+  account. Copy/business tests passed; symlink privilege was probed by the existing
+  test helper. Skill validation and release metadata checks passed.
+- Five-override isolated tests cover retirement, repeat install, uninstall,
+  configuration-preserving rollback, dispatch safety and managed agent drift.
+  Real-pipe simulated servers cover strict initialization, natural versus cleanup
+  exit codes, deadlines and process-tree cleanup. They are not live quota evidence.
+- Independent L3 review, candidate CI and Windows upgrade acceptance are pending
+  at this checkpoint; subsequent entries record actual results.
+
+### Mac final acceptance handoff (pending)
+
+The baseline 400609c was produced on the owner's Mac; this alone does not validate
+live quota access. Shared configuration/RPC regressions apply to macOS as well.
+After candidate CI passes, use the same reviewed candidate commit as Windows:
+
+1. Read `${CODEX_COPILOT_STATE_DIR:-$HOME/.codex-copilot}/install.json` locally;
+   locate repo_root, config_path, agent/launcher targets and mode. Keep private
+   configuration and credentials out of shared outputs. Check Git state and the
+   actual CLI/Python versions; preserve local edits before fetching this branch.
+2. Record the pre-upgrade doctor summary by absolute launcher path. Back up config,
+   manifest and runtime pointer locally. Select the recorded candidate commit,
+   run the source install --dry-run, then install only the reviewed artifact plan.
+   The tier preference must stay unchanged; use copy mode if agent symlinks fail.
+3. Use the manifest's absolute launcher for doctor --json and one
+   status --refresh --json. Required settings/artifacts must pass; quota acceptance
+   requires source=app-server, read_success=true and actual windows. Record PATH
+   warnings separately. Fresh-chat role loading follows a user-timed Desktop restart.
+4. For permission/state errors, make at most one command-specific host-approved
+   comparison after the execution context changes. Report safe category, phase and
+   natural exit code; do not copy credentials or reset account state.
+5. Append the sanitized result and tested commit here. Until then, macOS real-device
+   quota/installation acceptance remains pending, irrespective of simulated CI tests.
+
+Rollback handoff: retain the installer's backup_dir and recovery.json plus the
+pre-upgrade manifest/runtime pointer backup. Compare each affected target with
+its new manifest fingerprint before restoring its original. For config, restore
+only keys changed by this upgrade that still equal their newly installed values;
+never replace a current whole config if subsequent user edits exist. Preserve
+measurement preferences/history and unrelated state. Stop and report conflicts or
+missing backups; do not use downgrade installation as destructive recovery.
+
+- L3 reviewer reproduced direct legacy uninstall restoring tier, omitted runtime
+  pointer records yielding complete, and symlink target edits escaping link-only
+  fingerprints. Fixes preserve tier even before upgrade, enforce expected artifact
+  coverage, and record/verify symlink instruction content. Legacy link-only agents
+  need a source-verified upgrade. Both mock and real-symlink regressions were added;
+  real-symlink tests remain capability-dependent on this Windows account.
+
+- Revised Windows suite: 136 tests, 7 platform/capability skips; no business failures.
+  L3 reviewer rechecked 34 diagnostics/CLI tests (3 capability skips) and reported no
+  blockers after the three fixes. A proposed extra cache-consistency hardening delta
+  was withdrawn when the second authorized review hit model capacity. The shipped
+  changes retain the reviewed cache provenance/TTL behavior. Both dispatches count
+  against the same cumulative run budget; no budget override was used.

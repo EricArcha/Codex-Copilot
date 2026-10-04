@@ -24,7 +24,9 @@
 </p>
 <p align="center"><sub>24 seconds. A clear route from request to evidence. The GIF preview is silent.</sub></p>
 
-## Current source version: 1.0.0
+## Current source version: 1.0.1
+
+Source 1.0.1 is the diagnostics candidate on `codex/installation-quota-diagnostics`; no new public Release or tag is implied.
 
 Codex-Copilot 1.0.0 establishes stable installation, CLI/JSON compatibility and release boundaries. The GitHub Release has been withdrawn; the source version and tag remain available. See [CHANGELOG](CHANGELOG.md), [compatibility](docs/compatibility.md), [release policy](docs/releasing.md) and [contributing](CONTRIBUTING.md).
 
@@ -72,7 +74,7 @@ The optional full install adds six custom agents, the `codex-copilot` command, a
 ```bash
 git clone https://github.com/EricArcha/Codex-Copilot.git
 cd Codex-Copilot
-git checkout v1.0.0
+git checkout codex/installation-quota-diagnostics
 ./bin/codex-copilot install --dry-run  # look first
 ./bin/codex-copilot install            # confirm in the terminal
 ```
@@ -82,7 +84,7 @@ On Windows PowerShell:
 ```powershell
 git clone https://github.com/EricArcha/Codex-Copilot.git
 cd Codex-Copilot
-git checkout v1.0.0
+git checkout codex/installation-quota-diagnostics
 .\bin\codex-copilot.cmd install --dry-run
 .\bin\codex-copilot.cmd install
 & "$HOME\.local\bin\codex-copilot.cmd" doctor --json
@@ -102,7 +104,7 @@ Before changing anything, the installer shows every file action and all six sett
 - Enable multi-agent work
 - Allow up to 3 concurrent subagent tasks
 - Set a lightweight default subagent (`gpt-6-luna`, low reasoning)
-- Use the standard service tier and disable fast mode
+- Preserve your service-tier preference; keep fast mode disabled by managed policy
 
 The original values are recorded for safe restoration.
 </details>
@@ -163,7 +165,7 @@ See [verification evidence and remaining limits](docs/verification.md) for the a
 
 ## Verify and upgrade
 
-For an existing source checkout, fetch tags and select the desired source tag after preserving local work. Review the platform installer dry-run, install, then restart Desktop and open a fresh chat. Verify the installed version is 1.0.0 and `doctor --json` reports complete. Use the displayed full launcher path if it is not on PATH.
+For an existing source checkout, fetch tags and select the desired source tag after preserving local work. Review the platform installer dry-run, install, then restart Desktop and open a fresh chat. Verify the installed version is 1.0.1 and `doctor --json` reports complete. Use the displayed full launcher path if it is not on PATH.
 
 `status --refresh --json` must return real windows with source=app-server. A complete installation alone does not certify live quota or model access. For permission/state errors use command-scoped host-approved execution described in [quota access](skill/codex-copilot/references/quota.md). Unknown is temporary degradation; Desktop percentages do not replace the executable gate. A live cache-write warning preserves the observation but state access must be resolved before trace-writing commands.
 

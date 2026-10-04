@@ -11,6 +11,7 @@ from .paths import codex_home
 from .profile import active_profile
 from .quota import get_quota
 from .routing import Profile, QuotaBand, TaskLevel, route_for
+from .config_policy import require_dispatch_config
 
 
 _BAND_ORDER = {
@@ -71,6 +72,15 @@ def dispatch_spec(role: str, profile: Profile) -> DispatchSpec:
         raise DelegationDenied(f"Missing or invalid installed agent configuration for {role}")
     if (model, effort) != _ROLE_CONFIGURATION[role]:
         raise DelegationDenied(f"Installed agent configuration violates Copilot policy for {role}")
+    from .installer import InstallError, artifact_matches, load_manifest
+    try:
+        manifest = load_manifest()
+        if manifest:
+            item = next((a for a in manifest["artifacts"] if a["target"] == str(path)), None)
+            if not item or not artifact_matches(item):
+                raise DelegationDenied(f"Installed agent artifact is missing or modified for {role}")
+    except (OSError, InstallError):
+        raise DelegationDenied(f"Cannot verify installed agent artifact for {role}") from None
     return DispatchSpec(role=role, model=model, effort=effort)
 
 
@@ -142,6 +152,10 @@ def dispatch(
         raise DelegationDenied("run_id must be a canonical opaque UUID")
     if phase not in _PHASES:
         raise DelegationDenied(f"Unknown delegation phase: {phase}")
+    try:
+        require_dispatch_config()
+    except ValueError as exc:
+        raise DelegationDenied(str(exc)) from None
     records = records_for_run(run_id)
     selected_profile = profile or active_profile()
     prior_profiles = {item.get("profile") for item in _dispatched(records) if item.get("profile")}

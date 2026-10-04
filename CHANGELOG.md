@@ -12,6 +12,20 @@ versions, not retroactively claimed GitHub releases.
 - Align README release entry points and Skill-only/full-install capability boundaries.
 - Expand installation acceptance and quota-permission guidance for the published 1.0.0 workflow.
 
+## [1.0.1] - 2026-10-05
+
+- Preserve service-tier preferences on install, upgrade and uninstall; retire old
+  tier ownership records without losing their history or backups.
+- Separate installation integrity, required configuration and runtime availability
+  in doctor, with per-key impacts and independent PATH warnings.
+- Verify required manifest coverage and symlinked agent instruction content.
+- Require safe settings and unchanged managed agent artifacts before delegation;
+  quota overrides cannot bypass these checks.
+- Wait for App Server initialization before reading quota; report failure phase,
+  natural exit code, cache state and live-read/availability separately.
+- Keep command-scoped host approval, bounded child cleanup and 60-second successful
+  cache fallback. No automatic escalation, additional quota polling or telemetry.
+
 ## [1.0.0] - 2026-10-02
 
 - Establish a stable CLI, JSON, installation and persistent-data contract.

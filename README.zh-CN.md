@@ -24,7 +24,9 @@
 </p>
 <p align="center"><sub>24 秒，从任务请求走到有证据的交付。GIF 预览无声。</sub></p>
 
-## 当前源码版本：1.0.0
+## 当前源码版本：1.0.1
+
+源码 1.0.1 是 `codex/installation-quota-diagnostics` 分支上的诊断修复候选版本，不代表新增公开 Release 或标签。
 
 Codex-Copilot 1.0.0 建立了安装、CLI/JSON 兼容性及发布边界。GitHub Release 已撤回，源码版本和标签保留。参见[变更记录](CHANGELOG.md)、[兼容承诺](docs/compatibility.md)、[发布规则](docs/releasing.md)和[贡献入口](CONTRIBUTING.md)。
 
@@ -72,7 +74,7 @@ Skill-only 提供工作流指引。CLI 的真实额度查询、受管角色和�
 ```bash
 git clone https://github.com/EricArcha/Codex-Copilot.git
 cd Codex-Copilot
-git checkout v1.0.0
+git checkout codex/installation-quota-diagnostics
 ./bin/codex-copilot install --dry-run  # 先看看会发生什么
 ./bin/codex-copilot install            # 在终端确认后安装
 ```
@@ -82,7 +84,7 @@ Windows PowerShell 使用：
 ```powershell
 git clone https://github.com/EricArcha/Codex-Copilot.git
 cd Codex-Copilot
-git checkout v1.0.0
+git checkout codex/installation-quota-diagnostics
 .\bin\codex-copilot.cmd install --dry-run
 .\bin\codex-copilot.cmd install
 & "$HOME\.local\bin\codex-copilot.cmd" doctor --json
@@ -102,7 +104,7 @@ Windows 启动器动态发现 `py -3` 或 `python`，不嵌入特定版本的解
 - 开启多代理能力
 - 最多同时运行 3 个子代理任务
 - 使用轻量默认子代理（`gpt-6-luna`、low reasoning）
-- 选择 standard service tier，并关闭 fast mode
+- 保留用户的 service_tier 偏好；托管策略继续关闭 fast mode
 
 安装前的值会被记录，用于安全恢复。
 </details>
@@ -163,7 +165,7 @@ PowerShell 先设置 `$env:PYTHONPATH = 'src'`，再执行 `python -m unittest d
 
 ## 安装验收与升级
 
-已有源码目录先保留本地改动，获取标签并选择目标源码版本，再按平台运行安装预览和安装。完成后重启 Desktop 并新开聊天；确认版本为 1.0.0，`doctor --json` 为 complete。启动器不在 PATH 时使用安装器展示的完整路径。
+已有源码目录先保留本地改动，获取标签并选择目标源码版本，再按平台运行安装预览和安装。完成后重启 Desktop 并新开聊天；确认版本为 1.0.1，`doctor --json` 为 complete。启动器不在 PATH 时使用安装器展示的完整路径。
 
 `status --refresh --json` 应返回真实窗口且 source=app-server。安装完整不代表额度或模型权限已验证。权限或状态初始化失败时，按[额度访问](skill/codex-copilot/references/quota.md)对必要命令申请宿主受控执行；unknown 只用于临时降级，Desktop 百分比不能代替可执行门禁。缓存写入警告保留真实观测，但写 trace 前仍需解决状态目录访问。
 

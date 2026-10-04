@@ -226,7 +226,7 @@ class CliTests(unittest.TestCase):
             with patch.dict(
                 os.environ,
                 {
-                    "CODEX_COPILOT_STATE_DIR": temp,
+                    **self.environment(temp),
                     "CODEX_COPILOT_QUOTA_FIXTURE": str(fixture),
                 },
                 clear=False,
@@ -243,11 +243,12 @@ class CliTests(unittest.TestCase):
             with patch.dict(
                 os.environ,
                 {
-                    "CODEX_COPILOT_STATE_DIR": temp,
+                    **self.environment(temp),
                     "CODEX_COPILOT_QUOTA_FIXTURE": str(fixture),
                 },
                 clear=False,
             ):
+                install()
                 output = StringIO()
                 with redirect_stdout(output):
                     code = main(["launch", "--level", "complex", "--dry-run"])

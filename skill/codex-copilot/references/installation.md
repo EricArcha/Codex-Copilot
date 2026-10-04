@@ -6,13 +6,13 @@ Read this when installation is requested, diagnostics show residue, or the CLI i
 
 - **Skill-only:** instructions exist, but no managed installation is recorded. Continue using the guidance and the unknown quota route; do not assume custom agents exist.
 - **Complete:** `doctor --json` reports `installation_state: complete`. Use quota and the installed agent delegation gate. Account/model access is still determined by Codex at runtime.
-- **Incomplete:** a manifest, launcher or agents exist, but required files/settings differ or are missing. Explain the failed checks; preserve state/backups. Do not dispatch missing or invalid agents. Continue the user's task with available guidance unless its required review cannot be performed.
+- **Incomplete:** a manifest, launcher or agents exist, but required files/settings differ or are missing (service_tier preference does not count). Explain the failed checks; preserve state/backups. Do not dispatch missing or invalid agents. Continue the user's task with available guidance unless its required review cannot be performed.
 
 If the CLI is missing, inspect the known launcher location or run diagnostics from a source checkout before calling an existing full installation Skill-only. Default bin directory is `~/.local/bin`; Windows uses `codex-copilot.cmd`. `doctor` does not require PATH to pass when called by full path.
 
 ## Install or upgrade when requested
 
-Clone `https://github.com/EricArcha/Codex-Copilot.git`, enter that directory and select the desired released tag (currently `git checkout v1.0.0`). For an existing checkout, preserve local work and fetch tags before selecting a release; do not overwrite or reset user changes. On Windows PowerShell:
+Clone `https://github.com/EricArcha/Codex-Copilot.git`, enter that directory and select a reviewed source version (public v1.0.0 Release is withdrawn; its source tag remains). For an existing checkout, preserve local work and fetch tags before selecting a release; do not overwrite or reset user changes. On Windows PowerShell:
 
 ```powershell
 .\bin\codex-copilot.cmd install --dry-run
@@ -70,3 +70,21 @@ Quota reads have a deadline and clean up their app-server process. Missing login
 Uninstall by running `codex-copilot uninstall --dry-run`, then `codex-copilot uninstall`. Windows can use the full `.cmd` path. If the launcher is missing, re-clone and run the same subcommand with that platform's source launcher. Deleting the Skill manually does not restore managed settings.
 
 Uninstall restores a setting only while its current value equals the managed installed value. Unchanged adopted Skills are restored from backup. User-modified artifacts are retained with a recovery manifest; resolve them and rerun uninstall from a source checkout. Preserve `~/.codex-copilot` or `CODEX_COPILOT_STATE_DIR` until recovery finishes. Unique backup directories include originals and `recovery.json`; interrupted installations may need manual restoration from these records. A locked file can prevent rollback too; report the exact recovery location and stop further installation attempts until resolved.
+
+From source 1.0.1, installation preserves `service_tier` unchanged (including unset).
+Historical ownership moves to `retired_config_changes`; uninstall does not restore
+retired preferences. `features.fast_mode=false` and agent requirements remain managed.
+Inspect doctor `config_checks` for exact keys and blocking impacts, `codex_runtime`
+for the actual native/npm command resolution, and `runtime_available` separately
+from file integrity. A complete installation can still have an unavailable runtime
+or quota; a preference difference alone does not mean damaged files.
+
+Before a real upgrade, preserve the previous config, manifest and runtime pointer
+alongside the installer transaction backups. Rollback restores only this transaction's
+files that still match the just-installed content; preserve later user edits and report
+conflicts. Never replace a whole current Codex configuration to repair diagnostics.
+
+Agent symlinks require both link and instruction-content fingerprints. Legacy
+link-only records are unverified for dispatch; upgrade from a reviewed checkout
+only if the target still matches that source, or use copy mode. Changed targets
+remain protected from overwrite. Missing required manifest records also fail integrity.

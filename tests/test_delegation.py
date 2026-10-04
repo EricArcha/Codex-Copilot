@@ -55,6 +55,9 @@ class DelegationTests(unittest.TestCase):
             {"CODEX_HOME": str(home), "CODEX_COPILOT_STATE_DIR": str(Path(self.temp.name) / "state")},
             clear=False,
         )
+        from codex_copilot.config_edit import apply_updates
+        from codex_copilot.config_policy import REQUIRED_CONFIG
+        (home / "config.toml").write_text(apply_updates("", REQUIRED_CONFIG)[0], encoding="utf-8")
         self.environment.start()
         self.addCleanup(self.environment.stop)
 

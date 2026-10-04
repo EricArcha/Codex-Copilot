@@ -27,3 +27,11 @@ classified in bounded memory; never copy raw errors into metrics or trace.
 Normal acceptance: host-approved `status --refresh --json` has real windows and
 source=app-server; the actual final-review dispatch gate uses app-server (or its
 valid short-lived fallback). An unknown read is not a successful acceptance test.
+
+Doctor/status `quota_status` separates live `read_success` from `available`. A fresh
+cache fallback has available=true but read_success=false; expired or unreadable
+cache never authorizes a higher route. Inspect cache_status, failure phase and natural
+process_exit_code alongside error_category; null is not evidence of a clean exit.
+Doctor's legacy warning `ok=true` means the diagnostic can continue, not live success.
+The client waits for initialize success before sending initialized and the quota read.
+App Server EOF alone does not prove an installation defect or exhausted allowance.

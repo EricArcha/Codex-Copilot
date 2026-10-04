@@ -24,3 +24,9 @@ def codex_command(args: list[str]) -> list[str]:
 
 def run_codex(args: list[str], **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(codex_command(args), **kwargs)
+
+
+def codex_resolution() -> dict[str, object]:
+    command = codex_command([])
+    return {"executable": command[0], "entrypoint": command[1] if len(command) > 1 else command[0],
+            "mode": "npm" if len(command) > 1 else "native"}

@@ -13,14 +13,15 @@ from pathlib import Path
 from typing import Any
 
 from . import VERSION
-from .config_edit import MISSING, get_path, parse_toml
+from .config_edit import parse_toml
+from .config_policy import config_checks, require_dispatch_config
 from .delegation import DelegationDenied, complete as complete_delegation, dispatch as dispatch_delegation, trace
 from .installer import (
     AGENT_FILES,
-    CONFIG_UPDATES,
     SYMLINK_RISK_WARNING,
     InstallError,
     artifact_matches,
+    expected_artifact_targets,
     install,
     load_manifest,
     uninstall,
@@ -28,7 +29,7 @@ from .installer import (
 from .metrics import project_hash, record, summarize
 from .measurement import begin as begin_measurement, compare as compare_measurements, enabled as measurement_enabled, end as end_measurement, set_enabled as set_measurement_enabled
 from .paths import bin_dir, codex_home, skill_locations, skills_home
-from .process import codex_command, run_codex
+from .process import codex_command, codex_resolution, run_codex
 from .user_path import normalize
 from .profile import active_profile, set_profile
 from .quota import QuotaSnapshot, get_quota
@@ -213,10 +214,12 @@ def doctor() -> dict[str, Any]:
     add("python", sys.version_info >= (3, 11), sys.version.split()[0])
 
     codex = shutil.which("codex")
+    resolution = None
     if not codex:
         add("codex", False, "codex executable not found")
     else:
         try:
+            resolution = codex_resolution()
             completed = run_codex(["--version"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5)
             version_text = (completed.stdout or completed.stderr).strip()
             version = _version_tuple(version_text)
@@ -225,14 +228,14 @@ def doctor() -> dict[str, Any]:
             logged_in = login.returncode == 0 and "ChatGPT" in (login.stdout or login.stderr)
             add("chatgpt_login", logged_in, "ChatGPT login detected" if logged_in else "ChatGPT login not detected")
         except (OSError, subprocess.SubprocessError) as exc:
-            add("codex", False, str(exc))
+            add("codex", False, "Codex executable resolution or runtime check failed; inspect codex_runtime")
 
     config_path = codex_home() / "config.toml"
     try:
         config = parse_toml(config_path.read_text(encoding="utf-8") if config_path.exists() else "")
         add("config", True, str(config_path))
     except (OSError, ValueError) as exc:
-        add("config", False, str(exc))
+        add("config", False, "Codex configuration is unreadable or invalid")
         config = {}
 
     try:
@@ -243,18 +246,32 @@ def doctor() -> dict[str, Any]:
     add("manifest", manifest is not None, str(manifest and manifest.get("version") or "not installed"))
     if manifest:
         mismatches = []
+        artifact_checks = []
         for artifact in manifest.get("artifacts", []):
-            if not artifact_matches(artifact):
+            try:
+                matches = artifact_matches(artifact)
+            except OSError:
+                matches = False
+            target = Path(artifact["target"])
+            artifact_checks.append({"target": str(target), "kind": artifact["kind"],
+                                    "status": "match" if matches else "missing" if not target.exists() else "modified_or_unreadable"})
+            if not matches:
                 mismatches.append(str(artifact["target"]))
+        missing_records = expected_artifact_targets(manifest["mode"]) - {a["target"] for a in manifest["artifacts"]}
+        for target in sorted(missing_records):
+            mismatches.append(target)
+            artifact_checks.append({"target": target, "kind": "required_artifact", "status": "missing_record"})
         add(
             "installation_integrity",
             not mismatches,
             "all recorded links/copies match" if not mismatches else f"mismatch: {', '.join(mismatches)}",
         )
+        checks[-1]["artifacts"] = artifact_checks
     skill = skills_home() / "codex-copilot" / "SKILL.md"
+    settings = config_checks(config)
     if manifest:
-        settings_ok = all(get_path(config, key, MISSING) == value for key, value in CONFIG_UPDATES.items())
-        add("managed_config", settings_ok, "managed settings match" if settings_ok else "managed settings differ; review before reinstalling")
+        settings_ok = not any(item["blocking"] for item in settings)
+        add("managed_config", settings_ok, "required settings match" if settings_ok else "required settings differ; review blocking config_checks")
     add("skill", skill.exists(), str(skill))
     symlinked_agents = []
     for name in AGENT_FILES:
@@ -278,7 +295,7 @@ def doctor() -> dict[str, Any]:
         add("launcher_python_entry", (bin_dir() / "codex-copilot.py").is_file(), str(bin_dir() / "codex-copilot.py"))
     path_entries = {normalize(item) for item in os.environ.get("PATH", "").split(os.pathsep) if item}
     in_path = normalize(str(bin_dir())) in path_entries
-    add("path", in_path, f"{bin_dir()} in current process PATH", severity="ok" if in_path else "warning")
+    add("path", in_path, f"{bin_dir()} in current process PATH" if in_path else f"{bin_dir()} is absent from current PATH; use the absolute launcher path. This does not diagnose quota access.", severity="ok" if in_path else "warning")
     registered = [p for p in skill_locations() if (p / "SKILL.md").exists()]
     add("skill_registration", len(registered) <= 1, "single registration" if len(registered) <= 1 else "duplicate Skill registrations detected")
     quota = get_quota(refresh=True)
@@ -310,13 +327,22 @@ def doctor() -> dict[str, Any]:
     complete = bool(manifest) and manifest.get("status") != "uninstall-residue" and all(c["ok"] for c in checks if c["name"] in installation_names)
     residue = bool(manifest) or any((codex_home() / "agents" / name).exists() for name in AGENT_FILES) or executable.exists() or any(not c["ok"] for c in checks if c["name"] == "manifest_read")
     state = "complete" if complete else "incomplete" if residue else "skill-only"
-    return {"ok": all(c["ok"] or c.get("severity") == "warning" for c in checks), "installation_state": state, "checks": checks, "warnings": warnings}
+    runtime_ok = all(c["ok"] for c in checks if c["name"] in {"python", "codex", "chatgpt_login", "config"})
+    quota_status = quota.to_dict()["quota_status"]
+    return {"ok": all(c["ok"] or c.get("severity") == "warning" for c in checks), "installation_state": state,
+            "checks": checks, "warnings": warnings, "config_checks": settings,
+            "codex_runtime": resolution, "runtime_available": runtime_ok,
+            "quota_status": quota_status}
 
 
 def _human_doctor(result: dict[str, Any]) -> None:
     for check in result["checks"]:
         marker = "WARNING" if check.get("severity") == "warning" else "OK" if check["ok"] else "FAIL"
         print(f"[{marker}] {check['name']}: {check['detail']}")
+    for item in result.get("config_checks", []):
+        if item["blocking"] or (item["impact"] == "preference" and not item["missing"]):
+            print(f"[{item['impact']}] {item['key']}: expected={json.dumps(item['expected'])}, "
+                  f"actual={json.dumps(item['actual'])}, missing={item['missing']}, blocking={item['blocking']}")
     for warning in result.get("warnings", []):
         print(f"warning: {warning}", file=sys.stderr)
 
@@ -341,6 +367,7 @@ def _human_trace(result: dict[str, Any]) -> None:
 
 
 def _launch(args: argparse.Namespace) -> int:
+    require_dispatch_config()
     snapshot = get_quota(refresh=True)
     level = launch_level(args.level)
     profile = Profile(args.profile) if args.profile else active_profile()
