@@ -34,3 +34,11 @@ A later macOS CI run revealed the same Darwin EPERM edge on an exited descendant
 - Pre-release boundary follow-up defines responsibility owners and scope fences in existing governance files. A copy-install regression verifies the runtime contains only src/skill/agents/bin/VERSION and excludes repository-root governance, tests, scripts and user files outside the product trees.
 
 - Boundary follow-up suite: 118 tests passed with 7 platform skips. An actual temporary Git repository verifies that ignored .env/private.key product files block tag validation while installer-excluded bytecode is allowed; diagnostics omit private filenames.
+
+## Introduction media and README — 2026-10-04
+
+- Added bilingual project milestones grounded in source history; only v1.0.0 is described as a tagged stable release.
+- Completed a 24-second workflow illustration with music and cue sound effects. A 1080p 60fps master, 720p 30fps web MP4, 640px GIF and poster remain outside installed product trees.
+- Verified seven representative frames, deterministic seeks, playback controls and phone-size scaling with zero browser errors. Chromium loads and plays the web H.264/AAC export. Both MP4s are 24 seconds with an audio stream; final web audio measured -17.2 LUFS and -1.5 dBFS true peak.
+- README uses a centered, linked GIF preview with separate web/master MP4 entry points. No embedded player HTML is required in GitHub Markdown.
+- Local repository suite: 118 tests run, 7 Windows-specific tests skipped on macOS; Skill validator, release metadata and whitespace checks pass. Runtime, agent configurations, installation and permission behavior are unchanged.

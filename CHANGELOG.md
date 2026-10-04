@@ -5,6 +5,8 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+- Add source-history milestones to both README files and complete the project introduction demo.
+
 - Align README release entry points and Skill-only/full-install capability boundaries.
 - Expand installation acceptance and quota-permission guidance for the published 1.0.0 workflow.
 
