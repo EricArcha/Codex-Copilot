@@ -68,7 +68,7 @@ A later macOS CI run revealed the same Darwin EPERM edge on an exited descendant
 - Independent L3 review, candidate CI and Windows upgrade acceptance are pending
   at this checkpoint; subsequent entries record actual results.
 
-### Mac final acceptance handoff (pending)
+### Mac final acceptance handoff (installation/quota completed; restart pending)
 
 The baseline 400609c was produced on the owner's Mac; this alone does not validate
 live quota access. Shared configuration/RPC regressions apply to macOS as well.
@@ -89,8 +89,8 @@ After candidate CI passes, use the same reviewed candidate commit as Windows:
 4. For permission/state errors, make at most one command-specific host-approved
    comparison after the execution context changes. Report safe category, phase and
    natural exit code; do not copy credentials or reset account state.
-5. Append the sanitized result and tested commit here. Until then, macOS real-device
-   quota/installation acceptance remains pending, irrespective of simulated CI tests.
+5. Append the sanitized result and tested commit here. Real-device results below
+   distinguish installation/quota acceptance from restart-dependent role loading.
 
 Rollback handoff: retain the installer's backup_dir and recovery.json plus the
 pre-upgrade manifest/runtime pointer backup. Compare each affected target with
@@ -181,3 +181,94 @@ missing backups; do not use downgrade installation as destructive recovery.
   attempts failed on temporary test-artifact access, including a workspace-scoped
   TEMP attempt; they are not counted as passes. Their owned test processes were
   stopped and the newly created workspace temporary directory was removed.
+
+### Mac installed acceptance — 2026-10-05
+
+- Synced candidate branch `codex/installation-quota-diagnostics` at
+  8570d0859078c2c753bd50fe948a1026b0479e97. Its product trees are identical to the
+  Windows-reviewed runtime commit 330f6383b4fa0263d8500e4f08b5e21a97b9c2b4;
+  the later commits add verification documentation. Latest
+  [candidate CI](https://github.com/EricArcha/Codex-Copilot/actions/runs/37225177884)
+  passed all 13 jobs, including macOS Python 3.11–3.14.
+- Local macOS, Python 3.14.6, Codex CLI 0.147.0 via its npm launcher selected by
+  PATH: 136 tests ran successfully
+  with 7 Windows-only skips. Native symlink capability probes and symlink business
+  regressions passed. Existing five-path-override isolated regressions passed,
+  covering historical upgrades, configuration preservation, rollback, changed
+  artifacts and dispatch checks. Skill validator, release metadata and whitespace
+  checks passed. These tests do not substitute for the live checks below.
+- Before upgrade, the absolute installed launcher reported complete 1.0.0 and
+  live quota in host-approved execution. The existing manifest matched this source
+  checkout and copy mode. Backups of existing config, manifest, runtime pointer,
+  measurement preference and metric history files were retained locally under the state
+  directory at backups/pre-1.0.1-mac-b2a59e7f-891c-4faf-98cb-a2ecb8c917a7.
+  No authentication files were copied or private configuration contents shared.
+- Applied the reviewed copy-upgrade preview through its bound plan token; actual
+  setting changes were zero. Installed version is 1.0.1. Full configuration bytes
+  and parsed values are identical before/after, including the tier preference.
+  One historical tier ownership record was retired. The profile file was absent
+  before and after (the effective profile remains balanced). Measurement
+  preference and existing metrics history were byte-identical during upgrade;
+  measurement remains enabled. Persistent PATH was not changed. Repeat-install
+  preview reports `Already installed; no changes.`
+- Transaction originals and recovery mapping remain under state-directory
+  backups/c14708b9ccf24f0f987511ee53d0fe32. No rollback was needed. The rollback
+  handoff above continues to apply; backups are retained rather than automatically
+  restoring or downgrading the installation.
+- Installed absolute-launcher restricted doctor reports ok=true, complete,
+  runtime_available=true and all required settings/artifacts valid, with a quota
+  warning: state_initialization_failed, phase=initialize, natural exit code 1,
+  expired cache, read_success=false and available=false. This Mac observation does
+  not establish the SQLite/OS-level cause demonstrated on Windows.
+- One command-scoped host-approved comparison reports complete,
+  runtime_available=true, no failed/warning checks and live quota
+  source=app-server/read_success=true/available=true/cache_status=valid. A separate
+  required installed status --refresh returned real 300/10080-minute windows,
+  remaining 26%/63%, band=red, and no error. These are time-bound observations.
+  No global sandbox policy, folder permissions, credentials or account state were
+  changed. The user explicitly authorized continuing L3 work and final-review
+  delegation despite the Red-band pause.
+- Installation and live-quota acceptance are complete. Restart-dependent fresh
+  Desktop chat role loading remains pending a user-timed restart; this active chat
+  cannot certify that future restart.
+- Independent GPT-6.1 Sol High final review found no blocking issues. The reviewer
+  confirmed matching product trees, sanitized acceptance evidence and retained
+  originals for all 12 transaction recovery mappings. A documentation correction
+  clarifies the absent profile file rather than claiming it was backed up.
+  Trace run b2a59e7f-891c-4faf-98cb-a2ecb8c917a7 records one successful final review
+  using live app-server quota and the explicit user-authorized Red-band override;
+  compliance is `OVERRIDDEN BY USER`, not a default-budget compliant dispatch.
+
+
+### Mac post-restart role-loading acceptance — 2026-10-05 (completed)
+
+- In the user's post-restart Desktop acceptance chat, tested source commit
+  8570d0859078c2c753bd50fe948a1026b0479e97 and installed version 1.0.1.
+  Installed absolute-launcher doctor reports complete, runtime_available=true,
+  matching artifacts and required settings. Restricted quota initialization still
+  warns; one command-scoped host-approved status succeeded with actual App Server
+  windows (initial remaining 21%/62%, Red).
+- The user explicitly approved continuing the six-role read-only acceptance,
+  exceeding the cumulative delegation budget and a temporary premium route.
+  Every child passed the installed CLI gate using the same canonical run UUID
+  and live source=app-server; no child recursively delegated. All six actual
+  role sessions successfully used a tool to read VERSION as 1.0.1:
+  copilot_scout (Luna Low), copilot_investigator and copilot_worker (Sol Medium),
+  copilot_reviewer and copilot_final_reviewer (Sol High), and
+  copilot_astra_final_reviewer (Astra High).
+- Trace run 0f554f46-a1ec-4150-88a8-4d203f6d7514 records six dispatches and six
+  successful completions, with compliance OVERRIDDEN BY USER. Model/effort
+  entries describe configured roles, not independent backend billing telemetry.
+  These bounded probes verify fresh role loading and representative tool access;
+  reviewer probes are not source reviews or full development-task acceptance.
+- Configuration and all six agent-file fingerprints are unchanged; the profile
+  file's presence/content is unchanged and the effective default remains balanced.
+  No installation, persistent PATH, sandbox policy or account-state changes were
+  performed. Only this verification evidence was appended to the existing local
+  documentation edits.
+- Optional local measurement was already enabled. Begin/end used the same UUID;
+  begin had no fresh cached snapshot and end read App Server once. The incomplete
+  start observation cannot support an allowance-cost or savings comparison.
+- Local revalidation: 136 tests completed successfully with 7 Windows-only skips;
+  Skill Creator validation and release metadata check (1.0.1) passed. Installation,
+  live-quota and post-restart role-loading acceptance are now complete on this Mac.
