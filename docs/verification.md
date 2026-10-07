@@ -410,3 +410,39 @@ missing backups; do not use downgrade installation as destructive recovery.
   the independent L3 production review still covers the same production source.
 - The full local suite, Skill and release checks still pass. Windows rerun results
   belong to the subsequent exact-commit CI, not the first failed CI.
+
+### Real end-to-end diagnosis and acceptance — 2026-10-07
+
+- Follow-up diagnosis retained caller-owned JSONL before parser rejection, outside
+  metrics/state. The reproduced rejected item was item.completed/error carrying
+  the CLI notice about the enabled experimental skip_host_skill_discovery feature.
+  It was not a tool. Earlier missing receipts cannot prove that every historical
+  rejection was the same item; the reproduced parser defect is now established.
+- Managed arguments suppress unstable-feature notices for that invocation only;
+  no global config changes. Non-fatal error/Error items are forwarded to callers,
+  while actual tool items and top-level error/turn.failed remain rejected. A real
+  subprocess regression covers notice followed by success and both terminal errors.
+- Diagnostic run 052758e0-43f9-4480-88d2-85c716542499 preserves its consumed/unknown
+  attempt and is paused. Acceptance run e3c02340-aaea-409c-863e-2390097bb308 imports
+  that one consumed attempt explicitly, total cap 4/reserve 1, smoke cap 2. This
+  retains cumulative accounting rather than rewriting failure or resetting budget.
+- Two actual managed model calls succeeded: first returned a fresh random token;
+  a follow-up bound to the same observed session correctly repeated the previous
+  token. Both request replays returned executed=false without another process.
+  Direct smoke evidence passed; no domain-effect conclusion is claimed from it.
+- Full local suite: 185 discovered, 178 passed, seven Windows-specific skips. Skill
+  validator, release metadata 1.1.0 and whitespace checks passed. One reserved
+  independent L3 final review and exact-commit CI remain required before install.
+
+- Independent copilot_final_reviewer found no actionable issues in the two-file
+  executable/test delta; all 13 focused tests passed. Additional subprocess probes
+  confirmed both notice case variants are forwarded and a following tool event is
+  still rejected. It independently checked the retained diagnostic and cumulative
+  four-call ledger accounting, without making model/network/quota calls itself.
+- The acceptance budget is exhausted (one imported diagnostic, two real model turns,
+  one successful reviewer). The run is honestly closed as a paused checkpoint:
+  smoke advancement preceded final review, so the existing stage-bound acceptance
+  API cannot attach review acceptance without a new pilot call. No stage or outcome
+  was rewritten and no fifth call was made. Repo acceptance is evidenced separately
+  by direct smoke receipts, independent review and exact-commit CI; no comparison
+  effect or runtime publication_eligible claim is made.

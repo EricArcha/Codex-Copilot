@@ -23,6 +23,8 @@ versions, not retroactively claimed GitHub releases.
 - Add explicit run budgets, closing reserves, legacy recovery confirmation and
   bounded offline/smoke/pilot/batch evidence checkpoints. Engineering success
   alone cannot complete a comparison with missing effect acceptance.
+- Distinguish native non-fatal CLI notice items from tool activity and terminal
+  errors; suppress experimental-feature notices in the managed invocation only.
 - Add a fixed, isolated `model exec` data-plane entry point and project-local Git
   identity check. Results belong to callers; prompts and raw receipts never enter
   Copilot execution state or metrics.

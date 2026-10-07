@@ -76,6 +76,7 @@ class ModelTests(unittest.TestCase):
         self.assertIn("--ignore-user-config", args)
         self.assertIn("read-only", args)
         self.assertIn(model.MODEL, args)
+        self.assertIn("suppress_unstable_features_warning=true", args)
         for feature in model.DISABLED_FEATURES:
             self.assertIn(feature, args)
         session = uid()
@@ -112,6 +113,20 @@ class ModelTests(unittest.TestCase):
         code = 'import sys; sys.stdin.read(); print(\'{"type":"item.started","item":{"type":"command_execution"}}\')'
         with self.assertRaisesRegex(ex.ExecutionDenied, "tool activity"):
             self.run_process(code)
+
+    def test_nonfatal_native_notice_does_not_impersonate_tool_activity(self):
+        session = uid()
+        events = [{"type":"thread.started", "thread_id":session},
+                  {"type":"item.completed", "item":{"id":"0", "type":"error", "message":"Under-development features enabled"}},
+                  {"type":"item.completed", "item":{"id":"1", "type":"agent_message", "text":"OK"}},
+                  {"type":"turn.completed"}]
+        code = "import sys; sys.stdin.read(); print(" + repr("\n".join(json.dumps(x) for x in events)) + ")"
+        self.assertEqual(self.run_process(code), session)
+        for event in ({"type":"error", "message":"terminal failure"},
+                      {"type":"turn.failed", "error":{"message":"terminal failure"}}):
+            code = "import sys; sys.stdin.read(); print(" + repr(json.dumps(event)) + ")"
+            with self.assertRaisesRegex(ex.ExecutionDenied, "Managed model failed"):
+                self.run_process(code)
 
     def test_real_process_session_mismatch_and_incomplete_turn_fail(self):
         code = "import sys; sys.stdin.read(); print(" + repr(json.dumps({"type":"thread.started","thread_id":uid()})) + ")"

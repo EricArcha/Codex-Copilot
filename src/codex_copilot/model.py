@@ -84,7 +84,8 @@ def _arguments(call: dict[str, Any], cwd: Path) -> list[str]:
     args = ["exec", "--ignore-user-config", "--enable", "skip_host_skill_discovery"]
     for feature in DISABLED_FEATURES:
         args.extend(["--disable", feature])
-    args.extend(["-c", f'model_reasoning_effort="{EFFORT}"', "-c", 'web_search="disabled"',
+    args.extend(["-c", f'model_reasoning_effort="{EFFORT}"',
+                 "-c", "suppress_unstable_features_warning=true", "-c", 'web_search="disabled"',
                  "--model", MODEL, "--sandbox", "read-only", "--skip-git-repo-check", "--json",
                  "--color", "never", "--cd", str(cwd)])
     if call["followup_id"]:
@@ -209,7 +210,10 @@ def _run(args: list[str], prompt: str, output: TextIO, timeout: float,
                     raise execution.ExecutionDenied("Unexpected extra model turn")
                 completed = True
             item = event.get("item", {})
-            if not isinstance(item, dict) or (item and item.get("type") not in {"agent_message", "reasoning", "AgentMessage", "Reasoning"}):
+            # Native error items are non-fatal notices, distinct from top-level
+            # error/turn.failed events. Forward them without treating them as tools.
+            if not isinstance(item, dict) or (item and item.get("type") not in {
+                    "agent_message", "reasoning", "AgentMessage", "Reasoning", "error", "Error"}):
                 raise execution.ExecutionDenied("Unexpected tool activity in data-plane model call")
             # Forward successful model events to the caller; never put them in state/metrics.
             if event_type in {"thread.started", "turn.started", "turn.completed", "item.started", "item.completed", "item.updated"}:
