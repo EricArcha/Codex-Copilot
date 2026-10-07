@@ -1,6 +1,6 @@
 # Optional allowance measurement
 
-Task-level measurement is off by default. `codex-copilot measure on|off|status` changes only a local preference. The existing subagent dispatch trace remains active for the delegation cap even when measurement is off. Turning measurement off does not delete history.
+Task-level measurement is off by default. `codex-copilot measure on|off|status` changes only a local preference. The durable execution ledger enforces call budgets even when measurement is off; the best-effort subagent trace is a display/diagnostic projection, not authorization state. Turning measurement off does not delete history.
 
 When `codex-copilot status --json` says `measurement_enabled: true`, generate one canonical UUID and run after the Start quota check. If quota status is unavailable, `codex-copilot measure status` reads this local preference without contacting the quota service:
 

@@ -51,7 +51,9 @@ before release. Update CHANGELOG for user-facing changes. Permission, installati
   conditional operator guidance. Instructions cannot grant host permissions or
   bypass runtime validation. Do not make every task load every reference.
 - `src/` owns executable enforcement. Quota owns trusted acquisition/diagnostics,
-  routing owns policy, delegation owns cumulative dispatch authorization,
+  routing owns policy, delegation owns role policy and native dispatch authorization, execution owns durable
+  call budgets, scoped grants and evidence-stage gates, model owns fixed data-plane
+  invocation and at-most-once spawn claims,
   installer owns managed artifact transactions, metrics/measurement own opt-in
   privacy-safe observations. Diagnostics and measurements never authorize dispatch.
 - Repository governance stays in AGENTS/CONTRIBUTING and docs, not in the runtime

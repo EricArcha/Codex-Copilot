@@ -118,3 +118,49 @@ still matches and content equals the reviewed source, then records the content h
 Copy mode keeps its existing whole-file fingerprints. Doctor checks that every
 required artifact has a manifest record, including the runtime pointer. Direct
 uninstall through 1.0.1 also preserves a tier still actively recorded by an old manifest.
+
+## Bounded execution from 1.1.0
+
+Execution authorization has its own schema-1 SQLite ledger under the local state
+root. It is independent of installer schema, quota cache, metrics rotation and
+opt-in measurement. Native child dispatch and managed model turns reserve cumulative
+capacity transactionally; failure, cancellation, timeout and unknown outcomes never
+refund a slot. New requests are denied when the ledger is unavailable or invalid.
+Existing public fields retain their meanings. New optional request/grant identifiers
+are canonical UUIDs; traces remain declared configuration, not billing telemetry.
+
+Internal `_delegate dispatch` now requires an explicitly begun run and request ID;
+bare `--override` is rejected. A scoped grant records a user-authorization declaration
+for a finite count and expiry. It changes route/cap eligibility only, never total-call,
+closing-reserve, observation, role/model/effort, single-writer or configuration policy.
+Follow-ups pin the original session configuration and consume new capacity. Legacy
+traces remain readable, but cannot authorize new work without explicit confirmed
+consumption recovery. No automatic history migration, reset or deletion is performed.
+
+`run begin/status/checkpoint/close`, `grant`, `model exec` and `release-check` are
+additive interfaces. Budgets require normal/worst totals, the authorized total and a
+closing reserve; absent budgets permit offline preflight only. Model stages use explicit
+bounded caps (default 3 per smoke/pilot/batch), caller-owned opaque evidence references
+and real successful call records. Comparison expansion requires executed scoring and
+paired-evidence declarations. Domain fidelity and acceptance evidence remain the
+caller's responsibility; publication_eligible does not grant publication permission.
+
+`model exec` supports CLI installations exposing all required isolation feature flags
+(tested with 0.160.1); unsupported installations fail before generation. It constructs
+GPT-6.1 Sol Medium arguments without caller overrides and uses an empty stable cwd,
+read-only sandbox and disabled host tools. Output belongs to the caller; Copilot stores
+no prompts, responses, raw receipts or CLI command text. Native Codex session storage
+is used for explicitly bound continuations. At-most-once applies to managed CLI starts,
+not backend-internal retries, Desktop parent turns or unrelated processes.
+
+Bulk turns use only the recent successful quota cache, without per-turn live readers
+or polling. Missing/expired quota blocks expansion. Native child dispatch retains its
+existing necessary live refresh. Explicit optional primary-window observation guards
+reuse the trusted Start cache, emit a concise notice and never change measurement
+preferences. Window changes do not rebase guards or restore capacity; percentage-point
+limits cannot guarantee the cost of an in-flight turn or exact task attribution.
+
+Repository identity checks require project-local name/email and matching effective
+author/committer values. They never change local/global Git configuration or expose
+identity values. Permission recovery remains command-scoped host approval, never a
+global sandbox, credential or state relocation workaround.

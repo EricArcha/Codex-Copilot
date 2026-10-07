@@ -35,3 +35,19 @@ process_exit_code alongside error_category; null is not evidence of a clean exit
 Doctor's legacy warning `ok=true` means the diagnostic can continue, not live success.
 The client waits for initialize success before sending initialized and the quota read.
 App Server EOF alone does not prove an installation defect or exhausted allowance.
+
+## Bounded model batches
+
+Bulk `model exec` uses the existing successful CLI quota cache (at most 60 seconds old)
+and never starts a quota reader per evaluation turn. Use the planned Start or batch-boundary
+status check; an expired/missing cache pauses calls, rather than causing automatic reads or
+retries. Do not poll to keep it warm. After a permission change, make only the one targeted
+host-approved reattempt already described above. A fresh cache-write warning still proves
+live quota for native dispatch, but bulk execution needs the accessible trusted cache.
+
+Execution-state writes are a separate fail-closed requirement: a live quota read cannot
+compensate for an unavailable SQLite ledger. An optional run allowance guard uses the
+trusted Start cache as its baseline, not Desktop-provided observations. Same-window deltas
+are conservative account observations; crossing/resetting the window blocks that guard
+instead of rebasing it. A route grant never overrides the observation limit. No guarantee
+is made about an in-flight turn's cost or unobserved Desktop/other-account activity.

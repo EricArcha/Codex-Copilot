@@ -288,10 +288,13 @@ class CliTests(unittest.TestCase):
                 "codex_copilot.delegation.get_quota", return_value=self.yellow_snapshot()
             ):
                 install()
+                from codex_copilot.execution import begin
+                begin(run_id="11111111-1111-4111-8111-111111111111", normal_calls=1, worst_calls=1, call_limit=1)
                 denied = StringIO()
                 with redirect_stderr(denied):
                     self.assertEqual(main([
                         "_delegate", "dispatch", "--run-id", "11111111-1111-4111-8111-111111111111",
+                        "--request-id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
                         "--task-level", "L3", "--role", "copilot_reviewer", "--phase", "final_review",
                         "--profile", "premium",
                     ]), 1)
@@ -299,6 +302,7 @@ class CliTests(unittest.TestCase):
                 with redirect_stdout(output):
                     code = main([
                         "_delegate", "dispatch", "--run-id", "11111111-1111-4111-8111-111111111111",
+                        "--request-id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
                         "--task-level", "L3", "--role", "copilot_reviewer", "--phase", "final_review",
                         "--astra-unavailable", "--profile", "premium",
                     ])
