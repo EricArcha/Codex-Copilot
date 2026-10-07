@@ -399,3 +399,14 @@ missing backups; do not use downgrade installation as destructive recovery.
 - Corrected live end-to-end acceptance therefore remains blocked. The source may
   be committed/pushed for CI and draft review, but this checkpoint does not qualify
   for the requested local upgrade or publication. Existing local 1.0.1 stays installed.
+
+### Cross-platform follow-up
+
+- First push/PR CI passed all eight macOS/Linux Python 3.11–3.14 jobs and Skill
+  validation. All four Windows jobs exposed one test cleanup failure: a test-owned
+  sqlite3 connection context committed its transaction without closing the handle.
+- The test now uses contextlib.closing around that connection, retaining the actual
+  corruption assertion and transaction commit. Runtime enforcement is unchanged;
+  the independent L3 production review still covers the same production source.
+- The full local suite, Skill and release checks still pass. Windows rerun results
+  belong to the subsequent exact-commit CI, not the first failed CI.

@@ -5,6 +5,7 @@ import tempfile
 import unittest
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
@@ -176,7 +177,7 @@ class ExecutionTests(unittest.TestCase):
             with self.assertRaisesRegex(ex.ExecutionDenied, "Execution state unavailable") as error:
                 self.reserve()
             self.assertNotIn("secret", str(error.exception))
-        with sqlite3.connect(path) as db:
+        with closing(sqlite3.connect(path)) as db, db:
             data = json.loads(db.execute("SELECT payload FROM runs").fetchone()[0])
             data["consumed"] = -1
             db.execute("UPDATE runs SET payload=?", (json.dumps(data),))
