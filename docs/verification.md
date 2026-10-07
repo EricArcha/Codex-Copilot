@@ -446,3 +446,23 @@ missing backups; do not use downgrade installation as destructive recovery.
   was rewritten and no fifth call was made. Repo acceptance is evidenced separately
   by direct smoke receipts, independent review and exact-commit CI; no comparison
   effect or runtime publication_eligible claim is made.
+
+### Verified local synchronization
+
+- Product commit e23f677c68abe21de460e029d3a40a6aedc528e9 passed all 13 CI
+  jobs (Windows/macOS/Linux × Python 3.11–3.14 and Skill validation):
+  https://github.com/EricArcha/Codex-Copilot/actions/runs/37641524577 .
+- After reviewing the managed plan, the user-authorized copy installation upgraded
+  1.0.1 to 1.1.0 from that exact clean source. Additional local backups preserved
+  the prior config, manifest and runtime pointer; installer transaction backups
+  also remain. Config, measurement preference, profile, execution ledger and metrics
+  were byte-identical immediately after installation. No persistent PATH changes.
+- Installed launcher reports 1.1.0; host-approved doctor reports complete installation,
+  runtime available and successful live app-server quota. Repeat dry-run requires no
+  changes. Replaying the successful request through the installed launcher returns
+  executed=false, no model output and unchanged total consumption 4/4.
+- Optional measurement ended once using doctor's existing snapshot, without another
+  quota read. Its baseline covers the acceptance portion only, excluding the earlier
+  diagnostic; it is a shared-account observation rather than exact task cost.
+- No merge, public release or tag was performed. Desktop restart/fresh-chat loading
+  is a user-side follow-up and was not claimed as tested in this active chat.
