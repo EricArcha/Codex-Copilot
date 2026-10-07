@@ -466,3 +466,26 @@ missing backups; do not use downgrade installation as destructive recovery.
   diagnostic; it is a shared-account observation rather than exact task cost.
 - No merge, public release or tag was performed. Desktop restart/fresh-chat loading
   is a user-side follow-up and was not claimed as tested in this active chat.
+
+### Merge and restart closure — 2026-10-07
+
+- PR #8 was merged into remote main as a7b61ec7fea148f322fa59b34e84590fe78ae31d.
+  Local main was fast-forwarded to the same commit with a clean working tree.
+  All 13 merge-commit CI jobs passed (Windows/macOS/Linux × Python 3.11–3.14
+  and Skill validation):
+  https://github.com/EricArcha/Codex-Copilot/actions/runs/37644359871 .
+- Earlier statements about missing merge or pending restart describe their dated
+  checkpoints; this section records their subsequent closure. The user confirmed
+  restarting Codex Desktop. After that restart, installed doctor reported complete
+  installation, runtime available, successful live app-server quota and no warnings.
+- Installed version remains 1.1.0. Every managed artifact matches its manifest; the
+  installed product matches main and the execution reference is present. The managed
+  installation preview is idempotent and requires no changes. No reinstall or new
+  model/subagent call was needed for this closure check.
+- Final local revalidation: 185 tests discovered, 178 passed, seven Windows-specific
+  skips on macOS; Skill validator and release metadata checks passed.
+- Implementation and local-install acceptance can close. Raw diagnostic receipts
+  remain caller-owned; automatic retention of every rejected receipt was not added.
+  The user-confirmed restart and doctor checks do not claim an additional native
+  agent dispatch from a fresh chat. Prior paused/unknown records remain preserved.
+  Public tagging/release is outside this completed scope.
