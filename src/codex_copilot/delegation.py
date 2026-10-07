@@ -2,25 +2,18 @@ from __future__ import annotations
 
 import tomllib
 import uuid
-import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
-from .metrics import project_hash, record, records_for_run
+from .metrics import record, records_for_run
 from .paths import codex_home
 from .profile import active_profile
-from .quota import get_quota
+from .quota import get_quota, unknown_snapshot
 from .routing import Profile, QuotaBand, TaskLevel, route_for
 from .config_policy import require_dispatch_config
+from . import execution
 
 
-_BAND_ORDER = {
-    QuotaBand.GREEN: 0,
-    QuotaBand.YELLOW: 1,
-    QuotaBand.UNKNOWN: 2,
-    QuotaBand.RED: 3,
-    QuotaBand.CRITICAL: 4,
-}
 _KNOWN_ROLES = {
     "copilot_scout",
     "copilot_investigator",
@@ -30,7 +23,6 @@ _KNOWN_ROLES = {
     "copilot_astra_final_reviewer",
 }
 _PHASES = {"exploration", "implementation", "final_review"}
-_OUTCOMES = {"success", "failure"}
 _ROLE_CONFIGURATION = {
     "copilot_scout": ("gpt-6-luna", "low"),
     "copilot_investigator": ("gpt-6.1-sol", "medium"),
@@ -48,7 +40,7 @@ class DispatchSpec:
     effort: str
 
 
-class DelegationDenied(ValueError):
+class DelegationDenied(execution.ExecutionDenied):
     pass
 
 
@@ -82,17 +74,6 @@ def dispatch_spec(role: str, profile: Profile) -> DispatchSpec:
     except (OSError, InstallError):
         raise DelegationDenied(f"Cannot verify installed agent artifact for {role}") from None
     return DispatchSpec(role=role, model=model, effort=effort)
-
-
-def _effective_band(records: list[dict[str, Any]], current: QuotaBand) -> QuotaBand:
-    observed = [current]
-    for item in records:
-        raw = item.get("effective_quota_band") or item.get("quota_band")
-        try:
-            observed.append(QuotaBand(raw))
-        except (TypeError, ValueError):
-            continue
-    return max(observed, key=lambda band: _BAND_ORDER[band])
 
 
 def _dispatched(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -140,101 +121,122 @@ def _allow_role(
     return count == 0 and role == "copilot_reviewer"
 
 
+def validate_role(level: TaskLevel, role: str, phase: str, profile: Profile,
+                  *, astra_unavailable: bool = False, band: str | None = None) -> None:
+    if role not in _KNOWN_ROLES or level is TaskLevel.L0 or not _valid_role_phase(level, role, phase):
+        raise DelegationDenied("Role and phase violate the task policy; grants cannot override this")
+    if level is not TaskLevel.L3 and role in {"copilot_final_reviewer", "copilot_astra_final_reviewer"}:
+        raise DelegationDenied("Reserved final-review roles require L3")
+    if role == "copilot_final_reviewer" and profile is Profile.PREMIUM:
+        raise DelegationDenied("Premium L3 uses its dedicated final reviewer")
+    if level is TaskLevel.L3 and role == "copilot_reviewer" and not (
+            band == "unknown" or (profile is Profile.PREMIUM and astra_unavailable)):
+        raise DelegationDenied("L3 standard reviewer is only an unknown-route or premium fallback")
+
+
+def _record_best_effort(event: dict[str, Any]) -> None:
+    try:
+        record(event)
+    except (OSError, ValueError):
+        pass
+
+
 def dispatch(
     *, run_id: str, level: TaskLevel, role: str, phase: str, override: bool = False,
-    astra_unavailable: bool = False, profile: Profile | None = None, read_only: bool = False
+    astra_unavailable: bool = False, profile: Profile | None = None, read_only: bool = False,
+    request_id: str | None = None, grant_id: str | None = None, followup_id: str | None = None,
 ) -> dict[str, Any]:
+    if override:
+        raise DelegationDenied("Bare --override is no longer accepted; use a scoped, expiring grant")
     try:
-        parsed_run_id = uuid.UUID(run_id)
-    except (ValueError, AttributeError) as exc:
-        raise DelegationDenied("run_id must be a canonical opaque UUID") from exc
-    if str(parsed_run_id) != run_id.lower():
-        raise DelegationDenied("run_id must be a canonical opaque UUID")
+        execution.opaque_id(run_id)
+    except execution.ExecutionDenied as exc:
+        raise DelegationDenied(str(exc)) from None
     if phase not in _PHASES:
-        raise DelegationDenied(f"Unknown delegation phase: {phase}")
+        raise DelegationDenied("Unknown delegation phase")
     try:
         require_dispatch_config()
     except ValueError as exc:
         raise DelegationDenied(str(exc)) from None
-    records = records_for_run(run_id)
     selected_profile = profile or active_profile()
-    prior_profiles = {item.get("profile") for item in _dispatched(records) if item.get("profile")}
-    if prior_profiles and prior_profiles != {selected_profile.value}:
-        raise DelegationDenied("Profile is pinned by the first subagent dispatch for this run")
-    snapshot = get_quota(refresh=True)
-    current = QuotaBand(snapshot.band)
-    effective = _effective_band(records, current)
-    prior = _dispatched(records)
-    allowed = _allow_role(level, effective, role, phase, len(prior), astra_unavailable, selected_profile)
-    if effective is QuotaBand.YELLOW and level in {TaskLevel.L1, TaskLevel.L2} and read_only:
-        allowed = role in {"copilot_scout", "copilot_investigator"} and phase == "exploration" and not prior
-    if not allowed and not override:
-        route = route_for(effective, level, selected_profile)
-        raise DelegationDenied(
-            f"Delegation blocked: effective {effective.value} route permits no {role} dispatch "
-            f"after {len(prior)} subagent(s). {route.reason}"
-        )
     spec = dispatch_spec(role, selected_profile)
-    ordinal = len(prior) + 1
-    event = {
-        "event": "subagent_dispatched",
-        "run_id": run_id,
-        "surface": "skill",
-        "project_hash": project_hash(os.getcwd()),
-        "task_level": level.value,
-        "quota_band": current.value,
-        "quota_source": snapshot.source,
-        "effective_quota_band": effective.value,
-        "profile": selected_profile.value,
-        "primary_used_percent": snapshot.primary.used_percent if snapshot.primary else None,
-        "secondary_used_percent": snapshot.secondary.used_percent if snapshot.secondary else None,
-        "subagent_role": spec.role,
-        "subagent_ordinal": ordinal,
-        "subagent_model": spec.model,
-        "subagent_effort": spec.effort,
-        "subagent_phase": phase,
-        "override": override or None,
-        "outcome": "dispatched",
-    }
-    record(event)
+    # Structural checks precede acquisition; the unknown-route fallback is checked below.
+    validate_role(level, role, phase, selected_profile, astra_unavailable=astra_unavailable, band="unknown")
+    state = execution.status(run_id)
+    prior = next((c for c in state["calls"] if c["request_id"] == request_id), None)
+    if prior:
+        snapshot = replace(unknown_snapshot("Request replay"), band=prior["current_band"], source=prior["quota_source"])
+    else:
+        snapshot = get_quota(refresh=True)
+    try:
+        call = execution.reserve(
+            run_id=run_id, request_id=request_id or str(uuid.uuid4()), kind="subagent",
+            category="review" if phase == "final_review" else "subagent", phase=phase,
+            snapshot=snapshot, role=spec.role, model=spec.model, effort=spec.effort,
+            level=level.value, profile=selected_profile.value, grant_id=grant_id,
+            followup_id=followup_id, astra_unavailable=astra_unavailable, read_only=read_only,
+        )
+    except execution.ExecutionDenied as exc:
+        raise DelegationDenied(str(exc)) from None
+    event = _dispatch_event(run_id, call)
+    event["replayed"] = call["replayed"]
+    event["outcome"] = call["outcome"] or "dispatched"
+    if not call["replayed"]:
+        _record_best_effort({k: v for k, v in event.items() if k != "replayed"})
     return event
 
 
-def complete(*, run_id: str, ordinal: int, outcome: str) -> dict[str, Any]:
-    if outcome not in _OUTCOMES:
-        raise DelegationDenied(f"Unknown delegation outcome: {outcome}")
-    dispatched = _dispatched(records_for_run(run_id))
-    matching = next((item for item in dispatched if item.get("subagent_ordinal") == ordinal), None)
-    if not matching:
-        raise DelegationDenied(f"No dispatched subagent #{ordinal} found for run {run_id}")
-    event = {
-        "event": "subagent_completed",
-        "run_id": run_id,
-        "surface": "skill",
-        "task_level": matching.get("task_level"),
-        "quota_band": matching.get("quota_band"),
-        "quota_source": matching.get("quota_source"),
-        "effective_quota_band": matching.get("effective_quota_band"),
-        "profile": matching.get("profile"),
-        "subagent_role": matching.get("subagent_role"),
-        "subagent_ordinal": ordinal,
-        "subagent_model": matching.get("subagent_model"),
-        "subagent_effort": matching.get("subagent_effort"),
-        "subagent_phase": matching.get("subagent_phase"),
-        "override": matching.get("override"),
-        "outcome": outcome,
-    }
-    record(event)
+def _dispatch_event(run_id: str, call: dict[str, Any]) -> dict[str, Any]:
+    return dict(event="subagent_dispatched", run_id=run_id, surface="skill",
+                task_level=call["level"], quota_band=call["current_band"],
+                quota_source=call["quota_source"], effective_quota_band=call["effective_band"],
+                profile=call["profile"], subagent_role=call["role"], subagent_ordinal=call["child_ordinal"],
+                subagent_model=call["model"], subagent_effort=call["effort"], subagent_phase=call["phase"],
+                override=bool(call["grant_id"]), request_id=call["request_id"], grant_id=call["grant_id"],
+                configuration_label="declared", outcome="dispatched")
+
+
+def complete(*, run_id: str, ordinal: int, outcome: str, session_id: str | None = None) -> dict[str, Any]:
+    try:
+        state = execution.status(run_id)
+        call = next((c for c in state["calls"] if c["kind"] == "subagent" and c["child_ordinal"] == ordinal), None)
+        if call is None:
+            raise execution.ExecutionDenied("No durable subagent reservation found")
+        already = call["outcome"] is not None
+        finished = execution.complete(run_id=run_id, request_id=call["request_id"], outcome=outcome, session_id=session_id)
+    except execution.ExecutionDenied as exc:
+        raise DelegationDenied(str(exc)) from None
+    event = _dispatch_event(run_id, finished)
+    event.update(event="subagent_completed", outcome=outcome)
+    if not already:
+        _record_best_effort(event)
     return event
 
 
 def trace(run_id: str | None = None) -> dict[str, Any]:
     from .metrics import latest_trace_run_id
 
-    selected = run_id or latest_trace_run_id()
+    selected = run_id or execution.latest_trace_run_id() or latest_trace_run_id()
     if not selected:
         return {"found": False, "message": "No subagent trace found."}
     events = records_for_run(selected)
+    state = None
+    try:
+        state = execution.status(selected)
+    except execution.ExecutionDenied:
+        pass
+    if state is not None:
+        events = [e for e in events if state["legacy_consumed"] and
+                  type(e.get("subagent_ordinal")) is int and
+                  0 < e["subagent_ordinal"] <= state["legacy_consumed"] and
+                  e.get("event") in {"subagent_dispatched", "subagent_completed"}]
+        for call in state["calls"]:
+            if call["kind"] != "subagent":
+                continue
+            event = _dispatch_event(selected, call)
+            events.append(event)
+            if call["outcome"] is not None:
+                events.append(dict(event, event="subagent_completed", outcome=call["outcome"]))
     dispatched = _dispatched(events)
     if not dispatched:
         return {"found": False, "run_id": selected, "message": "No subagent trace found for this run."}
@@ -265,5 +267,6 @@ def trace(run_id: str | None = None) -> dict[str, Any]:
         "dispatched": len(agents),
         "compliance": "OVERRIDDEN BY USER" if any(agent["override"] for agent in agents) else "COMPLIANT",
         "configuration_label": "declared",
+        "legacy": state is None or bool(state["legacy_consumed"]),
         "agents": agents,
     }

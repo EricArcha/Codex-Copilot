@@ -305,3 +305,97 @@ missing backups; do not use downgrade installation as destructive recovery.
   independent reviewer rechecked the test-only follow-up with no blockers and
   reran all 11 pipe tests. Full local suite remains 137 tests with 7 Windows skips;
   Skill, release and whitespace checks pass. Runtime repair is unchanged.
+
+## Bounded execution candidate 1.1.0 — 2026-10-07
+
+- Responsibility owner: execution/delegation enforce cumulative budgets and role
+  policy; model constructs data-plane invocations; metrics remains a best-effort
+  privacy-safe projection. Trust changes are limited to local durable authorization,
+  explicit user-declared grants and caller-declared opaque acceptance evidence.
+  Exclusions: no user installation, global settings/permissions, credential handling,
+  Any-Persona changes, exact billing or Desktop-parent hard enforcement.
+- Incident verification independently reproduced the documented live-* receipt
+  totals by content-hash deduplication and confirmed eight formal artifacts with
+  no final blind scores. Retained dispatches all used live app-server quota;
+  unavailable reads were not observed in those successful gate events. Account
+  deltas cannot be attributed as exact task costs.
+- A restricted current quota query reproduced state_initialization_failed at
+  initialize, natural exit 1. A command-scoped host-approved comparison succeeded
+  with two actual windows. This establishes the execution-context distinction,
+  not a proven macOS SQLite file/OS-error root cause for every historical failure.
+- Local suite: 184 discovered, 177 passed, seven Windows-specific skips on macOS.
+  New regressions cover scoped grants, structural policy, closing reserves,
+  concurrent reservations, interrupted/replayed calls, ledger corruption and
+  write failure, rotation-independent counts, native follow-up identity,
+  batch evidence/scoring, incomplete effect acceptance, privacy and Git identity.
+  Existing installation tests use all five isolated path overrides. Skill Creator
+  validation, release metadata 1.1.0 and whitespace checks passed.
+- One bounded live probe obtained trusted Yellow quota and started the fixed model
+  command. The parser rejected a native message representation; the attempt remains
+  recorded as failed/consumed, not retrospectively rewritten. Offline native receipt
+  inspection found Reasoning/AgentMessage item variants and no tools in the matched
+  receipt. The parser now accepts those exact variants; a deterministic real-process
+  regression passes. A successful live rerun is not claimed.
+- Independent L3 review and cross-platform CI results are recorded below when
+  available. Project-local Git identity is absent at this checkpoint; no commit,
+  branch push, tag, public release or user installation is claimed.
+
+### Independent review and bounded closure
+
+- One actual reserved copilot_final_reviewer (GPT-6.1 Sol High, balanced) passed the
+  source gate with live app-server Yellow. It independently identified six issues:
+  paused-stage bypass, identical-count resume, metrics-dependent durable recovery,
+  effective-band L3 fallback, uncertain model outcomes (including interruption),
+  and recovered legacy trace visibility. Root fixed them as the sole writer.
+- The same active review turn rechecked affected changes without another dispatch;
+  58 focused offline tests passed and no actionable findings remained. Post-spawn
+  timeout/KeyboardInterrupt now preserves an unknown outcome and observed session;
+  unknown turns block continuation, expansion and completed closure. Status opens
+  its ledger read-only, and durable resume does not depend on readable metrics.
+- Final full local suite: 184 discovered, 177 passed, seven platform skips; Skill,
+  release metadata and whitespace checks passed. Cross-platform CI and a successful
+  corrected live model smoke remain unverified. No user installation was changed.
+- Run 2c307c91-50d4-4ac1-9867-a69d95b33e2c consumed two managed starts (one failed
+  model probe, one successful independent review), no route override, total cap 3.
+  It is paused as an acceptance checkpoint. Trace records one compliant declared
+  reviewer; the failed probe is unchanged. An approval review initially conflated
+  child ordinal 1 with model/global ordinal 1; a read-only request-ID check proved
+  they differ, and exact-ID closure preserved the failure without changing budget.
+- Missing project-local commit identity remains awaiting user confirmation. No
+  commit, push, tag, publication or cross-platform CI success is claimed.
+- Optional measurement reused the initial Start values and made one final read:
+  same-window primary used 51% to 79% (28 percentage points), secondary 8% to 12%
+  (4 points). These are shared-account observations, not exact task billing or
+  measured savings; Desktop parent usage is outside managed-start enforcement.
+
+### Pre-push revalidation — 2026-10-07
+
+- Repeated full local suite: 184 discovered, 177 passed, seven Windows-specific
+  skips on macOS; Skill validation, 1.1.0 metadata and whitespace checks passed.
+- Isolated copy-mode upgrade from the actual supported 1.0.1 distribution to
+  1.1.0 used all five path overrides. Configuration bytes, measurement preference,
+  profile and a history sentinel remained unchanged; repeat installation was
+  idempotent. No persistent user PATH or global installation changed in this test.
+- Remote main matched the branch base before commit preparation. Host-approved
+  GitHub authentication succeeded; restricted authentication diagnostics alone
+  were misleading. The next live quota checkpoint returned Red, so the corrected
+  smoke requires a specific finite user authorization or natural recovery.
+
+### Authorized pre-push smoke checkpoint — 2026-10-07
+
+- The user confirmed the repository-local EricArcha commit identity and exactly
+  one finite evaluation/probe exception. Identity validation now passes; global
+  Git identity was not changed.
+- Run 3e789f92-5f4f-40a2-abc0-132e0eb1327e had total/smoke caps of one, no closing
+  reserve, and one 600-second grant. Its sole request
+  d192335f-15bf-41e6-8b06-f487fd5884a8 started the fixed isolated model command,
+  but rejected an unexpected item before completion. It remains unknown/consumed,
+  the grant is exhausted, and the run is paused. No retry was started.
+- The observed native session identifier was retained. Its local rollout was
+  empty and read-only history inspection yielded no items; the exact rejected
+  representation and whether it represented a tool are not established. The
+  generic rejection message is not evidence of actual tool use. Accepting guessed
+  item types or retroactively marking the probe successful would be unjustified.
+- Corrected live end-to-end acceptance therefore remains blocked. The source may
+  be committed/pushed for CI and draft review, but this checkpoint does not qualify
+  for the requested local upgrade or publication. Existing local 1.0.1 stays installed.

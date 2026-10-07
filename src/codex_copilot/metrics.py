@@ -16,6 +16,9 @@ from .paths import state_dir
 MAX_BYTES = 5 * 1024 * 1024
 ROTATIONS = 3
 ALLOWED_FIELDS = {
+    "request_id",
+    "grant_id",
+    "configuration_label",
     "schema",
     "timestamp",
     "event",
@@ -87,14 +90,17 @@ def record(event: dict[str, Any]) -> None:
     unknown = set(event) - ALLOWED_FIELDS
     if unknown:
         raise ValueError(f"Metrics rejected unapproved fields: {', '.join(sorted(unknown))}")
-    run_id = event.get("run_id")
-    if run_id is not None:
-        try:
-            parsed = uuid.UUID(str(run_id))
-        except (ValueError, AttributeError) as exc:
-            raise ValueError("Metrics rejected non-opaque run_id") from exc
-        if str(parsed) != str(run_id).lower():
-            raise ValueError("Metrics rejected non-canonical run_id")
+    for key in ("run_id", "request_id", "grant_id"):
+        value = event.get(key)
+        if value is not None:
+            try:
+                parsed = uuid.UUID(str(value))
+            except (ValueError, AttributeError) as exc:
+                raise ValueError("Metrics rejected non-opaque identifier") from exc
+            if str(parsed) != str(value).lower():
+                raise ValueError("Metrics rejected non-canonical identifier")
+    if event.get("configuration_label") not in {None, "declared", "constructed"}:
+        raise ValueError("Metrics rejected invalid configuration label")
     clean = {key: value for key, value in event.items() if key in ALLOWED_FIELDS and value is not None}
     clean.setdefault("schema", 1)
     clean.setdefault("timestamp", datetime.now(timezone.utc).isoformat())

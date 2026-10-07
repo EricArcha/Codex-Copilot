@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from codex_copilot import execution
 from codex_copilot.delegation import DelegationDenied, complete, dispatch, dispatch_spec, trace
 from codex_copilot.quota import QuotaSnapshot
 from codex_copilot.routing import Profile, QuotaBand, TaskLevel
@@ -60,6 +61,9 @@ class DelegationTests(unittest.TestCase):
         (home / "config.toml").write_text(apply_updates("", REQUIRED_CONFIG)[0], encoding="utf-8")
         self.environment.start()
         self.addCleanup(self.environment.stop)
+        for run_id in (self.RUN_1, self.RUN_2, self.RUN_3, self.RUN_4, self.RUN_5):
+            execution.begin(run_id=run_id, normal_calls=2, worst_calls=3, call_limit=3)
+
 
     def test_green_l3_reserves_final_sol_review_and_traces_declared_config(self):
         with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.GREEN)):
@@ -109,13 +113,15 @@ class DelegationTests(unittest.TestCase):
                 dispatch(run_id=self.RUN_4, level=TaskLevel.L1, role="copilot_scout", phase="exploration")
 
     def test_explicit_override_is_visible_in_trace(self):
+        grant_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        execution.grant(run_id=self.RUN_5, grant_id=grant_id, phase="final_review", category="review", user_authorized=True)
         with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.RED)):
             dispatch(
                 run_id=self.RUN_5,
                 level=TaskLevel.L3,
                 role="copilot_final_reviewer",
                 phase="final_review",
-                override=True,
+                grant_id=grant_id,
             )
         result = trace(self.RUN_5)
         self.assertEqual(result["compliance"], "OVERRIDDEN BY USER")
@@ -180,6 +186,66 @@ class DelegationTests(unittest.TestCase):
                 profile=Profile.PREMIUM,
             )
         self.assertEqual(event["subagent_model"], "gpt-6.1-sol")
+
+
+    def test_legacy_trace_stays_readable_after_explicit_recovery_and_new_calls(self):
+        from codex_copilot.metrics import record
+        run_id = "66666666-6666-4666-8666-666666666666"
+        record(dict(event="subagent_dispatched", run_id=run_id, subagent_ordinal=1,
+                    task_level="L3", quota_band="green", profile="balanced",
+                    subagent_role="copilot_investigator", subagent_model="gpt-6.1-sol",
+                    subagent_effort="medium", subagent_phase="exploration"))
+        self.assertEqual(trace(run_id)["dispatched"], 1)
+        execution.begin(run_id=run_id, normal_calls=2, worst_calls=2, call_limit=2, resume_consumed=1)
+        self.assertEqual(trace(run_id)["dispatched"], 1)
+        with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.GREEN)):
+            dispatch(run_id=run_id, level=TaskLevel.L3, role="copilot_final_reviewer", phase="final_review")
+        result = trace(run_id)
+        self.assertEqual(result["dispatched"], 2)
+        self.assertTrue(result["legacy"])
+
+    def test_unknown_then_green_retains_its_permitted_l3_fallback(self):
+        with patch("codex_copilot.delegation.get_quota", side_effect=[snapshot(QuotaBand.UNKNOWN), snapshot(QuotaBand.GREEN)]):
+            with self.assertRaises(DelegationDenied):
+                dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role="copilot_scout", phase="exploration")
+            call = dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role="copilot_reviewer", phase="final_review")
+        self.assertEqual(call["effective_quota_band"], "unknown")
+        self.assertFalse(call["override"])
+
+    def test_bare_override_and_scoped_grants_never_bypass_role_phase(self):
+        grant_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        execution.grant(run_id=self.RUN_1, grant_id=grant_id, phase="final_review", category="review", user_authorized=True)
+        with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.GREEN)):
+            for role, phase in (("copilot_worker", "final_review"), ("copilot_worker", "implementation"),
+                                ("copilot_investigator", "final_review")):
+                with self.subTest(role=role, phase=phase), self.assertRaises(DelegationDenied):
+                    dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role=role, phase=phase, grant_id=grant_id)
+            with self.assertRaises(DelegationDenied):
+                dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role="copilot_final_reviewer", phase="final_review", override=True)
+        self.assertEqual(execution.status(self.RUN_1)["consumed"], 0)
+
+    def test_metrics_failure_and_rotation_cannot_restore_child_slots(self):
+        with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.GREEN)), patch(
+                "codex_copilot.delegation.record", side_effect=OSError("no metrics access")):
+            dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role="copilot_investigator", phase="exploration")
+            dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role="copilot_final_reviewer", phase="final_review")
+            with self.assertRaises(DelegationDenied):
+                dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role="copilot_final_reviewer", phase="final_review")
+        self.assertEqual(trace(self.RUN_1)["dispatched"], 2)
+
+    def test_followup_is_pinned_and_replay_does_not_read_quota_again(self):
+        request = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        session = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+        grant_id = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+        with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.GREEN)) as quota_read:
+            call = dispatch(run_id=self.RUN_1, request_id=request, level=TaskLevel.L3, role="copilot_final_reviewer", phase="final_review")
+            again = dispatch(run_id=self.RUN_1, request_id=request, level=TaskLevel.L3, role="copilot_final_reviewer", phase="final_review")
+            self.assertTrue(again["replayed"])
+            self.assertEqual(quota_read.call_count, 1)
+            complete(run_id=self.RUN_1, ordinal=call["subagent_ordinal"], outcome="success", session_id=session)
+            execution.grant(run_id=self.RUN_1, grant_id=grant_id, phase="exploration", category="subagent", user_authorized=True)
+            with self.assertRaises(DelegationDenied):
+                dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role="copilot_investigator", phase="exploration", followup_id=request, grant_id=grant_id)
 
 
 if __name__ == "__main__":

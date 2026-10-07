@@ -12,6 +12,28 @@ versions, not retroactively claimed GitHub releases.
 - Align README release entry points and Skill-only/full-install capability boundaries.
 - Expand installation acceptance and quota-permission guidance for the published 1.0.0 workflow.
 
+## [1.1.0] - 2026-10-07
+
+- Replace bare internal delegation overrides with scoped, expiring user-declared
+  grants; role, phase, model/effort, safe configuration and writer constraints
+  remain binding. Native follow-ups retain their original session role.
+- Store cumulative authorization in a transactional SQLite execution ledger,
+  separate from rotating, best-effort metrics. Failed and interrupted attempts
+  remain consumed; duplicate request IDs cannot launch another model turn.
+- Add explicit run budgets, closing reserves, legacy recovery confirmation and
+  bounded offline/smoke/pilot/batch evidence checkpoints. Engineering success
+  alone cannot complete a comparison with missing effect acceptance.
+- Add a fixed, isolated `model exec` data-plane entry point and project-local Git
+  identity check. Results belong to callers; prompts and raw receipts never enter
+  Copilot execution state or metrics.
+- Offer an explicit account-observation guard without enabling measurement or
+  polling. Bulk calls reuse only the recent trusted quota cache; unavailable
+  quota blocks bulk expansion. Strictest-band and cumulative limits survive resets.
+- Existing public CLI/JSON meanings remain; internal `_delegate` callers must
+  begin a run, provide a request UUID and replace `--override` with `--grant-id`.
+  Older traces remain display-only legacy declarations. No automatic migration,
+  installation, privilege escalation or global configuration changes.
+
 ## [1.0.1] - 2026-10-05
 
 - Preserve service-tier preferences on install, upgrade and uninstall; retire old

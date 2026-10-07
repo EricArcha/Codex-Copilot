@@ -37,20 +37,33 @@ Reset credits and reset opportunities are exclusively manual user actions. Never
 
 ## Delegation gate
 
-The subagent cap is cumulative for one run: a completed, failed, or sequential child still consumes its slot. Before every child, generate one canonical UUID with `uuidgen` and run:
+The subagent cap is cumulative for one run: completed, failed, cancelled and sequential
+children still consume slots. Begin a durable run as described in [execution.md](execution.md).
+Generate one run UUID per task and a separate request UUID per attempted child or follow-up:
 
 ```text
-codex-copilot _delegate dispatch --run-id <run-id> --task-level <L0-L3> \
-  --role <copilot_role> --phase <exploration|implementation|final_review>
+codex-copilot _delegate dispatch --run-id <run-id> --request-id <request-id> \
+  --task-level <L0-L3> --role <copilot_role> --phase <exploration|implementation|final_review>
 ```
 
-Only call the child when this succeeds. Immediately after it finishes, record its generic
-result with `codex-copilot _delegate complete --run-id <run-id> --ordinal <n> --outcome <success|failure>`.
-The gate refreshes quota before each dispatch. A transient refresh failure can use only the
-tool's most recent successful app-server snapshot within the 60-second TTL; it is marked
-`cache-fallback`. The gate never accepts a caller-supplied quota band or snapshot, and preserves
-the most restrictive band observed for that run. It never automatically relaxes after a later refresh. Pass `--override` only after
-the user explicitly authorizes exceeding the current delegation budget; trace will mark it.
+Only call the child when the gate succeeds with `replayed=false`. A replay is an existing
+reservation, never permission to spawn again. Record the result with `_delegate complete
+--run-id <run-id> --ordinal <n> --outcome <success|failure|cancelled|unknown>`; add the actual
+opaque `--session-id` when known. Follow-ups use a new request UUID and `--followup-id`
+pointing to the original request. They preserve session role/model/effort/phase and consume
+another total-call and child slot. Native execution remains a declaration, not backend telemetry.
+
+The gate refreshes quota before each new native dispatch. It can use only its own successful
+60-second cache fallback. It never accepts caller-reported quota. Durable execution state,
+not rotating metrics, retains the cumulative count and most restrictive observed band;
+window refresh never resets either. Status shows current/effective bands separately.
+
+Bare `--override` is rejected. Only after explicit user authorization, create a scoped,
+expiring `grant` for the run, current stage, phase and category, then pass `--grant-id`.
+The default grant permits one additional attempt for ten minutes. It cannot bypass total
+call/allowance limits, closing reserve, stage evidence, role/config policy or writer ownership.
+The CLI records a user-authorization declaration; it cannot independently authenticate intent.
+See [execution.md](execution.md) for commands and legacy recovery.
 
 Reserve review capacity: Green/standard L1/L2 allows at most one exploratory child plus the final
 `copilot_reviewer`; Yellow/Unknown L1/L2 reserves the only slot for that reviewer. Green L3

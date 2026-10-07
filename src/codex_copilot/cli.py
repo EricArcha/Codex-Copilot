@@ -12,7 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from . import VERSION
+from . import VERSION, execution, model
+from .release_identity import check as check_release_identity
 from .config_edit import parse_toml
 from .config_policy import config_checks, require_dispatch_config
 from .delegation import DelegationDenied, complete as complete_delegation, dispatch as dispatch_delegation, trace
@@ -94,6 +95,62 @@ def _parser() -> argparse.ArgumentParser:
     profile_parser.add_argument("action", choices=("list", "show", "set"))
     profile_parser.add_argument("profile", nargs="?", choices=tuple(profile.value for profile in Profile))
 
+    run = sub.add_parser("run", help="Manage a durable bounded execution run")
+    run.add_argument("action", choices=("begin", "status", "checkpoint", "close"))
+    run.add_argument("--run-id", required=True)
+    run.add_argument("--task-level", choices=tuple(level.value for level in TaskLevel))
+    run.add_argument("--profile", choices=tuple(profile.value for profile in Profile))
+    run.add_argument("--normal-calls", type=int)
+    run.add_argument("--worst-calls", type=int)
+    run.add_argument("--call-limit", type=int)
+    run.add_argument("--reserve-calls", type=int, default=0)
+    run.add_argument("--smoke-calls", type=int, default=3)
+    run.add_argument("--pilot-calls", type=int, default=3)
+    run.add_argument("--batch-calls", type=int, default=3)
+    run.add_argument("--comparison", action="store_true")
+    run.add_argument("--quota-limit-pp", type=float)
+    run.add_argument("--quota-reserve-pp", type=float, default=0)
+    run.add_argument("--resume-consumed", type=int)
+    run.add_argument("--stage", choices=execution.STAGES)
+    run.add_argument("--outcome")
+    run.add_argument("--evidence-id")
+    run.add_argument("--paired", action="store_true")
+    run.add_argument("--scored", action="store_true")
+    run.add_argument("--blocker", choices=("protocol", "interface", "quality", "runtime", "budget"))
+    for field in ("engineering", "effect", "review"):
+        run.add_argument("--" + field, choices=("pending", "passed", "failed", "not_required"))
+    run.add_argument("--json", action="store_true")
+
+    grant = sub.add_parser("grant", help="Declare an explicitly user-authorized bounded route exception")
+    grant.add_argument("--run-id", required=True)
+    grant.add_argument("--grant-id", required=True)
+    grant.add_argument("--phase", required=True, choices=sorted(execution.PHASES))
+    grant.add_argument("--category", required=True, choices=sorted(execution.CATEGORIES))
+    grant.add_argument("--count", type=int, default=1)
+    grant.add_argument("--expires-in", type=int, default=600)
+    grant.add_argument("--user-authorized", action="store_true")
+
+    model_parser = sub.add_parser("model", help="Execute one bounded data-plane model turn from stdin")
+    model_parser.add_argument("action", choices=("exec",))
+    for field in ("run-id", "request-id", "category"):
+        model_parser.add_argument("--" + field, required=True)
+    model_parser.add_argument("--grant-id")
+    model_parser.add_argument("--followup-id")
+    model_parser.add_argument("--timeout", type=float, default=120)
+
+    call = sub.add_parser("_call", help=argparse.SUPPRESS)
+    call.add_argument("action", choices=("reserve", "complete"))
+    call.add_argument("--run-id", required=True)
+    call.add_argument("--request-id", required=True)
+    call.add_argument("--category")
+    call.add_argument("--grant-id")
+    call.add_argument("--followup-id")
+    call.add_argument("--outcome", choices=sorted(execution.OUTCOMES))
+    call.add_argument("--session-id")
+
+    identity = sub.add_parser("release-check", help="Check project-local Git author/committer identity")
+    identity.add_argument("--json", action="store_true")
+
     hidden = sub.add_parser("_record", help=argparse.SUPPRESS)
     hidden.add_argument("--event", required=True)
     hidden.add_argument("--run-id")
@@ -116,6 +173,10 @@ def _parser() -> argparse.ArgumentParser:
     delegate.add_argument("action", choices=("dispatch", "complete"))
     delegate.add_argument("--run-id", required=True)
     delegate.add_argument("--task-level", choices=tuple(level.value for level in TaskLevel))
+    delegate.add_argument("--request-id")
+    delegate.add_argument("--grant-id")
+    delegate.add_argument("--followup-id")
+    delegate.add_argument("--session-id")
     delegate.add_argument("--role")
     delegate.add_argument("--phase")
     delegate.add_argument("--ordinal", type=int)
@@ -537,10 +598,54 @@ def main(argv: list[str] | None = None) -> int:
             }
             record(event)
             return 0
+        if args.command == "run":
+            if args.action == "begin":
+                result = execution.begin(run_id=args.run_id, normal_calls=args.normal_calls,
+                    worst_calls=args.worst_calls, call_limit=args.call_limit, reserve_calls=args.reserve_calls,
+                    comparison=args.comparison, quota_limit_pp=args.quota_limit_pp,
+                    quota_reserve_pp=args.quota_reserve_pp, resume_consumed=args.resume_consumed,
+                    smoke_calls=args.smoke_calls, pilot_calls=args.pilot_calls, batch_calls=args.batch_calls,
+                    task_level=args.task_level, profile=args.profile)
+                if args.quota_limit_pp is not None:
+                    print("Optional local account allowance observation guard enabled; percentages are not exact task costs.", file=sys.stderr)
+            elif args.action == "status":
+                result = execution.status(args.run_id)
+            elif args.action == "checkpoint":
+                result = execution.checkpoint(run_id=args.run_id, stage=args.stage, outcome=args.outcome,
+                    evidence_id=args.evidence_id, paired=args.paired, scored=args.scored,
+                    blocker=args.blocker, engineering=args.engineering, effect=args.effect, review=args.review)
+            else:
+                result = execution.close(run_id=args.run_id, outcome=args.outcome)
+            print(json.dumps(result, indent=2))
+            return 0
+        if args.command == "grant":
+            print(json.dumps(execution.grant(run_id=args.run_id, grant_id=args.grant_id,
+                phase=args.phase, category=args.category, count=args.count, expires_in=args.expires_in,
+                user_authorized=args.user_authorized), indent=2))
+            return 0
+        if args.command == "model":
+            result = model.execute(run_id=args.run_id, request_id=args.request_id, category=args.category,
+                prompt=sys.stdin.read(4 * 1024 * 1024 + 1), output=sys.stdout,
+                grant_id=args.grant_id, followup_id=args.followup_id, timeout=args.timeout)
+            print(json.dumps(result), file=sys.stderr)
+            return 0 if result.get("outcome") == "success" else 1
+        if args.command == "_call":
+            if args.action == "reserve":
+                result = model.reserve(run_id=args.run_id, request_id=args.request_id, category=args.category,
+                                       grant_id=args.grant_id, followup_id=args.followup_id)
+            else:
+                result = execution.complete(run_id=args.run_id, request_id=args.request_id,
+                                            outcome=args.outcome, session_id=args.session_id)
+            print(json.dumps(result, indent=2))
+            return 0
+        if args.command == "release-check":
+            result = check_release_identity()
+            print(json.dumps(result, indent=2))
+            return 0 if result["ready"] else 1
         if args.command == "_delegate":
             if args.action == "dispatch":
-                if not args.task_level or not args.role or not args.phase:
-                    raise DelegationDenied("dispatch requires --task-level, --role, and --phase")
+                if not args.task_level or not args.role or not args.phase or not args.request_id:
+                    raise DelegationDenied("dispatch requires --task-level, --role, --phase and --request-id")
                 event = dispatch_delegation(
                     run_id=args.run_id,
                     level=TaskLevel(args.task_level),
@@ -549,12 +654,13 @@ def main(argv: list[str] | None = None) -> int:
                     override=args.override,
                     astra_unavailable=args.astra_unavailable,
                     profile=Profile(args.profile) if args.profile else None,
-                    read_only=args.read_only,
+                    read_only=args.read_only, request_id=args.request_id,
+                    grant_id=args.grant_id, followup_id=args.followup_id,
                 )
             else:
                 if args.ordinal is None or not args.outcome:
                     raise DelegationDenied("complete requires --ordinal and --outcome")
-                event = complete_delegation(run_id=args.run_id, ordinal=args.ordinal, outcome=args.outcome)
+                event = complete_delegation(run_id=args.run_id, ordinal=args.ordinal, outcome=args.outcome, session_id=args.session_id)
             print(json.dumps(event, indent=2))
             return 0
     except (InstallError, DelegationDenied, OSError, ValueError, subprocess.SubprocessError) as exc:

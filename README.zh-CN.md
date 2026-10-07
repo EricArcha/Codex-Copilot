@@ -170,3 +170,7 @@ PowerShell 先设置 `$env:PYTHONPATH = 'src'`，再执行 `python -m unittest d
 `status --refresh --json` 应返回真实窗口且 source=app-server。安装完整不代表额度或模型权限已验证。权限或状态初始化失败时，按[额度访问](skill/codex-copilot/references/quota.md)对必要命令申请宿主受控执行；unknown 只用于临时降级，Desktop 百分比不能代替可执行门禁。缓存写入警告保留真实观测，但写 trace 前仍需解决状态目录访问。
 
 各平台升级、冲突和恢复步骤见[安装 reference](skill/codex-copilot/references/installation.md)。
+
+## 有界执行（1.1.0）
+
+运行采用明确的总调用预算、收尾预留和有限路由授权。原生代理续轮与模型评估调用共享持久化授权状态；统计日志和可选测量不授权执行。批量生成需通过离线预检、真实烟测和成对评分门槛。参见[执行指南](skill/codex-copilot/references/execution.md)及[兼容契约](docs/compatibility.md)。`release-check --json` 检查项目级提交身份；Desktop 主会话和精确账户成本不属于硬控制范围。

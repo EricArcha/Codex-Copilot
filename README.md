@@ -170,3 +170,7 @@ For an existing source checkout, fetch tags and select the desired source tag af
 `status --refresh --json` must return real windows with source=app-server. A complete installation alone does not certify live quota or model access. For permission/state errors use command-scoped host-approved execution described in [quota access](skill/codex-copilot/references/quota.md). Unknown is temporary degradation; Desktop percentages do not replace the executable gate. A live cache-write warning preserves the observation but state access must be resolved before trace-writing commands.
 
 Detailed platform, upgrade, conflict and recovery instructions: [installation reference](skill/codex-copilot/references/installation.md).
+
+## Bounded execution (1.1.0)
+
+Runs now use explicit total-call budgets, closing reserves and finite route grants. Native follow-ups and model evaluation turns share durable authorization state; logs and measurement do not authorize work. Batch generation requires offline, smoke and paired-scoring evidence gates. See the [execution guide](skill/codex-copilot/references/execution.md) and [compatibility contract](docs/compatibility.md). `release-check --json` verifies project-local commit identity. Desktop parent usage and exact account cost remain outside hard enforcement.
