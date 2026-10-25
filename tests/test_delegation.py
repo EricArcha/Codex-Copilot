@@ -1,10 +1,11 @@
 import os
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from codex_copilot import execution
+from codex_copilot import config_policy, delegation, execution
 from codex_copilot.delegation import DelegationDenied, complete, dispatch, dispatch_spec, trace
 from codex_copilot.quota import QuotaSnapshot
 from codex_copilot.routing import Profile, QuotaBand, TaskLevel
@@ -32,6 +33,22 @@ class DelegationTests(unittest.TestCase):
     RUN_3 = "33333333-3333-4333-8333-333333333333"
     RUN_4 = "44444444-4444-4444-8444-444444444444"
     RUN_5 = "55555555-5555-4555-8555-555555555555"
+
+    def test_role_model_and_effort_sources_are_consistent(self):
+        root = Path(__file__).resolve().parents[1]
+        routing = root / "skill/codex-copilot/references/routing.md"
+        documented = routing.read_text(encoding="utf-8")
+        for role, expected in delegation._ROLE_CONFIGURATION.items():
+            path = root / "agents" / (role.replace("_", "-") + ".toml")
+            with self.subTest(role=role):
+                actual = tomllib.loads(path.read_text(encoding="utf-8"))
+                self.assertEqual((actual.get("model"), actual.get("model_reasoning_effort")),
+                                 expected, f"{path.name}: {role} model/effort drift")
+                self.assertTrue(expected[0] in documented,
+                                f"{routing.name}: {role} model {expected[0]} missing")
+        self.assertEqual(config_policy.REQUIRED_CONFIG["agents.default_subagent_model"],
+                         delegation._ROLE_CONFIGURATION["copilot_scout"][0],
+                         "config_policy.py: copilot_scout default model drift")
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

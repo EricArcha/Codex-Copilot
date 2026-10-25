@@ -12,7 +12,7 @@ Classify from actual blast radius and uncertainty, not prompt length. A large me
 ## Model policy
 
 Pin normal coding and review to `gpt-6.1-sol`; use Medium for standard implementation
-routes, Low for conservative Green and Red routes, and High for independent review. Luna remains the focused exploration tier and Astra the
+routes, Low for conservative Green and Red routes, and High for independent review. Luna (`gpt-6-luna`) remains the focused exploration tier and Astra (`gpt-6-astra`) the
 premium L3 tier. GPT-6.1 Sol does not support `none` or `minimal`; this skill permits
 only its declared Low/Medium/High routes, never Max or Ultra. Account availability
 must be checked in Codex Desktop; do not silently substitute an older model in an
