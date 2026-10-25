@@ -69,6 +69,13 @@ Skill-only 提供工作流指引。CLI 的真实额度查询、受管角色和�
 
 ## 想开启完整驾驶舱？
 
+隐式调用默认 **关闭**，请用 `$codex-copilot` 显式启动。开启后，Codex 可以自行启动
+Skill，加载可能读取额度、创建运行状态的指令。默认关闭是为了避免误触发消耗额度。
+用 `codex-copilot install --implicit-invocation on|off` 切换，随后重启 Codex Desktop；
+用 `codex-copilot doctor --json` 的 `implicit_invocation` 字段检查。升级保留已记录的选择；
+没有该字段的旧安装会提示并切换为关闭，除非指定 `--implicit-invocation on`。
+开启需要 copy 模式；symlink 模式沿用仓库默认的关闭设置。
+
 完整安装是可选的：它会加入六个自定义 agents、`codex-copilot` 命令，以及少量多代理所需的 Codex 受管设置。默认 copy 模式无需管理员权限。macOS/Linux 使用：
 
 ```bash

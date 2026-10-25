@@ -38,6 +38,17 @@ MEASUREMENT_NOTICE = (
     "Optional allowance measurement is off by default. Run 'codex-copilot measure on' "
     "once for future skill tasks; 'codex-copilot measure off' stops new automatic measurements."
 )
+IMPLICIT_INVOCATION_NOTICE = (
+    "Explicit invocation is $codex-copilot. With implicit invocation on, Codex may start "
+    "the skill by itself, loading its instructions, which can read quota and create run state. "
+    "The default is off to avoid spending allowance on misfires. Change it with "
+    "'codex-copilot install --implicit-invocation on|off', then restart Codex Desktop; "
+    "check it with 'codex-copilot doctor --json'."
+)
+LEGACY_IMPLICIT_INVOCATION_NOTICE = (
+    "The previous release allowed implicit invocation; this upgrade turns it off unless "
+    "--implicit-invocation on is given."
+)
 IGNORED_FINGERPRINT_FILENAMES = {".DS_Store"}
 
 
@@ -59,6 +70,9 @@ def load_manifest() -> dict[str, Any] | None:
     valid = isinstance(manifest.get("config_path"), str) and bool(manifest["config_path"])
     valid = valid and isinstance(manifest.get("version"), str) and isinstance(manifest.get("mode"), str) and manifest["mode"] in {"copy", "symlink"}
     valid = valid and isinstance(manifest.get("artifacts"), list) and isinstance(manifest.get("config_changes"), list)
+    if "implicit_invocation" in manifest:
+        value = manifest["implicit_invocation"]
+        valid = valid and isinstance(value, str) and value in {"on", "off"}
     if valid:
         valid = all(isinstance(a, dict) and isinstance(a.get("target"), str) and bool(a["target"])
                     and isinstance(a.get("fingerprint"), str) and isinstance(a.get("kind"), str)
@@ -211,8 +225,10 @@ def _legacy_agent_matches(item: dict[str, Any], source: Path | None) -> bool:
             and target.read_bytes() == source.read_bytes())
 
 
-def _is_current_install(manifest: dict[str, Any] | None, mode: str, config: dict[str, Any]) -> bool:
+def _is_current_install(manifest: dict[str, Any] | None, mode: str, config: dict[str, Any], implicit_invocation: str = "off") -> bool:
     if not manifest or manifest.get("status") == "uninstall-residue" or manifest.get("mode") != mode or manifest.get("version") != VERSION:
+        return False
+    if manifest.get("implicit_invocation") != implicit_invocation:
         return False
     if any(item["blocking"] for item in config_checks(config)):
         return False
@@ -372,12 +388,18 @@ def _plan_token(config: str, current: dict[str, Any] | None, planned: list[tuple
     return digest.hexdigest()
 
 
-def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: str | None = None, add_to_path: bool = False) -> dict[str, Any]:
+def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: str | None = None, add_to_path: bool = False,
+            implicit_invocation: str | None = None) -> dict[str, Any]:
     if mode not in {"copy", "symlink"}:
         raise InstallError(f"Unsupported install mode: {mode}")
     if add_to_path and os.name != "nt":
         raise InstallError("--add-to-path manages Windows user PATH only; configure your shell PATH on macOS/Linux")
     current = load_manifest()
+    implicit_invocation = implicit_invocation if implicit_invocation is not None else (current or {}).get("implicit_invocation", "off")
+    if not isinstance(implicit_invocation, str) or implicit_invocation not in {"on", "off"}:
+        raise InstallError("Implicit invocation must be on or off")
+    if mode == "symlink" and implicit_invocation == "on":
+        raise InstallError("Symlink installs use the repository default (off); copy mode is required to enable implicit invocation")
     if current and current.get("status") == "uninstall-residue":
         raise InstallError("Previous uninstall preserved modified files. Resolve them and run uninstall again before installing.")
     planned = _planned()
@@ -393,7 +415,7 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
     config_text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
     config = parse_toml(config_text)
     updated, changes = apply_updates(config_text, CONFIG_UPDATES)
-    current_install = _is_current_install(current, mode, config)
+    current_install = _is_current_install(current, mode, config, implicit_invocation)
     if mode == "copy" and not current_install:
         root, destination = repo_root().resolve(), share_dir().resolve()
         if root == destination or root.is_relative_to(destination) or destination.is_relative_to(root):
@@ -424,6 +446,7 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
         path_before, path_after, ownership = user_path.plan(bin_dir())
     actions = [f"{mode}: {source} -> {target}" for source, target, _ in planned]
     actions.extend([f"write runtime location: {pointer}", f"merge managed settings: {config_path}"])
+    actions.append(f"set implicit invocation: {implicit_invocation}")
     if mode == "copy":
         actions.insert(0, f"copy distribution: {repo_root()} -> {share_dir()}")
     actions.extend(f"back up and adopt verified Skill: {target}" for target in sorted(adopted))
@@ -431,7 +454,9 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
     actions.extend(f"remove obsolete copied distribution: {item['target']}" if item["kind"] == "distribution" else f"remove obsolete artifact: {item['target']}" for item in stale)
     if ownership and ownership["added"]:
         actions.append(f"append Windows user PATH: {ownership['entry']}")
-    warnings = [RESTART_NOTICE, MEASUREMENT_NOTICE]
+    warnings = [RESTART_NOTICE, MEASUREMENT_NOTICE, IMPLICIT_INVOCATION_NOTICE]
+    if current and "implicit_invocation" not in current:
+        warnings.append(LEGACY_IMPLICIT_INVOCATION_NOTICE)
     if mode == "symlink":
         warnings.insert(0, SYMLINK_RISK_WARNING)
     if os.name == "nt":
@@ -462,6 +487,16 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
             # Batch/Python entry points are always regular files, even in symlink mode.
             placement = "copy" if os.name == "nt" and kind == "executable" else mode
             previous = transaction.replace(actual_source, target, placement)
+            if kind == "skill" and mode == "copy" and implicit_invocation == "on":
+                policy_path = target / "agents" / "openai.yaml"
+                policy_text = policy_path.read_text(encoding="utf-8")
+                policy_line = "  allow_implicit_invocation: false"
+                lines = policy_text.splitlines(keepends=True)
+                if sum(line.rstrip("\r\n") == policy_line for line in lines) != 1:
+                    raise InstallError("Installed Skill policy must contain exactly one default implicit invocation line")
+                _atomic_write(policy_path, "".join(
+                    "  allow_implicit_invocation: true" + line[len(policy_line):]
+                    if line.rstrip("\r\n") == policy_line else line for line in lines))
             if kind == "executable" and os.name != "nt" and not target.is_symlink():
                 target.chmod(target.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
             item = {"kind": kind, "source": str(actual_source), "target": str(target), "fingerprint": artifact_fingerprint(target)}
@@ -492,6 +527,7 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
             path_written = True
             user_path.write(path_after)
         manifest = {"schema": 2, "version": VERSION, "mode": mode, "installed_at": int(time.time()), "repo_root": str(repo_root()),
+                    "implicit_invocation": implicit_invocation,
                     "artifacts": artifacts, "config_path": str(config_path), "config_backup": str(transaction.originals.get(config_path)),
                     "config_changes": original_changes, "user_path": previous_path if previous_path and previous_path.get("added") else ownership,
                     "retired_config_changes": retired_changes,

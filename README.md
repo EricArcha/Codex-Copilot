@@ -69,6 +69,14 @@ Skill-only provides workflow instructions. Actual CLI quota reads, managed roles
 
 ## Want the full cockpit?
 
+Implicit invocation defaults to **off**: use `$codex-copilot` explicitly. With `on`,
+Codex may start the Skill by itself, loading instructions that can read quota and create
+run state. The default avoids spending allowance on misfires. Change it with
+`codex-copilot install --implicit-invocation on|off`, then restart Codex Desktop; check
+`codex-copilot doctor --json` → `implicit_invocation`. Upgrades preserve the recorded choice;
+legacy installations switch to `off` with a notice unless `--implicit-invocation on` is given.
+Enabling it requires copy mode; symlink installs use the repository default `off`.
+
 The optional full install adds six custom agents, the `codex-copilot` command, and a few managed Codex settings for multi-agent work. Copy mode is the default and needs no administrator rights. On macOS/Linux:
 
 ```bash

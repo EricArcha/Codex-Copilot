@@ -47,6 +47,7 @@ def _parser() -> argparse.ArgumentParser:
     install_parser.add_argument("--dry-run", action="store_true")
     install_parser.add_argument("--yes", action="store_true", help="Confirm the displayed installation plan")
     install_parser.add_argument("--add-to-path", action="store_true", help="Opt in to managed Windows user PATH changes")
+    install_parser.add_argument("--implicit-invocation", choices=("on", "off"), help="Allow Codex to start the skill implicitly (default: off; preserves the installed choice)")
 
     uninstall_parser = sub.add_parser("uninstall", help="Remove managed installation artifacts")
     uninstall_parser.add_argument("--dry-run", action="store_true")
@@ -391,6 +392,7 @@ def doctor() -> dict[str, Any]:
     runtime_ok = all(c["ok"] for c in checks if c["name"] in {"python", "codex", "chatgpt_login", "config"})
     quota_status = quota.to_dict()["quota_status"]
     return {"ok": all(c["ok"] or c.get("severity") == "warning" for c in checks), "installation_state": state,
+            "implicit_invocation": (manifest or {}).get("implicit_invocation", "unknown"),
             "checks": checks, "warnings": warnings, "config_checks": settings,
             "codex_runtime": resolution, "runtime_available": runtime_ok,
             "quota_status": quota_status}
@@ -481,7 +483,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "install":
-            preview = install(mode=args.mode, dry_run=True, add_to_path=args.add_to_path)
+            preview = install(mode=args.mode, dry_run=True, add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
             _print_install_plan(preview)
             if args.dry_run:
                 print("Dry run: no changes made.")
@@ -491,7 +493,7 @@ def main(argv: list[str] | None = None) -> int:
             if not args.yes and not _confirm_install():
                 print("Installation cancelled. No changes made.", file=sys.stderr)
                 return 2
-            result = install(mode=args.mode, expected_plan_token=preview["plan_token"], add_to_path=args.add_to_path)
+            result = install(mode=args.mode, expected_plan_token=preview["plan_token"], add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
             _print_result({**result, "warnings": []})  # Already shown in the plan.
             return 0
         if args.command == "uninstall":

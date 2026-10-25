@@ -13,9 +13,9 @@ from codex_copilot import cli, installer, quota
 from codex_copilot.config_policy import config_checks
 from codex_copilot.delegation import DelegationDenied, dispatch, dispatch_spec
 from codex_copilot.routing import Profile, TaskLevel
-from test_native import environment
-from platform_support import require_symlinks
-import test_native
+from tests.test_native import environment
+from tests.platform_support import require_symlinks
+from tests import test_native
 
 
 class InstallationDiagnosticsTests(unittest.TestCase):

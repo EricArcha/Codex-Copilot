@@ -41,6 +41,14 @@ versions to later 1.x versions. Historical fixtures are immutable source snapsho
 Do not require downgrades to be supported; recovery uses installer backups and
 journals, not overwriting user data with an older installation.
 
+Implicit Skill invocation defaults to `off`; explicit invocation is `$codex-copilot`.
+The installer records `implicit_invocation` (`on` or `off`) and preserves it on upgrade.
+Legacy manifests without the field remain readable; upgrading them switches to `off`
+with a notice unless `--implicit-invocation on` is given. Enabling implicit invocation
+requires copy mode and changes only the installed Skill copy; symlink installs use
+the repository default `off`. Restart Desktop after changing the choice. Doctor adds
+`implicit_invocation`, reporting `unknown` when no manifest or field is present.
+
 Product version, installer manifest schema, quota cache fields and measurement /
 trace schemas evolve separately. Read supported old records with defaults for
 new optional fields. Any incompatible persisted format needs a tested migration

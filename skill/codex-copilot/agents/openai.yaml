@@ -4,4 +4,4 @@ interface:
   default_prompt: "Use $codex-copilot in Codex Desktop to complete this development task with quota-aware routing and independent verification."
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

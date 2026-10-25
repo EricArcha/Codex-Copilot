@@ -30,6 +30,15 @@ On macOS/Linux:
 
 Default copy mode requires neither administrator rights nor symlink privileges. Explicit symlink mode is optional and Codex may reject symlinked agent files. Use copies for dependable agents. Upgrade from a source checkout; keep the installed runtime intact until the new installation succeeds.
 
+Implicit invocation defaults to **off**; invoke the Skill explicitly with `$codex-copilot`.
+With `on`, Codex may start the Skill by itself, loading instructions that can read quota
+and create run state. The default avoids spending allowance on misfires. Change it with
+`codex-copilot install --implicit-invocation on|off`, then restart Codex Desktop; check
+`doctor --json` → `implicit_invocation` (`on`, `off`, or `unknown` without a recorded choice).
+Upgrades preserve the recorded choice. Legacy installations without that field switch
+from implicit invocation to `off` with a notice unless `--implicit-invocation on` is given.
+Enabling it requires copy mode; symlink installs use the repository default `off`.
+
 Installation previews all managed settings and artifacts; `--yes` confirms a reviewed plan for automation. Existing session authorization to install is sufficient; do not ask again merely because the CLI has a confirmation prompt. Without installation authorization, offer the appropriate commands and continue the task.
 
 The installer reuses an existing `$CODEX_HOME/skills/codex-copilot`; otherwise its default is `~/.agents/skills/codex-copilot`. A verified current or known release Skill can be backed up and adopted. Unknown content, changed managed artifacts, and duplicate registrations block installation. Never delete a conflict without examining and backing it up. `CODEX_COPILOT_SKILLS_HOME` selects the parent directory explicitly; `CODEX_HOME` selects Codex configuration, not the default shared Skill directory.

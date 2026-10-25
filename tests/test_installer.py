@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tempfile
@@ -5,7 +6,7 @@ import tomllib
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from platform_support import require_symlinks
+from tests.platform_support import require_symlinks
 
 from codex_copilot.installer import (
     AGENT_FILES,
@@ -181,6 +182,142 @@ class InstallerTests(unittest.TestCase):
                 config = tomllib.loads((Path(env["CODEX_HOME"]) / "config.toml").read_text())
                 self.assertIn("copilot-final-reviewer.toml", AGENT_FILES)
                 self.assertFalse(_is_current_install(manifest, "copy", config))
+
+    def policy(self):
+        return (Path(os.environ["CODEX_COPILOT_SKILLS_HOME"]) /
+                "codex-copilot/agents/openai.yaml")
+
+    def test_implicit_invocation_fresh_copy_defaults_off(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            install()
+            self.assertIn("  allow_implicit_invocation: false", self.policy().read_text(encoding="utf-8"))
+            self.assertEqual(load_manifest()["implicit_invocation"], "off")
+
+    def test_implicit_invocation_on_only_changes_installed_skill(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            source = Path(__file__).resolve().parents[1] / "skill/codex-copilot/agents/openai.yaml"
+            original = source.read_bytes()
+            install(implicit_invocation="on")
+            self.assertIn("  allow_implicit_invocation: true", self.policy().read_text(encoding="utf-8"))
+            self.assertEqual(source.read_bytes(), original)
+            copied_source = Path(os.environ["CODEX_COPILOT_SHARE_DIR"]) / "skill/codex-copilot/agents/openai.yaml"
+            self.assertEqual(copied_source.read_bytes(), original)
+            manifest = load_manifest()
+            self.assertEqual(manifest["implicit_invocation"], "on")
+            self.assertTrue(all(artifact_matches(a) for a in manifest["artifacts"]))
+            uninstall()
+            self.assertFalse(self.policy().exists())
+
+    def test_implicit_invocation_upgrade_preserves_on(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            install(implicit_invocation="on")
+            self.assertFalse(install()["changed"])
+            manifest_file = Path(os.environ["CODEX_COPILOT_STATE_DIR"]) / "install.json"
+            manifest = load_manifest()
+            manifest["version"] = "1.0.0"
+            manifest_file.write_text(json.dumps(manifest), encoding="utf-8")
+            self.assertTrue(install()["changed"])
+            self.assertEqual(load_manifest()["implicit_invocation"], "on")
+            self.assertIn("  allow_implicit_invocation: true", self.policy().read_text(encoding="utf-8"))
+
+    def test_implicit_invocation_switch_changes_plan_and_installed_policy(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            install()
+            off = install(dry_run=True)
+            on = install(dry_run=True, implicit_invocation="on")
+            self.assertTrue(on["needs_confirmation"])
+            self.assertIn("set implicit invocation: on", on["actions"])
+            self.assertNotEqual(off["plan_token"], on["plan_token"])
+            with self.assertRaisesRegex(InstallError, "plan changed"):
+                install(implicit_invocation="on", expected_plan_token=off["plan_token"])
+            install(implicit_invocation="on", expected_plan_token=on["plan_token"])
+            install(implicit_invocation="off")
+            self.assertEqual(load_manifest()["implicit_invocation"], "off")
+            self.assertIn("  allow_implicit_invocation: false", self.policy().read_text(encoding="utf-8"))
+
+    def test_implicit_invocation_legacy_upgrade_defaults_off_with_notice(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            install()
+            manifest_file = Path(os.environ["CODEX_COPILOT_STATE_DIR"]) / "install.json"
+            manifest = load_manifest()
+            manifest.pop("implicit_invocation", None)
+            # Represent the previous release's true policy and matching artifact record.
+            self.policy().write_text(self.policy().read_text(encoding="utf-8").replace(
+                "allow_implicit_invocation: false", "allow_implicit_invocation: true"), encoding="utf-8")
+            from codex_copilot.installer import artifact_fingerprint
+            for item in manifest["artifacts"]:
+                if item["kind"] == "skill":
+                    item["fingerprint"] = artifact_fingerprint(Path(item["target"]))
+            manifest_file.write_text(json.dumps(manifest), encoding="utf-8")
+            self.assertIsNotNone(load_manifest())
+            result = install()
+            self.assertTrue(result["changed"])
+            self.assertEqual(load_manifest()["implicit_invocation"], "off")
+            self.assertIn("allow_implicit_invocation: false", self.policy().read_text(encoding="utf-8"))
+            self.assertTrue(any("previous release allowed implicit invocation" in n for n in result["warnings"]))
+
+    def test_implicit_invocation_symlink_on_is_rejected_without_mutation(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            with self.assertRaisesRegex(InstallError, "copy mode"):
+                install(mode="symlink", implicit_invocation="on")
+            self.assertFalse(Path(os.environ["CODEX_COPILOT_STATE_DIR"]).exists())
+            self.assertFalse(self.policy().exists())
+            install(implicit_invocation="on")
+            manifest_file = Path(os.environ["CODEX_COPILOT_STATE_DIR"]) / "install.json"
+            original = manifest_file.read_bytes()
+            with self.assertRaisesRegex(InstallError, "repository default"):
+                install(mode="symlink")
+            self.assertEqual(manifest_file.read_bytes(), original)
+            self.assertTrue(all(artifact_matches(a) for a in load_manifest()["artifacts"]))
+
+    def test_implicit_invocation_dry_run_actions_and_notice(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            result = install(dry_run=True)
+            self.assertIn("set implicit invocation: off", result["actions"])
+            notices = " ".join(result["warnings"])
+            for text in ("$codex-copilot", "read quota", "create run state", "misfires",
+                         "install --implicit-invocation on|off", "doctor --json", "restart Codex Desktop"):
+                self.assertIn(text, notices)
+            self.assertFalse(Path(os.environ["CODEX_COPILOT_STATE_DIR"]).exists())
+
+    def test_implicit_invocation_invalid_manifest_values_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            install()
+            manifest_file = Path(os.environ["CODEX_COPILOT_STATE_DIR"]) / "install.json"
+            manifest = load_manifest()
+            for value in (None, True, "true", [], {}):
+                with self.subTest(value=value):
+                    manifest_file.write_text(json.dumps({**manifest, "implicit_invocation": value}), encoding="utf-8")
+                    with self.assertRaises(InstallError):
+                        load_manifest()
+
+    def test_implicit_invocation_bad_policy_rolls_back_upgrade(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            from codex_copilot import installer
+            source = Path(temp) / "source"
+            source.mkdir()
+            root = Path(__file__).resolve().parents[1]
+            for name in ("src", "skill", "agents", "bin"):
+                shutil.copytree(root / name, source / name, ignore=shutil.ignore_patterns("__pycache__"))
+            shutil.copy2(root / "VERSION", source / "VERSION")
+            with patch.object(installer, "repo_root", return_value=source):
+                install()
+                manifest_file = Path(os.environ["CODEX_COPILOT_STATE_DIR"]) / "install.json"
+                original_manifest = manifest_file.read_bytes()
+                config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+                original_config = config.read_bytes()
+                policy_source = source / "skill/codex-copilot/agents/openai.yaml"
+                original_policy = policy_source.read_text(encoding="utf-8")
+                line = "  allow_implicit_invocation: false"
+                for replacement in ("", line + "\n" + line):
+                    with self.subTest(replacement=replacement):
+                        policy_source.write_text(original_policy.replace(line, replacement), encoding="utf-8")
+                        with self.assertRaisesRegex(InstallError, "policy"):
+                            install(implicit_invocation="on")
+                        self.assertEqual(manifest_file.read_bytes(), original_manifest)
+                        self.assertEqual(config.read_bytes(), original_config)
+                        self.assertTrue(all(artifact_matches(a) for a in load_manifest()["artifacts"]))
+                        self.assertIn(line, self.policy().read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

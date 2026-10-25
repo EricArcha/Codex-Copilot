@@ -8,7 +8,7 @@ from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
-from platform_support import require_symlinks
+from tests.platform_support import require_symlinks
 
 from codex_copilot.cli import doctor, main
 from codex_copilot.installer import CONFIG_UPDATES, SYMLINK_RISK_WARNING, install
@@ -174,6 +174,44 @@ class CliTests(unittest.TestCase):
                     self.assertEqual(main(["install"]), 0)
                 self.assertIn("Already installed; no changes.", second_out.getvalue())
                 self.assertNotIn("without --yes", second_err.getvalue())
+
+    def test_install_implicit_invocation_flag_reaches_preview_and_confirmation(self):
+        for setting in ("on", "off"):
+            with self.subTest(setting=setting), tempfile.TemporaryDirectory() as temp:
+                with patch.dict(os.environ, self.environment(temp)), patch(
+                    "codex_copilot.cli.install", wraps=install
+                ) as calls, redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                    self.assertEqual(main(["install", "--implicit-invocation", setting, "--yes"]), 0)
+                self.assertEqual(len(calls.call_args_list), 2)
+                self.assertTrue(all(c.kwargs["implicit_invocation"] == setting for c in calls.call_args_list))
+
+    def test_install_implicit_invocation_notice_prints_once_for_dry_real_and_repeat(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            for args in (["install", "--dry-run"], ["install", "--yes"], ["install"]):
+                stdout, stderr = StringIO(), StringIO()
+                with redirect_stdout(stdout), redirect_stderr(stderr):
+                    self.assertEqual(main(args), 0)
+                self.assertEqual(stderr.getvalue().count("Explicit invocation is $codex-copilot"), 1)
+
+    def test_doctor_json_reports_implicit_invocation_on_off_and_unknown(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)), patch(
+            "codex_copilot.cli.shutil.which", return_value=None
+        ), patch("codex_copilot.cli.get_quota", return_value=unknown_snapshot("test")):
+            def reported():
+                output = StringIO()
+                with redirect_stdout(output):
+                    main(["doctor", "--json"])
+                return json.loads(output.getvalue())["implicit_invocation"]
+            self.assertEqual(reported(), "unknown")
+            install()
+            self.assertEqual(reported(), "off")
+            install(implicit_invocation="on")
+            self.assertEqual(reported(), "on")
+            manifest_file = Path(os.environ["CODEX_COPILOT_STATE_DIR"]) / "install.json"
+            manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+            manifest.pop("implicit_invocation")
+            manifest_file.write_text(json.dumps(manifest), encoding="utf-8")
+            self.assertEqual(reported(), "unknown")
 
     def test_copy_to_symlink_preview_lists_the_distribution_removal(self):
         with tempfile.TemporaryDirectory() as temp:
