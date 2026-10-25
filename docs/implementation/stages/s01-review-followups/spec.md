@@ -3,7 +3,8 @@
 **State:** FROZEN
 **Stage:** s01-review-followups
 **Authority:** [confirmed-decisions.md](../../../decisions/confirmed-decisions.md) D-01 to D-05; AGENTS.md change fences
-**Last governed baseline:** 720a881589aa9eb18ef5abca241520b24fd6f850
+**Last governed baseline:** 84d3633 (revision r01)
+**Revision r01 (2026-10-26):** S01-REQ-5 also owns adding the literal Luna and Astra model IDs to `routing.md`; the original requirement assumed they were present. Trigger: [blocked-batch-checkpoint-r01.md](blocked-batch-checkpoint-r01.md).
 
 ## Requirements
 
@@ -44,6 +45,7 @@
 ### S01-REQ-5 Model/effort consistency test (D-04)
 
 - Add a test in `tests/test_delegation.py` that, for every role in `delegation._ROLE_CONFIGURATION`, reads `agents/<role with "_" replaced by "-">.toml` with `tomllib` and asserts `model` and `model_reasoning_effort` equal the configured pair; asserts `config_policy` `agents.default_subagent_model` equals the `copilot_scout` model; and asserts `routing.md` mentions every distinct configured model ID. Each failure message names the drifting file and role.
+- In `routing.md` "Model policy", name the literal IDs next to the display names: Luna (`gpt-6-luna`) and Astra (`gpt-6-astra`). Documentation only; no routing change.
 
 ### S01-REQ-6 CHANGELOG (D-05)
 
