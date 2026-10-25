@@ -3,8 +3,9 @@
 **State:** FROZEN
 **Stage:** s01-review-followups
 **Authority:** [confirmed-decisions.md](../../../decisions/confirmed-decisions.md) D-01 to D-05; AGENTS.md change fences
-**Last governed baseline:** 84d3633 (revision r01)
+**Last governed baseline:** c540061dc989d6fb6f7c906facd218a99195d444 (revision r02 planning parent)
 **Revision r01 (2026-10-26):** S01-REQ-5 also owns adding the literal Luna and Astra model IDs to `routing.md`; the original requirement assumed they were present. Trigger: [blocked-batch-checkpoint-r01.md](blocked-batch-checkpoint-r01.md).
+**Revision r02 (2026-10-26, before batch r02 started):** planner self-review clarified S01-REQ-1 budget interaction and compatibility note, S01-REQ-2 test scope, and the S01-REQ-4 installer interface. No decision changed.
 
 ## Requirements
 
@@ -15,12 +16,13 @@
 - A valid bounded user grant still authorizes the request, exactly as grants work today.
 - Without a grant, raise `ExecutionDenied("This run already used its final-review session; recheck with a follow-up of that reviewer session or obtain a bounded user grant")`.
 - Do not change `delegation._allow_role` counting, band rules, role/phase validation, or any other band's behavior. Legacy runs (`legacy_consumed`) keep their current limits.
-- Docs: `skill/codex-copilot/references/routing.md` Green row and the Green/standard L3 paragraph state that the second slot after a final review may only be a follow-up recheck of that reviewer session. `skill/codex-copilot/SKILL.md` recheck guidance names the follow-up mechanism.
+- The two-child Green budget is unchanged, so a follow-up recheck fits only when the final review used the first slot. Example: L3 Green balanced final review → follow-up is allowed; investigator → final review → follow-up stays denied by the existing budget (not by this rule). Tests must assert both.
+- Docs: `skill/codex-copilot/references/routing.md` Green row and the Green/standard L3 paragraph state that the second slot after a final review may only be a follow-up recheck of that reviewer session. `skill/codex-copilot/SKILL.md` recheck guidance names the follow-up mechanism. `docs/compatibility.md` "Bounded execution from 1.1.0" records that a run may dispatch only one fresh final-review session.
 
 ### S01-REQ-2 Single-window thresholds documented (D-02)
 
 - `routing.md`, directly below the band table, adds: when only one quota window is reported, Green ≥60%, Yellow 30–59%, Red 10–29%, Critical under 10% or reached.
-- Thresholds in `routing.band_for_remaining` are unchanged.
+- Thresholds in `routing.band_for_remaining` are unchanged. The single-window path is `band_for_windows(primary, None)`, which delegates to `band_for_remaining`; the existing `test_band_boundaries` already locks the code thresholds and stays unchanged.
 
 ### S01-REQ-3 SKILL.md Start step 2 split (follow-up #8)
 
@@ -30,7 +32,7 @@
 ### S01-REQ-4 Implicit invocation off by default with installer switch (D-03)
 
 - `skill/codex-copilot/agents/openai.yaml` sets `allow_implicit_invocation: false`.
-- CLI: `codex-copilot install --implicit-invocation {on,off}`; no default value at the argparse level.
+- CLI: `codex-copilot install --implicit-invocation {on,off}`; no default value at the argparse level. `installer.install` gains the keyword parameter `implicit_invocation: str | None = None`; `cli.py` passes it to both the dry-run preview call and the confirmed call.
 - Resolution: the flag when given; else the current manifest's `implicit_invocation`; else `off`.
 - Copy mode with `on`: after placing the skill target and before fingerprinting it, rewrite the single line `  allow_implicit_invocation: false` in the installed `agents/openai.yaml` to `true`. If that line does not occur exactly once, raise `InstallError` and roll back. The repository source and the copied distribution are never modified.
 - Symlink mode with `on`: raise `InstallError` explaining that symlink installs use the repository default (`off`) and that copy mode is required to enable it.
@@ -39,7 +41,7 @@
 - Plan actions include `set implicit invocation: <on|off>`; the plan token therefore covers the choice.
 - Install output (dry run and real) always includes one notice explaining: explicit invocation is `$codex-copilot`; with `on`, Codex may start the skill by itself, which loads its instructions and can read quota and create run state; the default is `off` to avoid spending allowance on misfires; how to change it (`install --implicit-invocation on|off`, then restart Codex Desktop) and check it (`doctor --json`).
 - Upgrading a legacy manifest (no field) adds a second notice: the previous release allowed implicit invocation; this upgrade turns it off unless `--implicit-invocation on` is given.
-- `doctor --json` adds top-level `"implicit_invocation"`: `"on"`, `"off"`, or `"unknown"` when no manifest or the field is missing.
+- `doctor --json` (implemented in `cli.py`) adds top-level `"implicit_invocation"`: `"on"`, `"off"`, or `"unknown"` when no manifest or the field is missing.
 - Docs: `references/installation.md` (Install or upgrade section), `README.md` ("Want the full cockpit?") and `README.zh-CN.md` ("想开启完整驾驶舱？") explain the setting with the same content as the notice; `docs/compatibility.md` "User data and upgrades" records default `off`, preservation on upgrade, and legacy installs switching to `off` with a notice.
 
 ### S01-REQ-5 Model/effort consistency test (D-04)

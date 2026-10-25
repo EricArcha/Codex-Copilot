@@ -2,20 +2,20 @@
 
 **Lifecycle:** READY
 **Planning suite:** FROZEN
-**Planning depth:** FULL_SUITE
+**Planning depth:** SUITE_REVISION (r02; original suite: FULL_SUITE)
 **Decision readiness:** READY (D-01 to D-05 confirmed in [confirmed-decisions.md](../../../decisions/confirmed-decisions.md); no blocking decision IDs)
 **Companion route:** grilling not required; domain-modeling not required; built-in Discover used
 **Authority sources:** AGENTS.md, CONTRIBUTING.md, docs/compatibility.md, docs/releasing.md, docs/decisions/confirmed-decisions.md, then this suite
 **Suite:** [spec.md](spec.md), [execution-plan.md](execution-plan.md), [validation-plan.md](validation-plan.md), [evidence-matrix.md](evidence-matrix.md)
-**Planning parent:** 84d3633 (blocked batch r01 checkpoint commit)
-**Batch history:** batch r01 from 322f362 stopped at U1 with [blocked-batch-checkpoint-r01.md](blocked-batch-checkpoint-r01.md) (missing literal model IDs in `routing.md`); this manifest is batch r02 after suite revision r01. The r01 confirmation does not carry over.
+**Planning parent:** c540061dc989d6fb6f7c906facd218a99195d444 (revision r01 planning commit)
+**Batch history:** batch r01 from 322f362 stopped at U1 with [blocked-batch-checkpoint-r01.md](blocked-batch-checkpoint-r01.md) (missing literal model IDs in `routing.md`); this manifest is batch r02 after suite revisions r01 and r02 (r02: planner self-review clarifications before r02 started). The r01 confirmation does not carry over.
 **Active packet:** none (stage batch)
 **Latest accepted review:** none
 **Open manual evidence:** S01-REQ-4 explicit `$codex-copilot` invocation in Codex Desktop (see validation plan)
 **Executor identity:** UNASSIGNED (intended platform: codex)
 
 **Delivery granularity:** STAGE_BATCH
-**Batch baseline:** the latest commit that changes this file (revision r01); resolve with `git log -n 1 --format=%H -- docs/implementation/stages/s01-review-followups/README.md`; its parent must be the planning parent above
+**Batch baseline:** the latest commit that changes this file (revision r02); resolve with `git log -n 1 --format=%H -- docs/implementation/stages/s01-review-followups/README.md`; its parent must be the planning parent above
 **Accepted dirty/untracked manifest:** one entry, see the table under Accepted dirty manifest
 **Current branch:** main
 **Worktree:** /Users/eric/Documents/Vibe Coding/Codex-Copilot
@@ -55,4 +55,6 @@ Verify the digest before the first edit; any mismatch is a stop condition.
 
 ## Plan readiness
 
-**Plan readiness check:** `python3 ~/.claude/skills/cross-agent-delivery/scripts/validate_stage_batch.py docs/implementation/stages/s01-review-followups/README.md docs/implementation/stages/s01-review-followups/execution-plan.md` -> exit 0 (2026-10-26)
+**Plan readiness check:** `python3 "/Users/eric/Documents/Vibe Coding/Cross-Agent-Delivery/scripts/validate_stage_batch.py" docs/implementation/stages/s01-review-followups/README.md docs/implementation/stages/s01-review-followups/execution-plan.md` -> exit 0 (2026-10-26, revision r02)
+
+Revision r02 checks (2026-10-26): Skill validator, `python3 scripts/check_release.py` and `git diff --check` -> exit 0. `PYTHONPATH=src python3 -m unittest discover -s tests -v` with the accepted pending U1 patch -> exit 1 (186 tests, 2 failing subtests, 7 platform skips): only the two missing literal model IDs recorded in the r01 checkpoint. These are the planned U1 repair, not a passing batch-baseline G1 claim; Execute must still verify G1–G4 at the committed baseline before editing. The pending U1 patch digest remains unchanged.

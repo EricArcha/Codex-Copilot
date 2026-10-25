@@ -3,18 +3,18 @@
 **State:** FROZEN
 **Stage:** s01-review-followups
 **Authority:** [spec.md](spec.md)
-**Last governed baseline:** 720a881589aa9eb18ef5abca241520b24fd6f850
+**Last governed baseline:** c540061dc989d6fb6f7c906facd218a99195d444 (revision r02 planning parent)
 
 ## Required regression tests (written by the executor)
 
 | Requirement | Tests that must exist and pass |
 |---|---|
-| S01-REQ-1 | L3 Green balanced: final review then a fresh final review is denied with the new message; final review then a follow-up of that session is allowed; investigator then final review still allowed. L1/L2 Green: reviewer then a fresh reviewer is denied; reviewer then its follow-up is allowed. A valid grant authorizes a second fresh reviewer. |
-| S01-REQ-2 | Boundary assertions 60/59.9/30/29.9/10/9.9 on `band_for_remaining`, plus a check that `routing.md` states the single-window 60/30/10 thresholds. |
+| S01-REQ-1 | L3 Green balanced: final review then a fresh final review is denied with the new message; final review then a follow-up of that session is allowed; investigator then final review still allowed; investigator → final review → follow-up still denied by the unchanged two-child budget. L1/L2 Green: reviewer then a fresh reviewer is denied; reviewer then its follow-up is allowed. A valid grant authorizes a second fresh reviewer. |
+| S01-REQ-2 | Existing `test_band_boundaries` unchanged. New check: `routing.md` states the single-window 60/30/10 thresholds, and `band_for_windows(x, None)` returns the documented band at 60/59.9/30/29.9/10/9.9. |
 | S01-REQ-4 | Fresh copy install defaults to `off` (installed policy `false`, manifest `off`); `--implicit-invocation on` writes `true` only in the installed copy and records `on`; a later install without the flag preserves `on`; switching value is not "Already installed"; legacy manifest upgrades to `off` with the legacy notice; symlink mode with `on` raises `InstallError`; dry-run actions show the setting; `doctor --json` reports `on`/`off`/`unknown`; a missing or duplicated policy line raises and rolls back. |
 | S01-REQ-5 | The consistency test, plus evidence that it fails when one `agents/*.toml` model is altered in a scratch copy (record the command and output; do not commit the alteration). |
 
-Each new behavioral test for S01-REQ-1 and S01-REQ-4 must fail on the batch baseline; record that evidence in the handoff.
+Tests of new behavior must fail on the batch baseline: for S01-REQ-1, the fresh second final-review denials (L3 and L1/L2) and the new message; for S01-REQ-4, every listed installer test. Assertions of unchanged behavior (follow-up allowed, investigator → final → follow-up denied, grant authorizes) are expected to pass on the baseline. Record both in the handoff.
 
 ## Final gates
 
