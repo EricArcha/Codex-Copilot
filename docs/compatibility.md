@@ -137,6 +137,11 @@ Follow-ups pin the original session configuration and consume new capacity. Lega
 traces remain readable, but cannot authorize new work without explicit confirmed
 consumption recovery. No automatic history migration, reset or deletion is performed.
 
+A run may dispatch only one fresh final-review session without a bounded user grant.
+Rechecks use a follow-up of that reviewer session and still consume cumulative child
+and total-call capacity; investigator → final review exhausts the two-child Green budget.
+Legacy recovered consumption retains its existing limits without inferring prior sessions.
+
 `run begin/status/checkpoint/close`, `grant`, `model exec` and `release-check` are
 additive interfaces. Budgets require normal/worst totals, the authorized total and a
 closing reserve; absent budgets permit offline preflight only. Model stages use explicit

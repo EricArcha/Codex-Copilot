@@ -27,7 +27,7 @@ depleted solely because the weekly window is moderately lower.
 
 | Band | Remaining | Policy |
 |---|---:|---|
-| Green / standard | 5-hour ≥50% and weekly ≥35% | GPT-6.1 Sol Medium parent. L0 has no subagent; L1/L2 may use one Luna scout and one Sol final reviewer. L3 reserves its final review. |
+| Green / standard | 5-hour ≥50% and weekly ≥35% | GPT-6.1 Sol Medium parent. L0 has no subagent; L1/L2 may use one Luna scout and one Sol final reviewer. L3 reserves its final review. If final review uses the first slot, the second may only be a follow-up recheck of that reviewer session. |
 | Yellow / guarded | 5-hour ≥30% and weekly ≥20% | One reviewer slot for code-changing L1-L3 work; a diagnosis-only task may use it for a scout. |
 | Red | 10-29% | L0: GPT-6 Luna Low. L1: GPT-6.1 Sol Low/Medium without delegation. Pause L2/L3. |
 | Critical | under 10% or reached | Do not begin code changes. Produce a checkpoint and the next natural quota-window refresh time. |
@@ -83,7 +83,7 @@ that consumes the guarded slot and makes a later reviewer dispatch unavailable.
 
 When Red pauses L2/L3, perform only the Start section's narrow read-only triage. Do not delegate, modify code or configuration, or start review. Immediately return a checkpoint with the task level, quota band, known evidence, zero changed files, next natural quota-window refresh time, and next action. A user override may resume work, but never permits reset-credit use.
 
-For Green/standard L3, use at most one read-only investigator before implementation and reserve the other agent slot for the final review. The premium profile uses the dedicated GPT-6 Astra final reviewer; balanced and conservative use GPT-6.1 Sol High. Keep exactly one writer. The definition of done must cover the relevant permission matrix, migration compatibility, failure rollback or retry behavior, and representative existing data.
+For Green/standard L3, use at most one read-only investigator before implementation and reserve the other agent slot for the final review. If final review uses the first slot, the second may only be a follow-up recheck of that reviewer session; investigator → final review leaves no follow-up capacity. A fresh second reviewer requires a bounded user grant within the total-call limits. The premium profile uses the dedicated GPT-6 Astra final reviewer; balanced and conservative use GPT-6.1 Sol High. Keep exactly one writer. The definition of done must cover the relevant permission matrix, migration compatibility, failure rollback or retry behavior, and representative existing data.
 
 ## Delegation economy
 

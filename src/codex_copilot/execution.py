@@ -414,10 +414,14 @@ def reserve(*, run_id: str, request_id: str, kind: str, category: str, phase: st
         if role == "copilot_worker" and any(c["role"] == "copilot_worker" and c["outcome"] in {None, "unknown"} for c in data["calls"]):
             raise ExecutionDenied("An unresolved writing child already owns the writer slot")
         effective = QuotaBand(data["effective_band"])
+        fresh_final_review_used = (kind == "subagent" and phase == "final_review" and parent is None and
+                                  any(c["kind"] == "subagent" and c["phase"] == "final_review" for c in data["calls"]))
         if kind == "subagent":
             allowed = _allow_role(TaskLevel(level), effective, role, phase, data["child_consumed"], astra_unavailable, Profile(profile))
             if effective is QuotaBand.YELLOW and level in {"L1", "L2"} and read_only:
                 allowed = role in {"copilot_scout", "copilot_investigator"} and phase == "exploration" and not data["child_consumed"]
+            if fresh_final_review_used:
+                allowed = False
         else:
             allowed = effective in {QuotaBand.GREEN, QuotaBand.YELLOW}
         if grant_id:
@@ -426,6 +430,8 @@ def reserve(*, run_id: str, request_id: str, kind: str, category: str, phase: st
                     authorization["remaining"] <= 0 or authorization["expires_at"] <= time.time()):
                 raise ExecutionDenied("Grant is missing, expired, exhausted or outside this call scope")
         elif not allowed:
+            if fresh_final_review_used:
+                raise ExecutionDenied("This run already used its final-review session; recheck with a follow-up of that reviewer session or obtain a bounded user grant")
             raise ExecutionDenied("Route paused or cumulative child cap reached; a bounded user grant is required")
         if grant_id:
             authorization["remaining"] -= 1

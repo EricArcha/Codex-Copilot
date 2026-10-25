@@ -217,6 +217,72 @@ class ExecutionTests(unittest.TestCase):
         with self.assertRaises(ex.ExecutionDenied):
             self.reserve(kind="subagent", role="copilot_worker", phase="implementation", category="subagent", grant_id=grant["grant_id"])
 
+    def review(self, **kwargs):
+        options = dict(kind="subagent", role="copilot_reviewer", effort="high",
+                       category="review", phase="final_review")
+        options.update(kwargs)
+        return self.reserve(**options)
+
+    def test_second_fresh_final_review_is_denied_for_green_levels_and_profiles(self):
+        for level, profile, role, fallback in (
+            ("L1", "balanced", "copilot_reviewer", False),
+            ("L2", "balanced", "copilot_reviewer", False),
+            ("L3", "balanced", "copilot_final_reviewer", False),
+            ("L3", "conservative", "copilot_final_reviewer", False),
+            ("L3", "premium", "copilot_astra_final_reviewer", False),
+            ("L3", "premium", "copilot_reviewer", True),
+        ):
+            with self.subTest(level=level, profile=profile, role=role):
+                self.run = uid()
+                self.begin()
+                options = dict(level=level, profile=profile, role=role,
+                               model="gpt-6-astra" if role == "copilot_astra_final_reviewer" else "gpt-6.1-sol",
+                               astra_unavailable=fallback)
+                call = self.review(**options)
+                self.finish(call, session_id=uid())
+                with self.assertRaisesRegex(ex.ExecutionDenied, "This run already used its final-review session; recheck with a follow-up of that reviewer session or obtain a bounded user grant"):
+                    self.review(**options)
+                self.assertEqual(ex.status(self.run)["child_consumed"], 1)
+
+    def test_green_reviewer_followup_uses_second_slot(self):
+        for level, role in (("L1", "copilot_reviewer"), ("L2", "copilot_reviewer"),
+                            ("L3", "copilot_final_reviewer")):
+            with self.subTest(level=level):
+                self.run = uid()
+                self.begin()
+                call = self.review(level=level, role=role)
+                session = uid()
+                self.finish(call, session_id=session)
+                followup = self.review(level=level, role=role, followup_id=call["request_id"])
+                self.assertEqual(followup["session_id"], session)
+                self.assertEqual(ex.status(self.run)["child_consumed"], 2)
+
+    def test_investigator_then_final_review_leaves_no_followup_slot(self):
+        self.begin()
+        scout = self.reserve(kind="subagent", category="subagent", role="copilot_investigator",
+                             phase="exploration", level="L3")
+        self.finish(scout)
+        review = self.review(level="L3", role="copilot_final_reviewer")
+        self.finish(review, session_id=uid())
+        with self.assertRaisesRegex(ex.ExecutionDenied, "cumulative child cap reached"):
+            self.review(level="L3", role="copilot_final_reviewer", followup_id=review["request_id"])
+
+    def test_bounded_grant_allows_second_fresh_final_review(self):
+        self.begin()
+        self.finish(self.review())
+        grant = self.grant(phase="final_review", category="review")
+        call = self.review(grant_id=grant["grant_id"])
+        self.assertIsNone(call["followup_id"])
+        self.assertEqual(ex.status(self.run)["grants"][0]["remaining"], 0)
+
+    def test_legacy_consumption_retains_existing_final_slot(self):
+        self.begin(resume_consumed=1)
+        call = self.review(level="L3", role="copilot_final_reviewer")
+        self.assertEqual(call["child_ordinal"], 2)
+        self.finish(call, session_id=uid())
+        with self.assertRaises(ex.ExecutionDenied):
+            self.review(level="L3", role="copilot_final_reviewer", followup_id=call["request_id"])
+
     def test_stages_require_real_calls_paired_scoring_and_bounded_batches(self):
         self.begin(comparison=True, smoke_calls=2, pilot_calls=2, batch_calls=2, call_limit=10)
         self.preflight()

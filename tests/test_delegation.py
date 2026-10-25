@@ -112,6 +112,21 @@ class DelegationTests(unittest.TestCase):
                     run_id=self.RUN_2, level=TaskLevel.L3, role="copilot_final_reviewer", phase="final_review"
                 )
 
+    def test_fresh_reviewer_denial_and_bound_followup_through_dispatch(self):
+        for run_id, level, role in ((self.RUN_1, TaskLevel.L1, "copilot_reviewer"),
+                                    (self.RUN_2, TaskLevel.L2, "copilot_reviewer"),
+                                    (self.RUN_3, TaskLevel.L3, "copilot_final_reviewer")):
+            with self.subTest(level=level), patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.GREEN)):
+                request = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+                session = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+                call = dispatch(run_id=run_id, request_id=request, level=level, role=role, phase="final_review")
+                complete(run_id=run_id, ordinal=call["subagent_ordinal"], outcome="success", session_id=session)
+                with self.assertRaisesRegex(DelegationDenied, "already used its final-review session"):
+                    dispatch(run_id=run_id, level=level, role=role, phase="final_review")
+                followup = dispatch(run_id=run_id, level=level, role=role, phase="final_review", followup_id=request)
+                self.assertEqual(followup["subagent_ordinal"], 2)
+                self.assertEqual(execution.status(run_id)["calls"][1]["session_id"], session)
+
     def test_yellow_l3_reserves_its_only_slot_for_final_review(self):
         with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.YELLOW)):
             with self.assertRaises(DelegationDenied):
