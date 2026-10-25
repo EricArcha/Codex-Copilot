@@ -33,6 +33,9 @@ depleted solely because the weekly window is moderately lower.
 | Critical | under 10% or reached | Do not begin code changes. Produce a checkpoint and the next natural quota-window refresh time. |
 | Unknown | unavailable | GPT-6.1 Sol Medium, one read-only subagent maximum, no Astra/Max/Ultra. |
 
+When only one quota window is reported: Green ≥60%, Yellow 30–59%, Red 10–29%,
+Critical under 10% or reached.
+
 Reset credits and reset opportunities are exclusively manual user actions. Never suggest, recommend, offer, prompt, redeem, consume, invoke, or otherwise use one—even on explicit user instruction. An explicit user instruction may override a route pause to continue work, but it never authorizes reset-credit use. If an override arrives, preserve required tests and review rather than silently lowering the quality bar.
 
 ## Delegation gate

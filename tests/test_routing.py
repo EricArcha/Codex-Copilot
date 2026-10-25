@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from codex_copilot.routing import Profile, QuotaBand, TaskLevel, band_for_remaining, band_for_windows, route_for
 
@@ -21,6 +22,18 @@ class RoutingTests(unittest.TestCase):
     def test_reached_overrides_percentage(self):
         self.assertEqual(band_for_remaining(90, reached=True), QuotaBand.CRITICAL)
         self.assertEqual(band_for_remaining(90, spend_control_reached=True), QuotaBand.CRITICAL)
+
+    def test_single_window_matches_documented_thresholds(self):
+        documented = (Path(__file__).resolve().parents[1] /
+                      "skill/codex-copilot/references/routing.md").read_text(encoding="utf-8")
+        self.assertIn("only one quota window", documented)
+        for text in ("Green ≥60%", "Yellow 30–59%", "Red 10–29%", "Critical under 10% or reached"):
+            self.assertIn(text, documented)
+        for remaining, expected in ((60, QuotaBand.GREEN), (59.9, QuotaBand.YELLOW),
+                                    (30, QuotaBand.YELLOW), (29.9, QuotaBand.RED),
+                                    (10, QuotaBand.RED), (9.9, QuotaBand.CRITICAL)):
+            with self.subTest(remaining=remaining):
+                self.assertEqual(band_for_windows(remaining, None), expected)
 
     def test_standard_capacity_requires_both_windows(self):
         self.assertEqual(band_for_windows(86, 54), QuotaBand.GREEN)
