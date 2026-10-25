@@ -10,7 +10,14 @@ versions, not retroactively claimed GitHub releases.
 - Add source-history milestones to both README files and complete the project introduction demo.
 
 - Align README release entry points and Skill-only/full-install capability boundaries.
-- Expand installation acceptance and quota-permission guidance for the published 1.0.0 workflow.
+- Expand installation acceptance and quota-permission guidance for the 1.0.0 workflow.
+- Limit each run to one fresh final-review session without a bounded user grant;
+  rechecks follow up the same reviewer session within the cumulative budget.
+- Document the existing 60/30/10 single-window quota thresholds.
+- Default implicit Skill invocation to off; add `install --implicit-invocation on|off`,
+  preserve the recorded choice on upgrade, and report it in `doctor --json`.
+  Legacy installs switch to off with a notice unless explicitly enabled; enabling
+  implicit invocation requires copy mode.
 
 ## [1.1.0] - 2026-10-07
 
