@@ -5,6 +5,10 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+- Fix implicit-invocation setting changes through the installed launcher; update
+  only the installed policy and manifest transactionally while retaining the
+  source-checkout requirement for distribution upgrades.
+
 - Withdraw the public 1.0.0 GitHub Release to draft at the owner's request; retain the source version and tag, and correct README release claims.
 
 - Add source-history milestones to both README files and complete the project introduction demo.

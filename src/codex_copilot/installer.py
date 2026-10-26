@@ -388,6 +388,32 @@ def _plan_token(config: str, current: dict[str, Any] | None, planned: list[tuple
     return digest.hexdigest()
 
 
+def _switch_implicit_invocation(current: dict[str, Any], desired: str, result: dict[str, Any]) -> dict[str, Any]:
+    skill = next(item for item in current["artifacts"] if item["kind"] == "skill")
+    policy = Path(skill["target"]) / "agents" / "openai.yaml"
+    with policy.open(encoding="utf-8", newline="") as stream:
+        lines = stream.read().splitlines(keepends=True)
+    old = "  allow_implicit_invocation: " + ("true" if current["implicit_invocation"] == "on" else "false")
+    new = "  allow_implicit_invocation: " + ("true" if desired == "on" else "false")
+    if (sum(line.rstrip("\r\n") == old for line in lines) != 1
+            or sum(line.lstrip().startswith("allow_implicit_invocation:") for line in lines) != 1):
+        raise InstallError("Installed Skill policy must contain exactly one recorded implicit invocation line")
+    updated_policy = "".join(new + line[len(old):] if line.rstrip("\r\n") == old else line for line in lines)
+    transaction = _Transaction()
+    try:
+        transaction.text(policy, updated_policy, stat.S_IMODE(policy.stat().st_mode))
+        artifacts = [dict(item) for item in current["artifacts"]]
+        for item in artifacts:
+            if item["kind"] == "skill":
+                item["fingerprint"] = artifact_fingerprint(Path(item["target"]))
+        manifest = {**current, "implicit_invocation": desired, "artifacts": artifacts}
+        transaction.text(manifest_path(), json.dumps(manifest, indent=2, sort_keys=True) + "\n", 0o600)
+    except Exception as exc:
+        _rollback(transaction, False, None, None)
+        raise InstallError(f"Installation failed and was rolled back: {exc}. Backups: {transaction.root}") from exc
+    return {**result, "changed": True, "needs_confirmation": False, "manifest": str(manifest_path())}
+
+
 def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: str | None = None, add_to_path: bool = False,
             implicit_invocation: str | None = None) -> dict[str, Any]:
     if mode not in {"copy", "symlink"}:
@@ -416,7 +442,12 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
     config = parse_toml(config_text)
     updated, changes = apply_updates(config_text, CONFIG_UPDATES)
     current_install = _is_current_install(current, mode, config, implicit_invocation)
-    if mode == "copy" and not current_install:
+    setting_only = (mode == "copy" and not add_to_path and current is not None
+                    and current.get("implicit_invocation") in {"on", "off"}
+                    and current["implicit_invocation"] != implicit_invocation
+                    and _is_current_install(current, mode, config, current["implicit_invocation"])
+                    and {item["target"] for item in current["artifacts"]} == expected_artifact_targets(mode))
+    if mode == "copy" and not current_install and not setting_only:
         root, destination = repo_root().resolve(), share_dir().resolve()
         if root == destination or root.is_relative_to(destination) or destination.is_relative_to(root):
             raise InstallError("Copy-mode upgrades must run from a source checkout outside the installed copy")
@@ -454,6 +485,8 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
     actions.extend(f"remove obsolete copied distribution: {item['target']}" if item["kind"] == "distribution" else f"remove obsolete artifact: {item['target']}" for item in stale)
     if ownership and ownership["added"]:
         actions.append(f"append Windows user PATH: {ownership['entry']}")
+    if setting_only:
+        actions = [f"set implicit invocation: {implicit_invocation}"]
     warnings = [RESTART_NOTICE, MEASUREMENT_NOTICE, IMPLICIT_INVOCATION_NOTICE]
     if current and "implicit_invocation" not in current:
         warnings.append(LEGACY_IMPLICIT_INVOCATION_NOTICE)
@@ -470,6 +503,8 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
               "config_path": str(config_path), "config_backup_dir": str(state_dir() / "backups"), "plan_token": token}
     if dry_run or no_changes:
         return result
+    if setting_only:
+        return _switch_implicit_invocation(current, implicit_invocation, result)
     transaction = _Transaction()
     path_written = False
     try:
