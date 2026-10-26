@@ -2,17 +2,36 @@
 
 **Lifecycle:** READY
 **Planning suite:** FROZEN
-**Planning depth:** SUITE_REVISION (r02; original suite: FULL_SUITE)
+**Planning depth:** REPAIR_PACKET (S01-R01, F-01; frozen r02 suite retained)
 **Decision readiness:** READY (D-01 to D-05 confirmed in [confirmed-decisions.md](../../../decisions/confirmed-decisions.md); no blocking decision IDs)
 **Companion route:** grilling not required; domain-modeling not required; built-in Discover used
 **Authority sources:** AGENTS.md, CONTRIBUTING.md, docs/compatibility.md, docs/releasing.md, docs/decisions/confirmed-decisions.md, then this suite
 **Suite:** [spec.md](spec.md), [execution-plan.md](execution-plan.md), [validation-plan.md](validation-plan.md), [evidence-matrix.md](evidence-matrix.md)
 **Planning parent:** c540061dc989d6fb6f7c906facd218a99195d444 (revision r01 planning commit)
 **Batch history:** batch r01 from 322f362 stopped at U1 with [blocked-batch-checkpoint-r01.md](blocked-batch-checkpoint-r01.md) (missing literal model IDs in `routing.md`); this manifest is batch r02 after suite revisions r01 and r02 (r02: planner self-review clarifications before r02 started). The r01 confirmation does not carry over.
-**Active packet:** none (stage batch)
+**Active packet:** [S01-R01 repair contract](repair-contract.md) (`READY`: verify committed planning baseline before Execute)
 **Latest accepted review:** none
 **Open manual evidence:** S01-REQ-4 explicit `$codex-copilot` invocation in Codex Desktop (see validation plan)
 **Executor identity:** UNASSIGNED (intended platform: codex)
+
+## Current route — F-01 repair planning (2026-10-27)
+
+Batch r02 was delivered in [stage-handoff.md](stage-handoff.md), then independently
+reviewed in [stage-review.md](stage-review.md) as `NEEDS_REPAIR`, with the single P1
+F-01 and route `COMPLEX_REPAIR_PLAN`. Review commit
+88ff1c44d5d70e6b715e3b80c7ba7678adf2d193 is a direct child of delivery commit
+4a9f93c733cd9a22b71cee13cdbdb5b174ba8afe. The committed review passed
+`validate_independent_review.py` again on 2026-10-27.
+
+Next legal role: **Execute** after verifying the scoped planning commit and both
+readiness gates in [repair-contract.md](repair-contract.md). The current user
+authorized the five-path planning commit and requested F-01 completion; additional
+implementation/evidence commits remain ungranted. Preserve both original
+handoff/review files; repair outputs are `handoff-r01.md` / `review-r01.md`.
+M-01 remains PENDING. No evidence row or stage acceptance is advanced.
+
+The batch fields below retain the original r02 execution boundary; the repair
+contract owns the new baseline, path ownership and Git authorities.
 
 **Delivery granularity:** STAGE_BATCH
 **Batch baseline:** the latest commit that changes this file (revision r02); resolve with `git log -n 1 --format=%H -- docs/implementation/stages/s01-review-followups/README.md`; its parent must be the planning parent above
