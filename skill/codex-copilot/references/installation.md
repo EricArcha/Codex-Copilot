@@ -65,6 +65,13 @@ complete with intact managed files. Use the displayed launcher path if PATH is
 not configured. Repeating install from the same release should report no changes.
 A complete installation verifies artifacts/settings, not model entitlement.
 
+From 1.2.0, the managed installation adds `copilot_terra_worker` (Terra Medium,
+L1 implementation only). Terra requires CLI 0.159.0+ and account model access.
+Its new agent file is subject to the same conflict, fingerprint, rollback and
+uninstall protections; do not replace an unknown file to complete an upgrade.
+Restart Desktop and use a fresh chat to load this role. Parent-model routing
+recommendations cannot switch the model of an already-running chat.
+
 `status --refresh --json` must show real quota windows with source=app-server.
 For permission_denied, state_initialization_failed or state_write_failed, use
 [quota access](quota.md): command-scoped host-approved execution for necessary

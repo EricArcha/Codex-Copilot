@@ -24,6 +24,7 @@ AGENT_FILES = (
     "copilot-scout.toml",
     "copilot-investigator.toml",
     "copilot-worker.toml",
+    "copilot-terra-worker.toml",
     "copilot-reviewer.toml",
     "copilot-final-reviewer.toml",
     "copilot-astra-final-reviewer.toml",

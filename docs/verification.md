@@ -1,5 +1,40 @@
 # Verification evidence
 
+## Terra routing candidate — 2026-10-29
+
+- Baseline at 55b995d1e4fca4552ef528229d7078c54c0fafed: 219 tests discovered,
+  212 passed and seven platform-specific skips on macOS. Updated candidate: 230
+  discovered, 223 passed and the same seven skips. Skill validation, release
+  metadata (1.2.0), whitespace and project-local commit-identity checks passed.
+- Regression coverage includes every profile/band/level parent route, Terra's
+  L1/implementation/model/effort fences, review reservation and request replay,
+  shared Sol/Terra writer ownership under concurrency and unknown outcomes,
+  grant resistance, bound follow-ups and the closing reserve.
+- The installer-owned test fixture `tests/fixtures/source-1.1.0.zip` is an immutable
+  product-tree archive of 55b995d1e4fca4552ef528229d7078c54c0fafed (source version
+  1.1.0, not a claimed public release). It adds upgrade, unknown-file collision,
+  rollback, repeat-install and uninstall coverage under all five isolated path
+  overrides. Existing 0.1.x fixtures were not changed.
+- Official model-selection and model pages were fetched on 2026-10-29; Terra's
+  exact ID is gpt-6.1-terra. The local model catalog lists it, and CLI 0.160.1 meets
+  its documented 0.159.0 minimum. No live Terra worker inference, model-quality
+  comparison or allowance-saving result is claimed by the regression tests.
+- Initial managed doctor reported complete installation at 1.1.0. The necessary
+  command-scoped host-approved status query returned live app-server windows;
+  optional measurement was already enabled and reused that Start cache.
+  Independent L3 review, remote CI, publication and actual local upgrade are
+  recorded separately when completed; a Desktop restart remains user-side.
+- Independent L3 final review returned PASS with no actionable findings. The
+  reviewer inspected routing, role/model/effort restrictions, shared writer locks,
+  grants, pinned follow-ups, managed installation/rollback and privacy boundaries;
+  independently ran 105 focused tests (98 passed, seven Windows-specific skips),
+  release metadata and whitespace checks; and verified the 1.1.0 fixture against
+  the baseline allowing declared Windows line-ending conversion. The reviewed
+  working tree is the implementation committed for the 1.2.0 PR; no product edits
+  were made after review. Gate evidence used live app-server quota, Green balanced
+  L3 and the declared Sol High final-review role, with one of two reserved calls
+  consumed. Native configuration is declared, not backend billing telemetry.
+
 Local validation on 2026-10-02 used Windows, Python 3.13.7 and Codex CLI 0.159.0-alpha.12.1.
 
 - Baseline at `8df44bb`: 71 tests, 5 failures and 13 errors. The full installer rejected Windows; one error independently demonstrated missing symlink privilege.

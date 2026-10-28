@@ -5,6 +5,22 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-29
+
+- Recommend GPT-6.1 Terra for Green/Yellow L0 parent work; retain Conservative
+  Green Low effort, Red Luna, Unknown Sol and Critical pause behavior.
+- Add a managed GPT-6.1 Terra Medium worker restricted to bounded L1
+  implementation, including development-related visual/UI fixes. Sol remains
+  the complex implementation and independent review tier; Astra remains Premium L3.
+- Share the writer slot across Sol and Terra workers, including unknown outcomes
+  and scoped grants. Preserve cumulative budgets, review reserves, pinned follow-ups,
+  existing schemas and the fixed isolated Sol data plane.
+- Update model guidance against official documentation on 2026-10-29. Parent
+  recommendations do not automatically change the active Desktop chat model;
+  using the new role requires a managed upgrade, Terra access and a Desktop restart.
+- Verify upgrade from the immutable 1.1.0 source snapshot, including new-agent
+  conflicts, rollback, retained preferences/history, repeat-install and uninstall.
+
 - Fix implicit-invocation setting changes through the installed launcher; update
   only the installed policy and manifest transactionally while retaining the
   source-checkout requirement for distribution upgrades.

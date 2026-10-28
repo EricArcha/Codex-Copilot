@@ -49,6 +49,27 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(route_for(QuotaBand.RED, TaskLevel.L0).root_model, "gpt-6-luna")
         self.assertEqual(route_for(QuotaBand.RED, TaskLevel.L1).root_model, "gpt-6.1-sol")
 
+    def test_model_and_effort_matrix_preserves_task_and_quota_boundaries(self):
+        for profile in Profile:
+            for band in QuotaBand:
+                for level in TaskLevel:
+                    with self.subTest(profile=profile, band=band, level=level):
+                        route = route_for(band, level, profile)
+                        expected = "gpt-6.1-sol"
+                        if band is QuotaBand.CRITICAL or (band is QuotaBand.RED and level is TaskLevel.L0):
+                            expected = "gpt-6-luna"
+                        elif band in {QuotaBand.GREEN, QuotaBand.YELLOW} and level is TaskLevel.L0:
+                            expected = "gpt-6.1-terra"
+                        elif band is QuotaBand.GREEN and profile is Profile.PREMIUM and level is TaskLevel.L3:
+                            expected = "gpt-6-astra"
+                        self.assertEqual(route.root_model, expected)
+                        low = band in {QuotaBand.RED, QuotaBand.CRITICAL} or (
+                            band is QuotaBand.GREEN and profile is Profile.CONSERVATIVE)
+                        self.assertEqual(route.root_effort, "low" if low else "medium")
+                        self.assertEqual(route.max_subagents, 0 if level is TaskLevel.L0 or band in {
+                            QuotaBand.RED, QuotaBand.CRITICAL} else 2 if band is QuotaBand.GREEN else 1)
+                        self.assertFalse(route.allow_max_or_ultra)
+
     def test_route_matrix_invariants(self):
         for band in QuotaBand:
             for level in TaskLevel:

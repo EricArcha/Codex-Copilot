@@ -60,6 +60,7 @@ class DelegationTests(unittest.TestCase):
             "copilot-scout": ("gpt-6-luna", "low"),
             "copilot-investigator": ("gpt-6.1-sol", "medium"),
             "copilot-worker": ("gpt-6.1-sol", "medium"),
+            "copilot-terra-worker": ("gpt-6.1-terra", "medium"),
             "copilot-reviewer": ("gpt-6.1-sol", "high"),
             "copilot-final-reviewer": ("gpt-6.1-sol", "high"),
             "copilot-astra-final-reviewer": ("gpt-6-astra", "high"),
@@ -182,7 +183,9 @@ class DelegationTests(unittest.TestCase):
             shutil.copy2(path, target / path.name)
             role = path.stem.replace("-", "_")
             spec = dispatch_spec(role, Profile.PREMIUM)
-            if role not in {"copilot_scout", "copilot_astra_final_reviewer"}:
+            if role == "copilot_terra_worker":
+                self.assertEqual((spec.model, spec.effort), ("gpt-6.1-terra", "medium"))
+            elif role not in {"copilot_scout", "copilot_astra_final_reviewer"}:
                 self.assertEqual(spec.model, "gpt-6.1-sol")
                 self.assertIn(spec.effort, {"medium", "high"})
 
@@ -194,6 +197,64 @@ class DelegationTests(unittest.TestCase):
                 path.write_text(f'model = "{model}"\nmodel_reasoning_effort = "{effort}"\n')
                 with self.assertRaises(DelegationDenied):
                     dispatch_spec("copilot_reviewer", Profile.BALANCED)
+
+    def test_terra_worker_reserves_review_and_replay_does_not_spend_again(self):
+        request = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.GREEN)) as reader:
+            first = dispatch(run_id=self.RUN_1, request_id=request, level=TaskLevel.L1,
+                             role="copilot_terra_worker", phase="implementation")
+            replay = dispatch(run_id=self.RUN_1, request_id=request, level=TaskLevel.L1,
+                              role="copilot_terra_worker", phase="implementation")
+            self.assertTrue(replay["replayed"])
+            self.assertEqual(reader.call_count, 1)
+            self.assertEqual((first["subagent_model"], first["subagent_effort"]), ("gpt-6.1-terra", "medium"))
+            complete(run_id=self.RUN_1, ordinal=first["subagent_ordinal"], outcome="success")
+            with self.assertRaises(DelegationDenied):
+                dispatch(run_id=self.RUN_1, level=TaskLevel.L1, role="copilot_scout", phase="exploration")
+            reviewer = dispatch(run_id=self.RUN_1, level=TaskLevel.L1,
+                                role="copilot_reviewer", phase="final_review")
+            self.assertEqual(reviewer["subagent_model"], "gpt-6.1-sol")
+            self.assertEqual(trace(self.RUN_1)["dispatched"], 2)
+
+    def test_terra_worker_default_access_is_only_green_l1_implementation(self):
+        for band in QuotaBand:
+            for level in TaskLevel:
+                for phase in ("exploration", "implementation", "final_review"):
+                    with self.subTest(band=band, level=level, phase=phase):
+                        allowed = delegation._allow_role(level, band, "copilot_terra_worker", phase,
+                                                        0, False, Profile.BALANCED)
+                        self.assertEqual(allowed, band is QuotaBand.GREEN and level is TaskLevel.L1
+                                         and phase == "implementation")
+                        self.assertFalse(delegation._allow_role(level, band, "copilot_terra_worker", phase,
+                                                               1, False, Profile.BALANCED))
+
+    def test_terra_role_and_phase_cannot_be_widened_by_grant(self):
+        grant_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        execution.grant(run_id=self.RUN_1, grant_id=grant_id, phase="implementation",
+                        category="subagent", user_authorized=True)
+        with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.GREEN)) as reader:
+            for level, phase in ((TaskLevel.L0, "implementation"), (TaskLevel.L2, "implementation"),
+                                 (TaskLevel.L3, "implementation"), (TaskLevel.L1, "exploration"),
+                                 (TaskLevel.L1, "final_review")):
+                with self.subTest(level=level, phase=phase), self.assertRaises(DelegationDenied):
+                    dispatch(run_id=self.RUN_1, level=level, role="copilot_terra_worker",
+                             phase=phase, grant_id=grant_id)
+            reader.assert_not_called()
+        self.assertEqual(execution.status(self.RUN_1)["consumed"], 0)
+
+    def test_terra_worker_rejects_missing_model_and_effort_changes_without_substitution(self):
+        path = Path(os.environ["CODEX_HOME"]) / "agents/copilot-terra-worker.toml"
+        for model, effort in (("gpt-6.1-sol", "medium"), ("gpt-5.6-terra", "medium"),
+                              ("gpt-6.1-terra", "none"), ("gpt-6.1-terra", "low"),
+                              ("gpt-6.1-terra", "high"), ("gpt-6.1-terra", "max"),
+                              ("gpt-6.1-terra", "ultra")):
+            with self.subTest(model=model, effort=effort):
+                path.write_text(f'model = "{model}"\nmodel_reasoning_effort = "{effort}"\n')
+                with self.assertRaises(DelegationDenied):
+                    dispatch_spec("copilot_terra_worker", Profile.BALANCED)
+        path.unlink()
+        with self.assertRaises(DelegationDenied):
+            dispatch_spec("copilot_terra_worker", Profile.BALANCED)
 
     def test_premium_l3_uses_dedicated_astra_final_reviewer(self):
         with patch("codex_copilot.delegation.get_quota", return_value=snapshot(QuotaBand.GREEN)):
