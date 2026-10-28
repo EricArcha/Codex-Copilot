@@ -32,6 +32,18 @@ AGENTS.md requires L3 independent final review for delegation and installation c
 
 | ID | Evidence | Owner | Status |
 |---|---|---|---|
-| M-01 | After installing with default `off` and restarting Codex Desktop, typing `$codex-copilot` in a new task loads the skill (D-03 explicit-invocation risk, openai/codex#40600) | repository owner | PENDING |
+| M-01 | After installing with default `off` and restarting Codex Desktop, typing `$codex-copilot` in a new task loads the skill (D-03 explicit-invocation risk, openai/codex#40600) | repository owner | COMPLETE |
+
+M-01 evidence (2026-10-28): chat `01a1832b-2dff-7013-b540-2c054c288bca`
+records successful `codex-copilot install --implicit-invocation off --yes`
+and the owner's report that Desktop had been restarted. Restart is owner-reported,
+not independently observed. In new chat `01a1832e-a6a4-7ec2-bfbf-e9da31626baf`,
+the owner explicitly selected `$codex-copilot`; Desktop supplied the installed
+SKILL.md content and the workflow loaded successfully. `doctor --json` in that
+chat reports `installation_state: complete`, `implicit_invocation: off`, and
+matching managed artifacts. This verifies explicit invocation while off; it does
+not test automatic skill selection while on. The installer default-off behavior
+is covered separately by the required regression tests. Stage acceptance/index
+updates remain separate from this manual-evidence record.
 
 M-01 does not block `ACCEPT` of the code change, but the stage cannot be marked `ACCEPTED` until M-01 is `COMPLETE`. If M-01 fails, return to Discover for D-03.

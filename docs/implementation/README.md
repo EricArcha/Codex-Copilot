@@ -4,6 +4,6 @@ Delivery records for work planned and reviewed with the `cross-agent-delivery` s
 
 | Stage | Lifecycle | Delivery | Next legal role |
 |---|---|---|---|
-| [s01-review-followups](stages/s01-review-followups/README.md) | READY (F-01 repair contract) | STAGE_BATCH → REPAIR_PACKET [S01-R01](stages/s01-review-followups/repair-contract.md) | Execute S01-R01 after verifying its planning commit; user requested F-01 completion; implementation/evidence Git authority remains ungranted |
+| [s01-review-followups](stages/s01-review-followups/README.md) | ACCEPTED (2026-10-28) | STAGE_BATCH → REPAIR_PACKET [S01-R01](stages/s01-review-followups/repair-contract.md) | None for S01: independent repair ACCEPT and manual M-01 complete; see stage evidence matrix |
 
 Decisions: [confirmed-decisions.md](../decisions/confirmed-decisions.md).

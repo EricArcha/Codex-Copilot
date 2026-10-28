@@ -1,6 +1,6 @@
 # S01 Review follow-ups — stage manifest
 
-**Lifecycle:** READY
+**Lifecycle:** ACCEPTED
 **Planning suite:** FROZEN
 **Planning depth:** REPAIR_PACKET (S01-R01, F-01; frozen r02 suite retained)
 **Decision readiness:** READY (D-01 to D-05 confirmed in [confirmed-decisions.md](../../../decisions/confirmed-decisions.md); no blocking decision IDs)
@@ -9,40 +9,58 @@
 **Suite:** [spec.md](spec.md), [execution-plan.md](execution-plan.md), [validation-plan.md](validation-plan.md), [evidence-matrix.md](evidence-matrix.md)
 **Planning parent:** c540061dc989d6fb6f7c906facd218a99195d444 (revision r01 planning commit)
 **Batch history:** batch r01 from 322f362 stopped at U1 with [blocked-batch-checkpoint-r01.md](blocked-batch-checkpoint-r01.md) (missing literal model IDs in `routing.md`); this manifest is batch r02 after suite revisions r01 and r02 (r02: planner self-review clarifications before r02 started). The r01 confirmation does not carry over.
-**Active packet:** [S01-R01 repair contract](repair-contract.md) (`READY`: verify committed planning baseline before Execute)
-**Latest accepted review:** none
-**Open manual evidence:** S01-REQ-4 explicit `$codex-copilot` invocation in Codex Desktop (see validation plan)
-**Executor identity:** UNASSIGNED (intended platform: codex)
+**Active packet:** none; [S01-R01 repair contract](repair-contract.md) completed
+**Latest accepted review:** [review-r01.md](review-r01.md), ACCEPT, commit `a15fd386c4bb06d5bc9c865aef8c7cf5ab42a308`
+**Open manual evidence:** none; M-01 COMPLETE on 2026-10-28 (see [validation plan](validation-plan.md))
+**Executor identity:** batch `codex/94b7691f-669a-43cc-8447-0b3c0529a634`; repair `codex/01a17938-a39d-7bb3-8dba-66bf2c51e4bb`
 
-## Current route — F-01 repair planning (2026-10-27)
+## Acceptance closeout (2026-10-28)
 
-Batch r02 was delivered in [stage-handoff.md](stage-handoff.md), then independently
-reviewed in [stage-review.md](stage-review.md) as `NEEDS_REPAIR`, with the single P1
-F-01 and route `COMPLEX_REPAIR_PLAN`. Review commit
-88ff1c44d5d70e6b715e3b80c7ba7678adf2d193 is a direct child of delivery commit
-4a9f93c733cd9a22b71cee13cdbdb5b174ba8afe. The committed review passed
-`validate_independent_review.py` again on 2026-10-27.
+**Next legal role:** none for S01; stage acceptance is complete. The repository
+owner authorized this evidence/index closeout, commit and push in chat
+`01a1832e-a6a4-7ec2-bfbf-e9da31626baf` on 2026-10-28.
 
-Next legal role: **Execute** after verifying the scoped planning commit and both
-readiness gates in [repair-contract.md](repair-contract.md). The current user
-authorized the five-path planning commit and requested F-01 completion; additional
-implementation/evidence commits remain ungranted. Preserve both original
-handoff/review files; repair outputs are `handoff-r01.md` / `review-r01.md`.
-M-01 remains PENDING. No evidence row or stage acceptance is advanced.
+Batch r02 was delivered at `4a9f93c733cd9a22b71cee13cdbdb5b174ba8afe`.
+The original [stage review](stage-review.md), committed at
+`88ff1c44d5d70e6b715e3b80c7ba7678adf2d193`, found only F-01 and returned
+NEEDS_REPAIR. Its other five requirement verdicts are PASS.
+Repair implementation `2a2366dec9a4c88347f85fd8f09129be499db9a4` was delivered
+at `3752ca8d7f5600528200341aeaef9a04c0f2ef73` and independently accepted in
+[review-r01.md](review-r01.md), committed at
+`a15fd386c4bb06d5bc9c865aef8c7cf5ab42a308`. This closes F-01 and the code
+portion of S01-REQ-4; [M-01 evidence](validation-plan.md) completes its Desktop
+acceptance. The original handoffs, reviews and repair contract remain historical
+records; their earlier pending states do not describe current acceptance.
 
-The batch fields below retain the original r02 execution boundary; the repair
-contract owns the new baseline, path ownership and Git authorities.
+All six requirements are ACCEPTED in the [evidence matrix](evidence-matrix.md).
+Closeout verification on 2026-10-28: G1 reports 219 tests, OK with seven existing
+Windows-only skips; G2 reports Skill is valid; G3 reports valid version 1.1.0;
+G4 passes. Both original and repair handoff/review pairs pass
+`validate_independent_review.py`. Native Windows/Linux and Python 3.11–3.13
+were not run locally; platform CI remains their verifier. No release or tag is
+part of this closeout.
+
+Responsibility owner: repository owner for acceptance records. Interfaces/trust
+boundaries touched: none; repository-only evidence and lifecycle metadata.
+Exclusions: runtime/installer/config changes, new review verdicts, version bump,
+release/tag, README version cleanup and implicit invocation changes (still off).
+
+## Completed batch boundary
+
+The fields and planning evidence below retain the original r02 execution scope;
+the repair contract records the subsequent repair scope. Git commit fields are
+resolved to the delivered history, rather than the latest edit of this manifest.
 
 **Delivery granularity:** STAGE_BATCH
-**Batch baseline:** the latest commit that changes this file (revision r02); resolve with `git log -n 1 --format=%H -- docs/implementation/stages/s01-review-followups/README.md`; its parent must be the planning parent above
+**Batch baseline:** `f9057ce5d021a226b15586aa851eb1544cc8a161` (revision r02); parent `c540061dc989d6fb6f7c906facd218a99195d444`
 **Accepted dirty/untracked manifest:** one entry, see the table under Accepted dirty manifest
 **Current branch:** main
 **Worktree:** /Users/eric/Documents/Vibe Coding/Codex-Copilot
 **Batch units:** U1, U2, U3, U4, U5, U6
-**Internal implementation commits:** UNVERIFIED
-**Handoff/evidence commit:** UNVERIFIED
-**Review commit:** UNVERIFIED
-**Push:** NOT_AUTHORIZED
+**Internal implementation commits:** U1 `a672dfd`, U2 `b7d1c52`, U3 `aade150`, U4 `ad61c51`, U5 `915c92e`, U6 `06177bd`
+**Handoff/evidence commit:** `4a9f93c733cd9a22b71cee13cdbdb5b174ba8afe`
+**Review commit:** `88ff1c44d5d70e6b715e3b80c7ba7678adf2d193` (NEEDS_REPAIR; superseded for F-01 by the accepted repair above)
+**Push:** AUTHORIZED for this acceptance closeout by the repository owner on 2026-10-28
 **Branch/worktree operations:** NOT_AUTHORIZED
 **Stage handoff:** docs/implementation/stages/s01-review-followups/stage-handoff.md
 **Stage review:** docs/implementation/stages/s01-review-followups/stage-review.md
@@ -53,15 +71,15 @@ contract owns the new baseline, path ownership and Git authorities.
 
 Unit commits stay on `main` unless the user grants branch/worktree authority at execution confirmation. The three commit authorities and push are confirmed by the user at Execute time; this skill grants none of them.
 
-## Accepted dirty manifest
+## Historical accepted dirty manifest
 
 | Git status | Path | Owner/source | Reason | Delivery inclusion | Content digest |
 |---|---|---|---|---|---|
 | M | tests/test_delegation.py | batch r01 executor (codex/a8ed563c-d9c6-4086-afc7-00b4c3052ba4), U1 | S01-REQ-5 consistency test written before the stop | Included in batch r02 U1 | SHA256 of `git diff --binary -- tests/test_delegation.py`: c53a4bbf4c192932d3746411c6d306b14a080f3a24507e5dc4fc088548430098 |
 
-Verify the digest before the first edit; any mismatch is a stop condition.
+This pre-execution digest was verified for batch r02; the patch was included in U1. It is not a current dirty-file allowance.
 
-## Batch eligibility
+## Historical batch eligibility
 
 | Rule | Result | Evidence |
 |---|---|---|
@@ -72,7 +90,7 @@ Verify the digest before the first edit; any mismatch is a stop condition.
 | Final automated gates runnable at batch end | PASS | G1–G4 passed on 2026-10-26 at 720a881 and again by the r01 executor at 322f362 (185 tests, 7 platform skips) |
 | Executor cannot self-ACCEPT | PASS | AGENTS.md requires L3 independent final review; Review is a fresh session per validation plan |
 
-## Plan readiness
+## Historical plan readiness
 
 **Plan readiness check:** `python3 "/Users/eric/Documents/Vibe Coding/Cross-Agent-Delivery/scripts/validate_stage_batch.py" docs/implementation/stages/s01-review-followups/README.md docs/implementation/stages/s01-review-followups/execution-plan.md` -> exit 0 (2026-10-26, revision r02)
 
