@@ -101,6 +101,8 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
 
     if band is QuotaBand.GREEN:
         root_model = "gpt-6-astra" if profile is Profile.PREMIUM and level is TaskLevel.L3 else "gpt-6.1-sol"
+        if level is TaskLevel.L0:
+            root_model = "gpt-6.1-terra"
         root_effort = "low" if profile is Profile.CONSERVATIVE else "medium"
         return Route(
             **base,
@@ -116,7 +118,7 @@ def route_for(band: QuotaBand, level: TaskLevel, profile: Profile = Profile.BALA
     if band is QuotaBand.YELLOW:
         return Route(
             **base,
-            root_model="gpt-6.1-sol",
+            root_model="gpt-6.1-terra" if level is TaskLevel.L0 else "gpt-6.1-sol",
             root_effort="medium",
             max_subagents=0 if level is TaskLevel.L0 else 1,
             allow_sol=level is TaskLevel.L3 and profile is not Profile.PREMIUM,

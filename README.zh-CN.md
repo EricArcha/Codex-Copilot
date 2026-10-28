@@ -24,13 +24,13 @@
 </p>
 <p align="center"><sub>24 秒，从任务请求走到有证据的交付。GIF 预览无声。</sub></p>
 
-## 当前源码版本：1.0.1
+## 当前源码版本：1.2.0
 
-源码 1.0.1 是 `codex/installation-quota-diagnostics` 分支上的诊断修复候选版本，不代表新增公开 Release 或标签。
+源码 1.2.0 加入按任务分工的 GPT-6.1 Terra 路由及共享写入锁。已发布版本与标签见 [GitHub Releases](https://github.com/EricArcha/Codex-Copilot/releases)。
 
 Codex-Copilot 1.0.0 建立了安装、CLI/JSON 兼容性及发布边界。GitHub Release 已撤回，源码版本和标签保留。参见[变更记录](CHANGELOG.md)、[兼容承诺](docs/compatibility.md)、[发布规则](docs/releasing.md)和[贡献入口](CONTRIBUTING.md)。
 
-Codex-Copilot 现已采用 GPT-6 分层路由：**Luna** 用于定向探索，也是默认子代理；**GPT-6.1 Sol** 负责常规开发与审查；**Astra** 仅用于 premium 的 L3 高风险任务和最终审查。已完成完整安装的用户，请先将源码仓库更新到此版本，再运行 `./bin/codex-copilot install`，然后重启 Codex Desktop 并新开任务。
+Codex-Copilot 按四类模型分工：**Terra** 用于 Green/Yellow 的 L0 主线程建议及可选的明确 L1 小修复；**Luna** 用于定向探索，也是默认子代理；**GPT-6.1 Sol** 负责复杂开发与独立审查；**Astra** 仅用于 premium 的 L3 任务和最终审查。Terra 要求 Codex CLI 0.159.0+ 及模型访问权限。已安装用户请更新受管安装，再重启 Desktop 并新开任务。主线程模型建议不会自动切换当前聊天。
 
 ## 项目里程碑
 
@@ -76,7 +76,7 @@ Skill，加载可能读取额度、创建运行状态的指令。默认关闭是
 没有该字段的旧安装会提示并切换为关闭，除非指定 `--implicit-invocation on`。
 开启需要 copy 模式；symlink 模式沿用仓库默认的关闭设置。
 
-完整安装是可选的：它会加入六个自定义 agents、`codex-copilot` 命令，以及少量多代理所需的 Codex 受管设置。默认 copy 模式无需管理员权限。macOS/Linux 使用：
+完整安装是可选的：它会加入七个自定义 agents、`codex-copilot` 命令，以及少量多代理所需的 Codex 受管设置。默认 copy 模式无需管理员权限。macOS/Linux 使用：
 
 ```bash
 git clone https://github.com/EricArcha/Codex-Copilot.git
@@ -103,7 +103,7 @@ Windows 启动器动态发现 `py -3` 或 `python`，不嵌入特定版本的解
 
 安装器优先沿用已有的 `$CODEX_HOME/skills/codex-copilot`，否则默认安装到 `~/.agents/skills`。只有与当前源码或已知发行版本内容一致的 Skill 才能备份后接管。未知文件、被修改的受管文件和重复注册会阻止安装；请备份并解决冲突。可通过 `CODEX_COPILOT_SKILLS_HOME`、`CODEX_COPILOT_BIN_DIR`、`CODEX_COPILOT_SHARE_DIR`、`CODEX_COPILOT_STATE_DIR` 分别覆盖目录；`CODEX_HOME` 指定 Codex 配置位置。支持自定义运行时位置。变更配置目录、Skill 注册目录或已持久管理 PATH 的 bin 目录前，须先卸载；迁移注册前还需处理卸载所恢复的原始 Skill。
 
-安装器会在改动前展示每个文件动作和全部六项受管设置。脚本或 CI 中，请先审阅 dry-run，再加 `--yes` 确认。
+安装器会在改动前展示每个文件动作和受管设置。脚本或 CI 中，请先审阅 dry-run，再加 `--yes` 确认。
 
 <details>
 <summary>会改哪些 Codex 设置？</summary>
@@ -172,7 +172,7 @@ PowerShell 先设置 `$env:PYTHONPATH = 'src'`，再执行 `python -m unittest d
 
 ## 安装验收与升级
 
-已有源码目录先保留本地改动，获取标签并选择目标源码版本，再按平台运行安装预览和安装。完成后重启 Desktop 并新开聊天；确认版本为 1.0.1，`doctor --json` 为 complete。启动器不在 PATH 时使用安装器展示的完整路径。
+已有源码目录先保留本地改动，获取标签并选择目标源码版本，再按平台运行安装预览和安装。完成后重启 Desktop 并新开聊天；确认版本为 1.2.0，`doctor --json` 为 complete。启动器不在 PATH 时使用安装器展示的完整路径。
 
 `status --refresh --json` 应返回真实窗口且 source=app-server。安装完整不代表额度或模型权限已验证。权限或状态初始化失败时，按[额度访问](skill/codex-copilot/references/quota.md)对必要命令申请宿主受控执行；unknown 只用于临时降级，Desktop 百分比不能代替可执行门禁。缓存写入警告保留真实观测，但写 trace 前仍需解决状态目录访问。
 

@@ -2,8 +2,8 @@
 
 ## Task level
 
-- **L0**: Clear, local, low-risk micro-change with an obvious verification command. Use GPT-6.1 Sol Medium in the existing parent session, no subagent, and no independent review. New behavior or an ordinary feature is at least L1 even when it touches one module.
-- **L1**: Normal change within one module. Use GPT-6.1 Sol Medium; add `copilot_scout` only when location or existing coverage is unclear; finish with `copilot_reviewer`.
+- **L0**: Clear, local, low-risk micro-change with an obvious verification command. Recommend GPT-6.1 Terra Medium for the Green/Yellow parent route (Conservative Green uses Low), no subagent, and no independent review. Red uses Luna Low; Unknown uses Sol Medium; Critical pauses. New behavior or an ordinary feature is at least L1 even when it touches one module.
+- **L1**: Normal change within one module. Default to GPT-6.1 Sol Medium; a fix with clear inputs and acceptance checks may instead use `copilot_terra_worker` as its sole writer. Add `copilot_scout` only when location or existing coverage is unclear; finish with `copilot_reviewer` within the cumulative cap.
 - **L2**: Cross-module change or unclear root cause. Use `copilot_scout` and/or `copilot_investigator` within the quota cap, one writer, then `copilot_reviewer`.
 - **L3**: Authentication, payment, permissions, migration, concurrency, security-sensitive, or otherwise high-blast-radius work. Reserve GPT-6.1 Sol High for one key decision or final review when the quota band permits it; the premium profile may instead reserve GPT-6 Astra High.
 
@@ -11,14 +11,35 @@ Classify from actual blast radius and uncertainty, not prompt length. A large me
 
 ## Model policy
 
-Pin normal coding and review to `gpt-6.1-sol`; use Medium for standard implementation
-routes, Low for conservative Green and Red routes, and High for independent review. Luna (`gpt-6-luna`) remains the focused exploration tier and Astra (`gpt-6-astra`) the
-premium L3 tier. GPT-6.1 Sol does not support `none` or `minimal`; this skill permits
-only its declared Low/Medium/High routes, never Max or Ultra. Account availability
-must be checked in Codex Desktop; do not silently substitute an older model in an
-installed role. Upgrade the managed installation before dispatching the new roles.
+Model guidance verified **2026-10-29** against the official
+[model selection guide](https://learn.chatgpt.com/docs/model-selection) and
+[Codex model list](https://learn.chatgpt.com/docs/models):
 
-Model and effort compatibility: [official GPT-6.1 Sol documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+| Model | Copilot responsibility |
+|---|---|
+| `gpt-6.1-terra` | Green/Yellow L0 parent recommendations and bounded L1 fixes, including development-related visual/UI issues with explicit acceptance checks. |
+| `gpt-6-luna` | Focused read-only exploration and the existing low-quota L0 route. |
+| `gpt-6.1-sol` | Normal L1-L3 implementation, diagnosis and independent review; fixed isolated `model exec` work. |
+| `gpt-6-astra` | Explicit Premium L3 work and final review. |
+
+Terra is an additional task-specific tier, not a blanket replacement for Sol.
+Its installed worker pins Medium, `workspace-write`, L1 and `implementation`;
+uncertain cross-module or higher-risk work returns to the primary thread for
+reclassification. Sol retains Medium standard implementation, Low Conservative
+Green/Red routes and High independent review. This skill permits only the declared
+Low/Medium/High routes, never Max or Ultra; Sol does not support `none` or `minimal`.
+Terra's API supports other efforts, but that does not widen its Copilot worker policy.
+
+Terra requires Codex CLI 0.159.0+ and account availability in Desktop. Select the
+recommended parent model in Desktop when needed: these instructions cannot switch
+the active chat automatically. Check account availability before dispatch; if Terra
+is unavailable, report it and keep work in the existing parent or explicitly choose
+the separate Sol route. Never silently substitute a model in an installed role.
+Upgrade the managed installation and restart Desktop before using new roles.
+
+Model and effort compatibility: [Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra)
+and [Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol). API token prices
+are not subscription allowance measurements or evidence of savings.
 
 ## Quota band
 
@@ -27,8 +48,8 @@ depleted solely because the weekly window is moderately lower.
 
 | Band | Remaining | Policy |
 |---|---:|---|
-| Green / standard | 5-hour ≥50% and weekly ≥35% | GPT-6.1 Sol Medium parent. L0 has no subagent; L1/L2 may use one Luna scout and one Sol final reviewer. L3 reserves its final review. If final review uses the first slot, the second may only be a follow-up recheck of that reviewer session. |
-| Yellow / guarded | 5-hour ≥30% and weekly ≥20% | One reviewer slot for code-changing L1-L3 work; a diagnosis-only task may use it for a scout. |
+| Green / standard | 5-hour ≥50% and weekly ≥35% | L0: Terra Medium parent (Conservative uses Low), no subagent. L1/L2: Sol parent, at most one exploratory child or worker plus a Sol reviewer; Terra worker is L1-only. L3 reserves its final review. If final review uses the first slot, the second may only be a follow-up recheck of that reviewer session. |
+| Yellow / guarded | 5-hour ≥30% and weekly ≥20% | L0: Terra Medium, no subagent. One reviewer slot for code-changing L1-L3 work; a diagnosis-only task may use it for a scout. |
 | Red | 10-29% | L0: GPT-6 Luna Low. L1: GPT-6.1 Sol Low/Medium without delegation. Pause L2/L3. |
 | Critical | under 10% or reached | Do not begin code changes. Produce a checkpoint and the next natural quota-window refresh time. |
 | Unknown | unavailable | GPT-6.1 Sol Medium, one read-only subagent maximum, no Astra/Max/Ultra. |
@@ -69,7 +90,9 @@ The CLI records a user-authorization declaration; it cannot independently authen
 See [execution.md](execution.md) for commands and legacy recovery.
 
 Reserve review capacity: Green/standard L1/L2 allows at most one exploratory child plus the final
-`copilot_reviewer`; Yellow/Unknown L1/L2 reserves the only slot for that reviewer. Green L3
+`copilot_reviewer`, or one worker instead of that exploratory child. Only L1 may use
+`copilot_terra_worker`; its default slot is Green's first slot. Yellow/Unknown L1/L2
+reserves the only slot for that reviewer. Green L3
 allows at most one read-only scout/investigator plus `copilot_final_reviewer` (GPT-6.1 Sol High).
 Yellow L3 reserves its only slot for that final reviewer. Unknown L3 reserves it for
 `copilot_reviewer`; Red and Critical allow none. If Astra is unavailable for a non-quota reason,
@@ -77,6 +100,11 @@ use `copilot_reviewer` with `--astra-unavailable` as the sole L3 final-review fa
 Explorers use only `exploration`, workers only `implementation`, and reviewers only
 `final_review`; the gate rejects a role/phase mismatch and any installed agent configuration
 that differs from the declared route policy.
+Both worker roles share one writer slot: an unresolved or unknown-outcome Sol or Terra
+worker blocks another worker, including requests with a scoped grant. Follow-ups pin
+the original role/model/effort/phase. Grants cannot authorize Terra at L0/L2/L3 or in
+exploration/review, or change its model/effort. Browser and computer-use access still
+depends on existing host permissions; a new worker grants no additional access.
 
 For a Yellow diagnosis with no code change, pass `--read-only` with a scout or investigator;
 that consumes the guarded slot and makes a later reviewer dispatch unavailable.

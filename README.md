@@ -24,13 +24,13 @@
 </p>
 <p align="center"><sub>24 seconds. A clear route from request to evidence. The GIF preview is silent.</sub></p>
 
-## Current source version: 1.0.1
+## Current source version: 1.2.0
 
-Source 1.0.1 is the diagnostics candidate on `codex/installation-quota-diagnostics`; no new public Release or tag is implied.
+Source 1.2.0 adds task-specific GPT-6.1 Terra routing and a shared writer slot. Published packages and tags are listed in [GitHub Releases](https://github.com/EricArcha/Codex-Copilot/releases).
 
 Codex-Copilot 1.0.0 establishes stable installation, CLI/JSON compatibility and release boundaries. The GitHub Release has been withdrawn; the source version and tag remain available. See [CHANGELOG](CHANGELOG.md), [compatibility](docs/compatibility.md), [release policy](docs/releasing.md) and [contributing](CONTRIBUTING.md).
 
-Codex-Copilot now routes work across the GPT-6 family: **Luna** handles focused exploration and is the default subagent, **GPT-6.1 Sol** handles normal development and review, and **Astra** is reserved for premium L3 high-risk work and final review. Existing full-install users should update their source checkout to this version, then run `./bin/codex-copilot install` again, then restart Codex Desktop and open a new task.
+Codex-Copilot routes work across four models: **Terra** handles Green/Yellow L0 recommendations and optional bounded L1 fixes; **Luna** handles focused exploration and is the default subagent; **GPT-6.1 Sol** handles complex development and independent review; **Astra** is reserved for premium L3 work and final review. Terra requires Codex CLI 0.159.0+ and model access. Existing full-install users should upgrade the managed installation, restart Codex Desktop and open a new task. Parent-model recommendations do not switch the active chat automatically.
 
 ## Project milestones
 
@@ -77,7 +77,7 @@ run state. The default avoids spending allowance on misfires. Change it with
 legacy installations switch to `off` with a notice unless `--implicit-invocation on` is given.
 Enabling it requires copy mode; symlink installs use the repository default `off`.
 
-The optional full install adds six custom agents, the `codex-copilot` command, and a few managed Codex settings for multi-agent work. Copy mode is the default and needs no administrator rights. On macOS/Linux:
+The optional full install adds seven custom agents, the `codex-copilot` command, and a few managed Codex settings for multi-agent work. Copy mode is the default and needs no administrator rights. On macOS/Linux:
 
 ```bash
 git clone https://github.com/EricArcha/Codex-Copilot.git
@@ -104,7 +104,7 @@ Default installation does not edit PATH. Use the displayed full launcher path, o
 
 An existing `$CODEX_HOME/skills/codex-copilot` registration is reused; otherwise the default is `~/.agents/skills`. Verified current/known release instructions can be backed up and adopted. Unknown files, edited managed artifacts and duplicate registrations block installation. Resolve conflicts after backing them up. `CODEX_COPILOT_SKILLS_HOME`, `CODEX_COPILOT_BIN_DIR`, `CODEX_COPILOT_SHARE_DIR` and `CODEX_COPILOT_STATE_DIR` override their respective locations; `CODEX_HOME` selects Codex configuration. Custom runtime locations are supported. Uninstall before changing configuration/Skill directories or a bin directory with owned persistent PATH; resolve any restored original Skill registration before moving it.
 
-Before changing anything, the installer shows every file action and all six settings it manages. For scripts or CI, review the dry run and add `--yes` to confirm.
+Before changing anything, the installer shows every file action and managed setting. For scripts or CI, review the dry run and add `--yes` to confirm.
 
 <details>
 <summary>Which Codex settings change?</summary>
@@ -173,7 +173,7 @@ See [verification evidence and remaining limits](docs/verification.md) for the a
 
 ## Verify and upgrade
 
-For an existing source checkout, fetch tags and select the desired source tag after preserving local work. Review the platform installer dry-run, install, then restart Desktop and open a fresh chat. Verify the installed version is 1.0.1 and `doctor --json` reports complete. Use the displayed full launcher path if it is not on PATH.
+For an existing source checkout, fetch tags and select the desired source tag after preserving local work. Review the platform installer dry-run, install, then restart Desktop and open a fresh chat. Verify the installed version is 1.2.0 and `doctor --json` reports complete. Use the displayed full launcher path if it is not on PATH.
 
 `status --refresh --json` must return real windows with source=app-server. A complete installation alone does not certify live quota or model access. For permission/state errors use command-scoped host-approved execution described in [quota access](skill/codex-copilot/references/quota.md). Unknown is temporary degradation; Desktop percentages do not replace the executable gate. A live cache-write warning preserves the observation but state access must be resolved before trace-writing commands.
 

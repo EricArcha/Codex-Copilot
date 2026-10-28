@@ -196,6 +196,75 @@ class ProcessGroupTests(unittest.TestCase):
 
 
 class NativeInstallTests(unittest.TestCase):
+    def install_v110(self, temp):
+        # Immutable source snapshot: 55b995d1e4fca4552ef528229d7078c54c0fafed.
+        original = Path(temp) / "old-source"
+        with zipfile.ZipFile(Path(__file__).parent / "fixtures/source-1.1.0.zip") as archive:
+            archive.extractall(original)
+        run = subprocess.run([sys.executable, str(original / "bin/codex-copilot.py"), "install", "--yes"],
+                             capture_output=True, text=True, encoding="utf-8", timeout=15)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(installer.load_manifest()["version"], "1.1.0")
+
+    def test_v110_upgrade_adds_terra_preserves_state_and_uninstalls(self):
+        from codex_copilot import VERSION
+        from codex_copilot.delegation import dispatch_spec
+        from codex_copilot.routing import Profile
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, environment(temp)):
+            self.install_v110(temp)
+            config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            config.write_text('model = "user-choice"\nservice_tier = "priority"\n' + config.read_text(encoding="utf-8"), encoding="utf-8")
+            config_before = config.read_bytes()
+            state = Path(os.environ["CODEX_COPILOT_STATE_DIR"])
+            retained = {"measurement.json": b'{"enabled":true}\n', "metrics.jsonl": b'{"schema":1}\n',
+                        "execution-history": b"caller-owned history\n"}
+            for name, content in retained.items():
+                (state / name).write_bytes(content)
+            terra = Path(os.environ["CODEX_HOME"]) / "agents/copilot-terra-worker.toml"
+            self.assertFalse(terra.exists())
+            preview = installer.install(dry_run=True)
+            self.assertFalse(terra.exists())
+            self.assertTrue(installer.install(expected_plan_token=preview["plan_token"])["changed"])
+            self.assertEqual(installer.load_manifest()["version"], VERSION)
+            self.assertEqual(config.read_bytes(), config_before)
+            for name, content in retained.items():
+                self.assertEqual((state / name).read_bytes(), content)
+            self.assertEqual(dispatch_spec("copilot_terra_worker", Profile.BALANCED).model, "gpt-6.1-terra")
+            self.assertTrue(all(installer.artifact_matches(a) for a in installer.load_manifest()["artifacts"]))
+            self.assertFalse(installer.install()["changed"])
+            installer.uninstall()
+            self.assertFalse(terra.exists())
+            self.assertEqual(tomllib.loads(config.read_text(encoding="utf-8"))["model"], "user-choice")
+            self.assertEqual(tomllib.loads(config.read_text(encoding="utf-8"))["service_tier"], "priority")
+            for name, content in retained.items():
+                self.assertEqual((state / name).read_bytes(), content)
+
+    def test_v110_upgrade_preserves_unknown_terra_file_and_rolls_back_new_agent(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, environment(temp)):
+            self.install_v110(temp)
+            terra = Path(os.environ["CODEX_HOME"]) / "agents/copilot-terra-worker.toml"
+            terra.write_text("user-owned", encoding="utf-8")
+            manifest_before = installer.manifest_path().read_bytes()
+            with self.assertRaises(installer.InstallError):
+                installer.install()
+            self.assertEqual(terra.read_text(encoding="utf-8"), "user-owned")
+            self.assertEqual(installer.manifest_path().read_bytes(), manifest_before)
+            terra.unlink()
+            config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            config_before = config.read_bytes()
+            original = installer._atomic_write
+            def fail_manifest(path, *args, **kwargs):
+                if path == installer.manifest_path():
+                    raise OSError("simulated manifest failure")
+                return original(path, *args, **kwargs)
+            with patch("codex_copilot.installer._atomic_write", side_effect=fail_manifest):
+                with self.assertRaises(installer.InstallError):
+                    installer.install()
+            self.assertFalse(terra.exists())
+            self.assertEqual(config.read_bytes(), config_before)
+            self.assertEqual(installer.manifest_path().read_bytes(), manifest_before)
+            self.assertTrue(all(installer.artifact_matches(a) for a in installer.load_manifest()["artifacts"]))
+
     def test_dry_run_upgrade_and_custom_runtime_location(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, environment(temp)):
             base = Path(temp)
@@ -203,7 +272,7 @@ class NativeInstallTests(unittest.TestCase):
             self.assertEqual(list(base.iterdir()), [])
             installer.install()
             manifest = installer.load_manifest()
-            self.assertEqual(len([a for a in manifest["artifacts"] if a["kind"] == "agent"]), 6)
+            self.assertEqual(len([a for a in manifest["artifacts"] if a["kind"] == "agent"]), 7)
             command = [sys.executable, str(Path(os.environ["CODEX_COPILOT_BIN_DIR"]) / ("codex-copilot.py" if os.name == "nt" else "codex-copilot")), "--version"]
             response = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", timeout=10)
             self.assertEqual(response.returncode, 0, response.stderr)

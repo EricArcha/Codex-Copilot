@@ -217,6 +217,65 @@ class ExecutionTests(unittest.TestCase):
         with self.assertRaises(ex.ExecutionDenied):
             self.reserve(kind="subagent", role="copilot_worker", phase="implementation", category="subagent", grant_id=grant["grant_id"])
 
+    def worker(self, role, **kwargs):
+        options = dict(kind="subagent", role=role, phase="implementation", category="subagent",
+                       model="gpt-6.1-terra" if role == "copilot_terra_worker" else "gpt-6.1-sol", level="L1")
+        options.update(kwargs)
+        return self.reserve(**options)
+
+    def test_sol_and_terra_workers_share_unresolved_writer_slot_even_with_grant(self):
+        roles = ("copilot_worker", "copilot_terra_worker")
+        for first_role in roles:
+            for second_role in roles:
+                with self.subTest(first=first_role, second=second_role):
+                    self.run = uid()
+                    self.begin()
+                    first = self.worker(first_role)
+                    grant = self.grant(phase="implementation", category="subagent")
+                    for outcome in (None, "unknown"):
+                        if outcome:
+                            ex.complete(run_id=self.run, request_id=first["request_id"], outcome=outcome)
+                        with self.subTest(outcome=outcome), self.assertRaisesRegex(ex.ExecutionDenied, "writer slot"):
+                            self.worker(second_role, grant_id=grant["grant_id"])
+                    self.assertEqual(ex.status(self.run)["consumed"], 1)
+                    self.assertEqual(ex.status(self.run)["grants"][0]["remaining"], 1)
+
+    def test_parallel_sol_and_terra_requests_claim_only_one_writer(self):
+        self.begin()
+        def attempt(role):
+            try:
+                self.worker(role)
+                return True
+            except ex.ExecutionDenied:
+                return False
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            self.assertEqual(sum(pool.map(attempt, ("copilot_worker", "copilot_terra_worker"))), 1)
+        self.assertEqual(ex.status(self.run)["consumed"], 1)
+
+    def test_terra_followup_pins_session_and_retains_review_reserve(self):
+        self.begin(call_limit=3, reserve_calls=1)
+        first = self.worker("copilot_terra_worker")
+        self.finish(first, session_id=uid())
+        grant = self.grant(phase="implementation", category="subagent")
+        with self.assertRaisesRegex(ex.ExecutionDenied, "Follow-up cannot change"):
+            self.worker("copilot_worker", followup_id=first["request_id"], grant_id=grant["grant_id"])
+        continuation = self.worker("copilot_terra_worker", followup_id=first["request_id"],
+                                   grant_id=grant["grant_id"])
+        self.assertEqual(continuation["session_id"], ex.status(self.run)["calls"][0]["session_id"])
+        self.finish(continuation, session_id=continuation["session_id"])
+        extra = self.grant(phase="implementation", category="subagent")
+        with self.assertRaisesRegex(ex.ExecutionDenied, "closing reserve"):
+            self.worker("copilot_terra_worker", grant_id=extra["grant_id"])
+        self.assertEqual(ex.status(self.run)["consumed"], 2)
+
+    def test_failed_terra_worker_releases_writer_without_refunding_attempt(self):
+        self.begin()
+        first = self.worker("copilot_terra_worker")
+        ex.complete(run_id=self.run, request_id=first["request_id"], outcome="failure")
+        grant = self.grant(phase="implementation", category="subagent")
+        self.worker("copilot_worker", grant_id=grant["grant_id"])
+        self.assertEqual(ex.status(self.run)["consumed"], 2)
+
     def review(self, **kwargs):
         options = dict(kind="subagent", role="copilot_reviewer", effort="high",
                        category="review", phase="final_review")

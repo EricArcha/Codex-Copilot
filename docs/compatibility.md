@@ -8,6 +8,8 @@ three platforms. New Python versions require validation; no claim of automatic
 future compatibility is made. Full workflow diagnostics require Codex CLI
 0.147.0+ and a ChatGPT login. Account model availability is checked at runtime.
 The external Skill validator uses PyYAML; it is not a product dependency.
+The optional Terra worker introduced in 1.2.0 requires CLI 0.159.0+ and account
+access to `gpt-6.1-terra`; other workflows retain their existing requirements.
 
 ## Stable interfaces
 
@@ -28,6 +30,15 @@ retains the existing 60-second bound and labels its source explicitly.
 Hidden underscore commands, exact model IDs, effort routing and quota thresholds
 are internal policy interfaces, not fixed forever. Changes still require release
 notes, validated configurations and delegation-budget regression coverage.
+
+From 1.2.0, Green/Yellow L0 recommends Terra (Medium, or Low for Conservative
+Green). Red/Unknown/Critical behavior is preserved. The new managed
+`copilot_terra_worker` pins Terra Medium and implementation-only L1; no grant can
+broaden that level/phase/model/effort policy. It shares the unresolved writer slot
+with `copilot_worker`, including unknown outcomes. Ordinary review and the fixed
+`model exec` data plane keep Sol. Existing records and schemas remain readable;
+an upgrade adds the new fingerprinted agent without replacing unrelated settings.
+Parent routes are recommendations and cannot switch the active Desktop chat.
 
 ## User data and upgrades
 

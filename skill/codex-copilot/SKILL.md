@@ -21,7 +21,7 @@ Only the user may manually redeem a reset credit or reset opportunity. Never sug
 2. Find `codex-copilot` using the current shell and platform's launcher; run `doctor --json` when available. Its `installation_state` identifies **skill-only** (instructions only), **complete** (managed files/settings intact), or **incomplete** (managed installation needs repair). Missing PATH alone does not mean Skill-only.
 3. If unavailable, inspect known launcher/manifest locations using [installation.md](references/installation.md). State degraded mode once and continue with available guidance; install or change configuration only when requested. Read that reference when installation, upgrade, diagnostics or recovery is needed.
 4. For a complete workflow, obtain `codex-copilot status --json` and `codex-copilot profile show` (balanced by default). For permission/state failures, use [quota.md](references/quota.md) for command-scoped host-approved execution; unresolved failures use the unknown route.
-5. Use Luna for focused exploration, GPT-6.1 Sol for normal implementation/review, and Astra for explicit premium L3 work.
+5. Use Terra for Green/Yellow L0 work and bounded L1 fixes, Luna for focused exploration, GPT-6.1 Sol for complex implementation/review, and Astra for explicit premium L3 work. Follow [routing.md](references/routing.md); Desktop parent-model selection is a recommendation, not an automatic switch of this chat.
 6. Classify the task as L0-L3 and choose the route in [routing.md](references/routing.md). If quota cannot be read, use the `unknown` route.
 7. State the task level, quota band, chosen route, and definition of done in one short update. If measurement is enabled, mention in that update that optional local allowance measurement is enabled. Treat the route as a guardrail, not an exact cost prediction.
 8. Begin one bounded execution run using [execution.md](references/execution.md). Reuse its canonical UUID for all calls and any optional measurement. Budget normal/worst calls, a total limit and closing reserve; bulk model work additionally requires stage evidence.
@@ -31,11 +31,11 @@ Only the user may manually redeem a reset credit or reset opportunity. Never sug
 
 - Keep requirements, decisions, and final evidence in the primary thread. Move bounded exploration, diagnosis, test-output triage, or review to subagents.
 - Do not delegate L0. For L1-L3, delegate only independent work that materially improves speed, evidence, or context quality.
-- Use the installed `copilot_scout`, `copilot_investigator`, `copilot_worker`, `copilot_reviewer`, and reserved final-review role. In premium L3 routes, use `copilot_astra_final_reviewer`; otherwise use `copilot_final_reviewer`.
+- Use the installed `copilot_scout`, `copilot_investigator`, `copilot_worker`, optional L1-only `copilot_terra_worker`, `copilot_reviewer`, and reserved final-review role. In premium L3 routes, use `copilot_astra_final_reviewer`; otherwise use `copilot_final_reviewer`.
 - Before every subagent dispatch or follow-up, run the delegation gate described in [routing.md](references/routing.md). Do not dispatch when it rejects the request. It counts the entire run, refreshes quota, and applies the most restrictive band observed so far. Use `copilot_final_reviewer` only for the permitted L3 Sol High final-review slot.
 - Route batch generation, evaluation, repair and scoring through the managed `model exec` entry point and evidence stages in [execution.md](references/execution.md). Do not disguise data-plane work as investigator dispatches.
-- Maintain exactly one writer. The primary agent should normally implement; use `copilot_worker` only when implementation itself is the bounded delegated unit. Do not use the multi-writer exception for L3 work.
-- Use GPT-6.1 Sol for normal coding, implementation, and review routes. Use GPT-6 Astra only for the explicit premium L3 route. Never use Max or Ultra under this skill.
+- Maintain exactly one writer. The primary agent should normally implement; use one worker only when implementation itself is the bounded delegated unit. Sol and Terra workers share one writer slot. Do not use the multi-writer exception for L3 work.
+- Use GPT-6.1 Terra for eligible small fixes, GPT-6.1 Sol for complex implementation and all normal review, and GPT-6 Astra only for the explicit premium L3 route. Never use Max or Ultra under this skill.
 - Apply relevant installed specialist skills only when their own trigger matches. They are optional; do not fail because one is absent.
 
 ## Verify and finish

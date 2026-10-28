@@ -351,7 +351,7 @@ def reserve(*, run_id: str, request_id: str, kind: str, category: str, phase: st
     if kind not in {"subagent", "model"} or category not in CATEGORIES or phase not in PHASES:
         raise ExecutionDenied("Invalid call kind, category or phase")
     # Role/config validation happens at the entry point, before any quota override.
-    from .delegation import _allow_role, validate_role, _ROLE_CONFIGURATION
+    from .delegation import _allow_role, validate_role, _ROLE_CONFIGURATION, _WRITER_ROLES
     from .routing import Profile, TaskLevel
     if kind == "subagent":
         validate_role(TaskLevel(level), role, phase, Profile(profile), astra_unavailable=astra_unavailable, band="unknown")
@@ -411,7 +411,7 @@ def reserve(*, run_id: str, request_id: str, kind: str, category: str, phase: st
             if any(parent[k] != identity[k] for k in ("kind", "role", "model", "effort", "level", "profile", "phase", "category")):
                 raise ExecutionDenied("Follow-up cannot change the session role, phase, model or effort")
         # A writing child cannot overlap any unresolved writing child.
-        if role == "copilot_worker" and any(c["role"] == "copilot_worker" and c["outcome"] in {None, "unknown"} for c in data["calls"]):
+        if role in _WRITER_ROLES and any(c["role"] in _WRITER_ROLES and c["outcome"] in {None, "unknown"} for c in data["calls"]):
             raise ExecutionDenied("An unresolved writing child already owns the writer slot")
         effective = QuotaBand(data["effective_band"])
         fresh_final_review_used = (kind == "subagent" and phase == "final_review" and parent is None and

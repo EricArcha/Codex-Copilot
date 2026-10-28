@@ -18,6 +18,7 @@ _KNOWN_ROLES = {
     "copilot_scout",
     "copilot_investigator",
     "copilot_worker",
+    "copilot_terra_worker",
     "copilot_reviewer",
     "copilot_final_reviewer",
     "copilot_astra_final_reviewer",
@@ -27,10 +28,12 @@ _ROLE_CONFIGURATION = {
     "copilot_scout": ("gpt-6-luna", "low"),
     "copilot_investigator": ("gpt-6.1-sol", "medium"),
     "copilot_worker": ("gpt-6.1-sol", "medium"),
+    "copilot_terra_worker": ("gpt-6.1-terra", "medium"),
     "copilot_reviewer": ("gpt-6.1-sol", "high"),
     "copilot_final_reviewer": ("gpt-6.1-sol", "high"),
     "copilot_astra_final_reviewer": ("gpt-6-astra", "high"),
 }
+_WRITER_ROLES = {"copilot_worker", "copilot_terra_worker"}
 
 
 @dataclass(frozen=True)
@@ -85,6 +88,8 @@ def _valid_role_phase(level: TaskLevel, role: str, phase: str) -> bool:
         return phase == "exploration"
     if role == "copilot_worker":
         return level is not TaskLevel.L3 and phase == "implementation"
+    if role == "copilot_terra_worker":
+        return level is TaskLevel.L1 and phase == "implementation"
     return phase == "final_review"
 
 
@@ -117,7 +122,7 @@ def _allow_role(
     if band is QuotaBand.GREEN:
         if role == "copilot_reviewer":
             return count < 2
-        return role in {"copilot_scout", "copilot_investigator", "copilot_worker"} and count == 0
+        return role in {"copilot_scout", "copilot_investigator", *_WRITER_ROLES} and count == 0
     return count == 0 and role == "copilot_reviewer"
 
 
