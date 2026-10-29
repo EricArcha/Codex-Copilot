@@ -5,6 +5,10 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+- Sort bilingual README milestones newest-first, add recent implementation
+  milestones, use language-switch badges and require a milestone check for future
+  project updates.
+
 ## [1.2.0] - 2026-10-29
 
 - Recommend GPT-6.1 Terra for Green/Yellow L0 parent work; retain Conservative
