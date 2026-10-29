@@ -6,8 +6,8 @@ versions, not retroactively claimed GitHub releases.
 ## [Unreleased]
 
 - Sort bilingual README milestones newest-first, add recent implementation
-  milestones, use language-switch badges and require a milestone check for future
-  project updates.
+  milestones, place language-switch badges beside the other header badges and
+  require a milestone check for future project updates.
 
 ## [1.2.0] - 2026-10-29
 
