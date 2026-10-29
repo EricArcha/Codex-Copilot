@@ -19,6 +19,8 @@ tests and material limitations. Keep relevant evidence in docs/verification.md;
 never include secrets or raw authentication/error output. Update CHANGELOG for
 user-facing changes. Do not create new governance documents when an existing
 rule can be clarified in its current home.
+Include the bilingual README milestone check from [AGENTS.md](AGENTS.md) in
+each update's documentation review.
 
 ## Change boundary checklist
 

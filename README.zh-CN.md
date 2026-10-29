@@ -6,7 +6,7 @@
 
 **给大任务准备的一位友好空管。** 它帮助 Codex 判断：什么时候该请子代理、什么时候该专注自己做，以及该为最终验证留下多少 token。
 
-[English](README.md)
+[![English](https://img.shields.io/badge/Language-English-2563eb)](README.md)
 
 > 面向 Windows、macOS 和 Linux 上的 **Codex Desktop**。要求 Python 3.11+、Codex CLI 0.147.0+。
 
@@ -34,18 +34,24 @@ Codex-Copilot 按四类模型分工：**Terra** 用于 Green/Yellow 的 L0 主�
 
 ## 项目里程碑
 
-以下为源码演进节点；0.1.x 是历史源码版本，并非带标签的 GitHub 正式发布。
+按时间倒序列出，源码版本与正式发布分别标明；0.1.x 是历史源码版本，并非带标签的 GitHub 正式发布。
 
 | 日期 | 里程碑 | 主要变化 |
 | --- | --- | --- |
-| 2026-09-05 | 初始基础 | 配额感知编排、受管角色与安装。 |
-| 2026-09-07 | 委派护栏 | 可执行委派检查与有界子代理工作。 |
-| 2026-09-12 | 路由配置 | conservative、balanced、premium 三档路线。 |
-| 2026-09-16 | 引导式安装 | 受管安装的预览与确认流程。 |
-| 2026-09-25 | 可选用量测量 | 主动开启的本地额度观测与 GPT-6 路由。 |
-| 2026-09-30 | 常规路线升级 | 常规开发与审查迁移到 GPT-6.1 Sol。 |
-| 2026-10-02 | Windows 原生支持 | 跨平台安装、进程处理与 CI。 |
+| 2026-10-29 | [1.2.0 正式发布：Terra 路由](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.2.0) | 按任务分工接入 Terra，新增有界 L1 worker，并与 Sol 共用写入锁。 |
+| 2026-10-27 | [已安装启动器的设置控制](https://github.com/EricArcha/Codex-Copilot/commit/2a2366d) | 通过已安装的启动器，以事务方式修改隐式调用偏好。 |
+| 2026-10-26 | [默认显式启动](https://github.com/EricArcha/Codex-Copilot/commit/ad61c51) | 安装时选择是否允许隐式调用，升级时保留本地选择。 |
+| 2026-10-26 | [最终审查预算](https://github.com/EricArcha/Codex-Copilot/commit/aade150) | 每次运行默认只开一个最终审查会话，复查沿用原会话并计入累计预算。 |
+| 2026-10-07 | [有界执行（1.1.0 源码）](https://github.com/EricArcha/Codex-Copilot/pull/8) | 持久化调用预算、收尾预留、有限授权，以及批量模型工作的证据门槛。 |
+| 2026-10-05 | [安装诊断（1.0.1 源码）](https://github.com/EricArcha/Codex-Copilot/pull/7) | 保留服务档位偏好，分别诊断受管文件完整性、运行时可用性与额度读取失败。 |
 | 2026-10-02 | [源码版本：1.0.0](https://github.com/EricArcha/Codex-Copilot/tree/v1.0.0) | 兼容承诺、升级验证与发布边界。 |
+| 2026-10-02 | Windows 原生支持 | 跨平台安装、进程处理与 CI。 |
+| 2026-09-30 | 常规路线升级 | 常规开发与审查迁移到 GPT-6.1 Sol。 |
+| 2026-09-25 | 可选用量测量 | 主动开启的本地额度观测与 GPT-6 路由。 |
+| 2026-09-16 | 引导式安装 | 受管安装的预览与确认流程。 |
+| 2026-09-12 | 路由配置 | conservative、balanced、premium 三档路线。 |
+| 2026-09-07 | 委派护栏 | 可执行委派检查与有界子代理工作。 |
+| 2026-09-05 | 初始基础 | 配额感知编排、受管角色与安装。 |
 
 版本详情见[变更记录](CHANGELOG.md)。
 

@@ -6,7 +6,7 @@
 
 **A friendly air-traffic controller for big Codex tasks.** It helps Codex decide what deserves a subagent, what should stay focused, and when to save tokens for the final check.
 
-[简体中文](README.zh-CN.md)
+[![简体中文](https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-2563eb)](README.zh-CN.md)
 
 > Made for **Codex Desktop** on Windows, macOS and Linux. Requires Python 3.11+ and Codex CLI 0.147.0+.
 
@@ -34,18 +34,25 @@ Codex-Copilot routes work across four models: **Terra** handles Green/Yellow L0 
 
 ## Project milestones
 
-Source-history milestones; 0.1.x were source versions, not tagged GitHub releases.
+Newest first. Source-version milestones are distinguished from published releases;
+0.1.x were source versions, not tagged GitHub releases.
 
 | Date | Milestone | What changed |
 | --- | --- | --- |
-| 2026-09-05 | Initial foundation | Quota-aware orchestration, managed roles and installation. |
-| 2026-09-07 | Delegation guardrails | Executable dispatch checks and bounded subagent work. |
-| 2026-09-12 | Routing profiles | Conservative, balanced and premium routes. |
-| 2026-09-16 | Guided installation | Preview and confirmation for managed installation. |
-| 2026-09-25 | Optional measurement | Opt-in local allowance observations and GPT-6 routing. |
-| 2026-09-30 | Standard-route update | Normal development and review moved to GPT-6.1 Sol. |
-| 2026-10-02 | Native Windows support | Cross-platform installation, process handling and CI. |
+| 2026-10-29 | [1.2.0 release: Terra routing](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.2.0) | Task-specific Terra routing, a bounded L1 worker and shared Sol/Terra writer ownership. |
+| 2026-10-27 | [Installed launcher controls](https://github.com/EricArcha/Codex-Copilot/commit/2a2366d) | Change implicit-invocation preferences transactionally through the installed launcher. |
+| 2026-10-26 | [Explicit startup by default](https://github.com/EricArcha/Codex-Copilot/commit/ad61c51) | Choose implicit invocation during installation; preserve the local choice on upgrade. |
+| 2026-10-26 | [Bounded final review](https://github.com/EricArcha/Codex-Copilot/commit/aade150) | One fresh final-review session per run by default; rechecks reuse it within the cumulative budget. |
+| 2026-10-07 | [Bounded execution (1.1.0 source)](https://github.com/EricArcha/Codex-Copilot/pull/8) | Durable call budgets, closing reserves, scoped grants and evidence gates for batch model work. |
+| 2026-10-05 | [Installation diagnostics (1.0.1 source)](https://github.com/EricArcha/Codex-Copilot/pull/7) | Preserve service-tier preferences; distinguish managed-file integrity, runtime availability and quota failures. |
 | 2026-10-02 | [Source version: 1.0.0](https://github.com/EricArcha/Codex-Copilot/tree/v1.0.0) | Compatibility contract, upgrade verification and release boundaries. |
+| 2026-10-02 | Native Windows support | Cross-platform installation, process handling and CI. |
+| 2026-09-30 | Standard-route update | Normal development and review moved to GPT-6.1 Sol. |
+| 2026-09-25 | Optional measurement | Opt-in local allowance observations and GPT-6 routing. |
+| 2026-09-16 | Guided installation | Preview and confirmation for managed installation. |
+| 2026-09-12 | Routing profiles | Conservative, balanced and premium routes. |
+| 2026-09-07 | Delegation guardrails | Executable dispatch checks and bounded subagent work. |
+| 2026-09-05 | Initial foundation | Quota-aware orchestration, managed roles and installation. |
 
 See [CHANGELOG](CHANGELOG.md) for version details.
 

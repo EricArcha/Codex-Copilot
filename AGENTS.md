@@ -14,6 +14,10 @@ This repository is the source of truth for the Codex-Copilot skill, custom agent
 - Treat allowance percentages as observations, not exact task costs or proven savings. Give users
   a concise notice when measurement is enabled or recording starts, without extra quota reads.
 - Keep the main skill concise; conditional detail belongs in `references/`.
+- For every project update, check the milestone sections in `README.md` and
+  `README.zh-CN.md` together. Keep dates, events and links aligned in newest-first
+  order; add substantive user-facing milestones without turning routine maintenance
+  into a milestone. Distinguish source versions from published releases.
 - Preserve one writer by default. Parallel work should be read-heavy and bounded.
 - Treat delegation limits as a run-wide cumulative budget. Every child dispatch must pass the
   delegation gate; do not bypass it because an earlier child completed or quota later improved.
