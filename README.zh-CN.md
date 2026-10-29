@@ -3,10 +3,9 @@
 [![Codex Desktop](https://img.shields.io/badge/Codex-Desktop-412991?logo=openai&logoColor=white)](https://openai.com/codex/)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![许可证](https://img.shields.io/badge/许可证-MIT-f59e0b)](LICENSE)
+[![English](https://img.shields.io/badge/Language-English-2563eb)](README.md)
 
 **给大任务准备的一位友好空管。** 它帮助 Codex 判断：什么时候该请子代理、什么时候该专注自己做，以及该为最终验证留下多少 token。
-
-[![English](https://img.shields.io/badge/Language-English-2563eb)](README.md)
 
 > 面向 Windows、macOS 和 Linux 上的 **Codex Desktop**。要求 Python 3.11+、Codex CLI 0.147.0+。
 

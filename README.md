@@ -3,10 +3,9 @@
 [![Codex Desktop](https://img.shields.io/badge/Codex-Desktop-412991?logo=openai&logoColor=white)](https://openai.com/codex/)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![License](https://img.shields.io/badge/License-MIT-f59e0b)](LICENSE)
+[![简体中文](https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-2563eb)](README.zh-CN.md)
 
 **A friendly air-traffic controller for big Codex tasks.** It helps Codex decide what deserves a subagent, what should stay focused, and when to save tokens for the final check.
-
-[![简体中文](https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-2563eb)](README.zh-CN.md)
 
 > Made for **Codex Desktop** on Windows, macOS and Linux. Requires Python 3.11+ and Codex CLI 0.147.0+.
 
