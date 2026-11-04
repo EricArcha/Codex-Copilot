@@ -333,7 +333,11 @@ def doctor() -> dict[str, Any]:
     settings = config_checks(config)
     if manifest:
         settings_ok = not any(item["blocking"] for item in settings)
-        add("managed_config", settings_ok, "required settings match" if settings_ok else "required settings differ; review blocking config_checks")
+        blocked_keys = [item["key"] for item in settings if item["blocking"]]
+        add("managed_config", settings_ok, "required settings match" if settings_ok else
+            "required settings differ: " + ", ".join(blocked_keys) +
+            "; preview repair from a reviewed source checkout with install --dry-run; "
+            "install only when authorized, then restart Desktop and run doctor --json")
     add("skill", skill.exists(), str(skill))
     symlinked_agents = []
     for name in AGENT_FILES:

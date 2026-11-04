@@ -5,6 +5,14 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+- Fix managed TOML insertion across array-table boundaries such as
+  `[[skills.config]]`; verify requested values before accepting an edit and
+  preserve unrelated Skill registrations.
+- Make configuration-drift diagnostics name blocking settings and explain the
+  authorized repair path; distinguish intact artifacts and quota recovery from
+  repaired installation. Add regression coverage for missing agent defaults,
+  non-mutating preview, safe repair and repeat-install idempotence.
+
 - Sort bilingual README milestones newest-first, add recent implementation
   milestones, place language-switch badges beside the other header badges and
   require a milestone check for future project updates.

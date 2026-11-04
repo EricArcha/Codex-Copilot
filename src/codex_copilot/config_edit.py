@@ -8,6 +8,7 @@ from typing import Any
 
 
 MISSING = object()
+_TABLE_RE = re.compile(r"^\s*\[.*]\s*(?:#.*)?$")
 _SECTION_RE = re.compile(r"^\s*\[([^\]]+)]\s*(?:#.*)?$")
 
 
@@ -43,18 +44,39 @@ def toml_literal(value: Any) -> str:
     raise TypeError(f"Unsupported managed TOML value: {type(value).__name__}")
 
 
+def _complete_prefix(lines: list[str], index: int) -> bool:
+    try:
+        parse_toml("".join(lines[:index]))
+    except tomllib.TOMLDecodeError:
+        return False
+    return True
+
+
+def _table_headers(lines: list[str]) -> list[int]:
+    headers = []
+    for index, line in enumerate(lines):
+        if not _TABLE_RE.match(line):
+            continue
+        # A header-looking line inside an unfinished multiline value is data.
+        # Parse only candidate prefixes; never rewrite unrelated TOML values.
+        if _complete_prefix(lines, index):
+            headers.append(index)
+    return headers
+
+
 def _section_bounds(lines: list[str], section: str) -> tuple[int, int] | None:
     start = None
-    for index, line in enumerate(lines):
-        match = _SECTION_RE.match(line)
+    headers = _table_headers(lines)
+    for index in headers:
+        match = _SECTION_RE.match(lines[index])
         if match and match.group(1).strip() == section:
             start = index
             break
     if start is None:
         return None
     end = len(lines)
-    for index in range(start + 1, len(lines)):
-        if _SECTION_RE.match(lines[index]):
+    for index in headers:
+        if index > start:
             end = index
             break
     return start, end
@@ -71,10 +93,10 @@ def _set_one(lines: list[str], path: str, value: Any) -> list[str]:
     replacement = None if value is MISSING else f"{key} = {toml_literal(value)}\n"
 
     if not section:
-        end = next((i for i, line in enumerate(lines) if _SECTION_RE.match(line)), len(lines))
+        end = next(iter(_table_headers(lines)), len(lines))
         pattern = _assignment_re(key)
         for index in range(end):
-            if pattern.match(lines[index]):
+            if pattern.match(lines[index]) and _complete_prefix(lines, index):
                 if replacement is None:
                     del lines[index]
                 else:
@@ -88,10 +110,10 @@ def _set_one(lines: list[str], path: str, value: Any) -> list[str]:
     # Root-level dotted keys are valid TOML and must be updated in place rather
     # than followed by a duplicate table declaration.
     dotted = f"{section}.{key}"
-    root_end = next((i for i, line in enumerate(lines) if _SECTION_RE.match(line)), len(lines))
+    root_end = next(iter(_table_headers(lines)), len(lines))
     dotted_pattern = _assignment_re(dotted)
     for index in range(root_end):
-        if dotted_pattern.match(lines[index]):
+        if dotted_pattern.match(lines[index]) and _complete_prefix(lines, index):
             if replacement is None:
                 del lines[index]
             else:
@@ -114,7 +136,7 @@ def _set_one(lines: list[str], path: str, value: Any) -> list[str]:
     start, end = bounds
     pattern = _assignment_re(key)
     for index in range(start + 1, end):
-        if pattern.match(lines[index]):
+        if pattern.match(lines[index]) and _complete_prefix(lines, index):
             if replacement is None:
                 del lines[index]
             else:
@@ -143,7 +165,11 @@ def apply_updates(text: str, updates: dict[str, Any]) -> tuple[str, list[ConfigC
         )
         lines = _set_one(lines, path, value)
     result = "".join(lines)
-    parse_toml(result)
+    parsed = parse_toml(result)
+    for path, value in updates.items():
+        actual = get_path(parsed, path)
+        if type(actual) is not type(value) or actual != value:
+            raise ValueError("Managed TOML update did not reach its intended key: " + path)
     return result, changes
 
 

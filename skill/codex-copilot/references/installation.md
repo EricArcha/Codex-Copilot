@@ -6,7 +6,7 @@ Read this when installation is requested, diagnostics show residue, or the CLI i
 
 - **Skill-only:** instructions exist, but no managed installation is recorded. Continue using the guidance and the unknown quota route; do not assume custom agents exist.
 - **Complete:** `doctor --json` reports `installation_state: complete`. Use quota and the installed agent delegation gate. Account/model access is still determined by Codex at runtime.
-- **Incomplete:** a manifest, launcher or agents exist, but required files/settings differ or are missing (service_tier preference does not count). Explain the failed checks; preserve state/backups. Do not dispatch missing or invalid agents. Continue the user's task with available guidance unless its required review cannot be performed.
+- **Incomplete:** a manifest, launcher or agents exist, but required files/settings differ or are missing (service_tier preference does not count). Report the exact blocking `config_checks` keys and expected values, or failed artifact checks; distinguish configuration drift from missing/modified files and from quota-access failure. Preview repair from a reviewed source checkout with `install --dry-run`; install only when authorized. Preserve state/backups. Do not dispatch missing or invalid agents. Continue the user's task with available guidance unless its required review cannot be performed.
 
 If the CLI is missing, inspect the known launcher location or run diagnostics from a source checkout before calling an existing full installation Skill-only. Default bin directory is `~/.local/bin`; Windows uses `codex-copilot.cmd`. `doctor` does not require PATH to pass when called by full path.
 
@@ -104,3 +104,8 @@ Agent symlinks require both link and instruction-content fingerprints. Legacy
 link-only records are unverified for dispatch; upgrade from a reviewed checkout
 only if the target still matches that source, or use copy mode. Changed targets
 remain protected from overwrite. Missing required manifest records also fail integrity.
+
+A successful quota retry resolves only quota access; it does not repair managed settings.
+After an authorized repair, rerun doctor and confirm complete installation independently
+of live quota success. Existing agents and files alone do not prove valid configuration.
+Do not infer when or which application changed a setting without evidence.

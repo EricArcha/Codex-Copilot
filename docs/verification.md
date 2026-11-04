@@ -1,5 +1,41 @@
 # Verification evidence
 
+## Array-table configuration repair — 2026-11-04
+
+- Responsibility owner: config editing/managed installation. Changes affect TOML
+  insertion boundaries and diagnostic prose, not dispatch authorization, quota
+  trust, model policy, telemetry or host permissions. Existing JSON fields and
+  version 1.2.0 remain unchanged; changes are recorded as Unreleased.
+- Reproduced missing agent defaults despite intact installed artifacts. An
+  authorized repair with the old editor inserted keys into a later
+  `[[skills.config]]` entry because array tables did not end section bounds.
+  The fixed editor recognizes array boundaries and checks resulting values.
+- 234 tests discovered: 227 passed, seven platform-specific skips on macOS.
+  Installer tests use all five isolated path overrides. Regressions cover
+  array-table boundaries, unrelated registrations, uninstall restoration,
+  configuration drift, preview preservation, safe repair and idempotence.
+- First independent L3 review found header-like array text inside multiline
+  strings could be modified. Candidate header prefixes are now parsed to exclude
+  unfinished values; basic/literal multiline preservation regressions pass.
+- Second independent review found assignment-looking text in multiline strings
+  could still be rewritten. Assignment scans now require complete TOML prefixes
+  too; expanded regressions and all 234 tests pass.
+- After explicit user authorization for one additional review, cumulative
+  consumption was carried forward as two used calls with a three-call ceiling.
+  Final independent L3 review returned PASS with no actionable findings; it
+  reran all 234 tests and six additional basic/literal multiline reproductions
+  across root, dotted-root and section assignment scans, including restoration.
+  The final reviewed runtime was installed locally and doctor again returned
+  complete with live app-server quota; repeat-install preview was unchanged.
+- Skill validator, release metadata check (1.2.0), whitespace and project-local
+  commit identity checks passed. Both README milestone sections were checked
+  together; this maintenance fix needs no milestone entry.
+- Authorized local installation repair returned doctor complete, all checks
+  passing and live app-server quota. Repeat-install preview reported no changes.
+  The initial repair's two known misplaced settings were removed with a backup;
+  correct agent settings and unrelated registrations were retained. Desktop
+  restart/fresh-chat loading remains user-side; other OS CI was not run locally.
+
 ## Terra routing candidate — 2026-10-29
 
 - Baseline at 55b995d1e4fca4552ef528229d7078c54c0fafed: 219 tests discovered,
