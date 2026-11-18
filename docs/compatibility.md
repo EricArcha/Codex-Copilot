@@ -73,12 +73,16 @@ user edits, unrelated settings, measurement preferences and recorded history.
 Uninstall restores only eligible managed values. Install confirmation is bound
 to the inspected plan. Failed upgrades retain rollback/recovery evidence.
 
-From 1.3.1, the installer previews a one-time migration of the configured
-`gpt-6.1-sol` default to `gpt-6.2-sol` when the executing Codex catalog lists the
-target model and configured effort (Medium if unset). A missing or incompatible
-catalog leaves the old default in place and emits an actionable notice. This is
-the default for new chats after restart and does not set the active chat model.
-The migration restores the actual previous setting on uninstall when still owned.
+From 1.3.2, a successful interactive installation or upgrade can offer the
+current L1 routing recommendation for new chats. It uses the current profile
+and a fresh trusted quota cache when available (Unknown otherwise) without a
+live quota read. The executing CLI must verify the recommended model and
+reasoning effort. The separate question defaults to keeping the current
+settings. `install --yes` keeps them and reports how to opt in.
+`install --yes --set-default-model` opts in explicitly. The optional model
+transaction can fail independently of installation. It binds the change to the
+reviewed configuration and restores the prior setting on uninstall when still
+owned. The active chat's model is unaffected.
 
 Support upgrade from 0.1.0 and 0.1.1 to 1.0.0 and from previously released 1.x
 versions to later 1.x versions. Historical fixtures are immutable source snapshots.

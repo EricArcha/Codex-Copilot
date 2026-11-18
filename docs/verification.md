@@ -1,5 +1,17 @@
 # Verification evidence
 
+## Confirm the recommended new-chat default — 2026-11-19
+
+- An isolated terminal install confirmed that the recommendation appears after
+  installation, Enter keeps both settings, and yes applies the displayed model
+  and effort. Tests exercise multiple recommendations, skipped and explicit
+  unattended choices, revalidation, symlink mode and uninstall ownership.
+- The independent GPT-6.2 Sol High L3 review passed. The local suite passed
+  238 of 245 tests with seven platform skips. Skill validation, release metadata
+  and whitespace checks passed.
+- Local copy upgrade to source 1.3.2 reported complete. It kept the existing
+  model and effort, and the repeat preview reported no changes.
+
 ## Quota cache and default-model migration — 2026-11-19
 
 - The macOS Desktop managed shell reported Seatbelt with networking disabled.

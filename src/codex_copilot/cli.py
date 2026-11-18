@@ -19,9 +19,11 @@ from .config_policy import config_checks, require_dispatch_config
 from .delegation import DelegationDenied, complete as complete_delegation, dispatch as dispatch_delegation, trace
 from .installer import (
     AGENT_FILES,
+    DEFAULT_MODEL_UNAVAILABLE,
     SYMLINK_RISK_WARNING,
     InstallError,
     artifact_matches,
+    configure_default_model,
     expected_artifact_targets,
     install,
     load_manifest,
@@ -43,9 +45,12 @@ def _parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     install_parser = sub.add_parser("install", help="Install the skill, agents, CLI, and managed config")
-    install_parser.add_argument("--mode", choices=("symlink", "copy"), default="copy")
+    install_parser.add_argument("--mode", choices=("symlink", "copy"),
+                                help="Installation mode (default: copy; model-only opt-in reuses the installed mode)")
     install_parser.add_argument("--dry-run", action="store_true")
     install_parser.add_argument("--yes", action="store_true", help="Confirm the displayed installation plan")
+    install_parser.add_argument("--set-default-model", action="store_true",
+                                help="After installation, set the recommended model as the default for new chats")
     install_parser.add_argument("--add-to-path", action="store_true", help="Opt in to managed Windows user PATH changes")
     install_parser.add_argument("--implicit-invocation", choices=("on", "off"), help="Allow Codex to start the skill implicitly (default: off; preserves the installed choice)")
 
@@ -232,6 +237,45 @@ def _confirm_install() -> bool:
         return builtins.input("Proceed with this installation? [y/N] ").strip().lower() in {"y", "yes"}
     except EOFError:
         return False
+
+
+def _offer_default_model(*, explicit: bool, interactive: bool) -> int:
+    if not explicit and not interactive:
+        print("Kept the default model. To use the recommended default, run: codex-copilot install --yes --set-default-model")
+        return 0
+    try:
+        plan = configure_default_model()
+        if plan["status"] != "available":
+            return _report_default_model(plan, required=explicit)
+        question = (f"Switch the default for new chats to this installation's recommendation, "
+                    f"{plan['model']} with {plan['effort']} reasoning?")
+        print(f"Recommendation for routine development ({plan['profile']} profile, {plan['band']} quota band).")
+        if not explicit:
+            try:
+                accepted = builtins.input(question + " [y/N] ").strip().lower() in {"y", "yes"}
+            except (EOFError, KeyboardInterrupt):
+                accepted = False
+            if not accepted:
+                print("Kept the default model.")
+                return 0
+        result = configure_default_model(expected_plan_token=plan["plan_token"])
+    except (InstallError, OSError, ValueError) as exc:
+        print(f"error: Could not finish the optional model step: {exc}", file=sys.stderr)
+        return 1
+    return _report_default_model(result, required=True)
+
+
+def _report_default_model(result: dict[str, Any], *, required: bool) -> int:
+    if result["status"] == "changed":
+        print(f"{result['model']} will be the default for new chats after restarting Codex Desktop.")
+    elif result["status"] == "current":
+        print(f"{result['model']} is already the default for new chats.")
+    else:
+        message = ("The current route is paused. Kept the default model." if result["status"] == "paused"
+                   else DEFAULT_MODEL_UNAVAILABLE)
+        print(f"warning: {message}", file=sys.stderr)
+        return int(required)
+    return 0
 
 
 def _format_reset(timestamp: int | None) -> str:
@@ -491,18 +535,27 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command == "install":
-            preview = install(mode=args.mode, dry_run=True, add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
+            mode = args.mode
+            if mode is None and args.set_default_model:
+                current = load_manifest()
+                mode = current["mode"] if current else None
+            mode = mode or "copy"
+            preview = install(mode=mode, dry_run=True, add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
             _print_install_plan(preview)
+            if args.set_default_model:
+                print("Requested after installation: set the recommended model as the new-chat default when available.")
             if args.dry_run:
                 print("Dry run: no changes made.")
                 return 0
             if not preview.get("needs_confirmation"):
-                return 0
+                return _offer_default_model(explicit=True, interactive=False) if args.set_default_model else 0
             if not args.yes and not _confirm_install():
                 print("Installation cancelled. No changes made.", file=sys.stderr)
                 return 2
-            result = install(mode=args.mode, expected_plan_token=preview["plan_token"], add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
+            result = install(mode=mode, expected_plan_token=preview["plan_token"], add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
             _print_result({**result, "warnings": []})  # Already shown in the plan.
+            if args.set_default_model or result.get("offer_default_model"):
+                return _offer_default_model(explicit=args.set_default_model, interactive=not args.yes and sys.stdin.isatty())
             return 0
         if args.command == "uninstall":
             _print_result(uninstall(dry_run=args.dry_run))

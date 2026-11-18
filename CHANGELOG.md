@@ -5,6 +5,13 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-11-19
+
+- Offer the current routine-development model and reasoning recommendation as
+  the default for new chats after installation or upgrade.
+  Keep the current default unless the user separately answers yes or passes
+  `--set-default-model`. Unattended `--yes` applies only to installation.
+
 ## [1.3.1] - 2026-11-19
 
 - Fix quota cache writes when two quota commands finish at the same time.

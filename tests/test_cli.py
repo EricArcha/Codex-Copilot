@@ -2,8 +2,10 @@ import json
 import os
 import shutil
 import tempfile
+import tomllib
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import replace
 from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -11,9 +13,10 @@ from unittest.mock import patch
 from tests.platform_support import require_symlinks
 
 from codex_copilot.cli import doctor, main
-from codex_copilot.installer import CONFIG_UPDATES, SYMLINK_RISK_WARNING, install
+from codex_copilot.installer import CONFIG_UPDATES, SYMLINK_RISK_WARNING, install, load_manifest
 from codex_copilot.metrics import record
 from codex_copilot.quota import QuotaSnapshot, unknown_snapshot
+from codex_copilot.routing import QuotaBand, TaskLevel, route_for
 
 
 class CliTests(unittest.TestCase):
@@ -174,6 +177,73 @@ class CliTests(unittest.TestCase):
                     self.assertEqual(main(["install"]), 0)
                 self.assertIn("Already installed; no changes.", second_out.getvalue())
                 self.assertNotIn("without --yes", second_err.getvalue())
+
+    def test_interactive_install_asks_about_the_model_after_installing(self):
+        for answer, recommendation, effort in (
+            ("", "gpt-6.2-sol", "medium"),
+            ("yes", "gpt-6.1-terra", "low"),
+        ):
+            with self.subTest(answer=answer), tempfile.TemporaryDirectory() as temp, patch.dict(
+                os.environ, self.environment(temp)
+            ), patch("codex_copilot.installer.route_for", return_value=replace(
+                route_for(QuotaBand.UNKNOWN, TaskLevel.L1), root_model=recommendation, root_effort=effort
+            )), patch("codex_copilot.installer._supports_default_model", return_value=True) as support, patch(
+                "codex_copilot.cli.sys.stdin", SimpleNamespace(isatty=lambda: True)
+            ), redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+                config.parent.mkdir()
+                config.write_text('model = "gpt-6.1-sol"\nmodel_reasoning_effort = "high"\n')
+
+                def reply(question):
+                    if question.startswith("Proceed with"):
+                        self.assertIsNone(load_manifest())
+                        return "yes"
+                    self.assertIsNotNone(load_manifest())
+                    self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.1-sol")
+                    self.assertIn("this installation's recommendation", question)
+                    self.assertIn(f"{recommendation} with {effort} reasoning", question)
+                    self.assertTrue(question.endswith("[y/N] "))
+                    return answer
+
+                with patch("builtins.input", side_effect=reply) as ask:
+                    self.assertEqual(main(["install"]), 0)
+                    self.assertEqual(ask.call_count, 2)
+                saved = tomllib.loads(config.read_text())
+                self.assertEqual(saved["model"], recommendation if answer else "gpt-6.1-sol")
+                self.assertEqual(saved["model_reasoning_effort"], effort if answer else "high")
+                support.assert_called_with(recommendation, effort)
+
+    def test_install_yes_keeps_the_model_and_explicit_opt_in_can_run_later(self):
+        out = StringIO()
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)), patch(
+            "codex_copilot.installer._supports_default_model", return_value=True
+        ) as catalog, patch("codex_copilot.installer.cached_quota", return_value=SimpleNamespace(band="future")), patch(
+            "builtins.input"
+        ) as ask, redirect_stdout(out), redirect_stderr(StringIO()):
+            config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            self.assertEqual(main(["install", "--yes"]), 0)
+            ask.assert_not_called()
+            catalog.assert_not_called()
+            self.assertNotIn("model", tomllib.loads(config.read_text()))
+            self.assertIn("--set-default-model", out.getvalue())
+            self.assertEqual(main(["install", "--dry-run", "--set-default-model"]), 0)
+            self.assertNotIn("model", tomllib.loads(config.read_text()))
+            self.assertEqual(main(["install", "--yes", "--set-default-model"]), 0)
+            saved = tomllib.loads(config.read_text())
+            self.assertEqual(saved["model"], "gpt-6.2-sol")
+            self.assertEqual(saved["model_reasoning_effort"], "medium")
+            ask.assert_not_called()
+
+    def test_model_opt_in_reuses_existing_symlink_mode(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)), patch(
+            "codex_copilot.installer._supports_default_model", return_value=True
+        ), redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            require_symlinks(self, temp)
+            self.assertEqual(main(["install", "--mode", "symlink", "--yes"]), 0)
+            self.assertEqual(main(["install", "--yes", "--set-default-model"]), 0)
+            self.assertEqual(load_manifest()["mode"], "symlink")
+            config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.2-sol")
 
     def test_install_implicit_invocation_flag_reaches_preview_and_confirmation(self):
         for setting in ("on", "off"):

@@ -86,13 +86,15 @@ never silently substitute an old model or widen a role. Checkpoint/finish active
 old-model sessions before upgrade: history stays readable, but the new policy
 rejects old-model resume/replay. Restart Desktop for refreshed agent definitions.
 
-From 1.3.1, the install plan upgrades an existing `model = "gpt-6.1-sol"` to
-`gpt-6.2-sol` for new chats after the executing CLI catalog verifies the selected
-effort. It preserves an explicit effort and uses Medium if none is configured.
-If the PATH CLI lacks the model or effort, the plan explains how to use a compatible
-CLI and skips the migration. This migration runs once and can be restored on
-uninstall if the managed value still matches. Restart Desktop and open a new
-chat to use the updated default.
+From 1.3.2, after an interactive install or upgrade, the installer separately
+asks whether to apply this run's recommended model and reasoning effort for
+new chats. It uses the routine development route with the current profile and
+a fresh trusted quota cache if available (Unknown otherwise). Press Enter to
+keep the existing settings. `install --yes` keeps them and prints the opt-in command.
+Use `codex-copilot install --yes --set-default-model` to explicitly opt in now
+or later. The executing CLI must verify the recommended model and effort. If
+the current model already matches, the installer keeps the current effort.
+Restart Desktop and open a new chat to use the updated default.
 
 ## Quota and recovery
 
