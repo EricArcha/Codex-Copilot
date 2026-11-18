@@ -5,6 +5,29 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-18
+
+- Update everyday development, diagnosis, review and the isolated data plane to
+  GPT-6.2 Sol; update the explicit Premium L3 route to GPT-6.2 Astra. Keep Terra
+  for bounded fixes/visual work and Luna for focused read-only exploration.
+- Validate exact model/effort pins across runtime and managed agents; retain
+  quota thresholds, role/phase limits, single-writer ownership and call budgets.
+  Inspect the executing CLI catalog; older PATH clients can lag Desktop.
+- Preserve existing schemas/history on upgrade. Old-model sessions stay readable
+  but cannot resume or replay through the new policy; checkpoint them before
+  upgrading. No silent substitution or budget reset is provided.
+- Verify managed upgrade from the immutable 1.2.0 source snapshot, preserving
+  user settings, measurement and history; reject drift and test rollback.
+
+
+- Fix managed TOML insertion across array-table boundaries such as
+  `[[skills.config]]`; verify requested values before accepting an edit and
+  preserve unrelated Skill registrations.
+- Make configuration-drift diagnostics name blocking settings and explain the
+  authorized repair path; distinguish intact artifacts and quota recovery from
+  repaired installation. Add regression coverage for missing agent defaults,
+  non-mutating preview, safe repair and repeat-install idempotence.
+
 - Sort bilingual README milestones newest-first, add recent implementation
   milestones, place language-switch badges beside the other header badges and
   require a milestone check for future project updates.

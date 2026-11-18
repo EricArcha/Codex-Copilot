@@ -196,6 +196,66 @@ class ProcessGroupTests(unittest.TestCase):
 
 
 class NativeInstallTests(unittest.TestCase):
+    def install_v120(self, temp):
+        # Immutable product snapshot of ba67666, including the 1.2.0 repair.
+        original = Path(temp) / "old-source"
+        with zipfile.ZipFile(Path(__file__).parent / "fixtures/source-1.2.0.zip") as archive:
+            archive.extractall(original)
+        run = subprocess.run([sys.executable, str(original / "bin/codex-copilot.py"), "install", "--yes"],
+                             capture_output=True, text=True, encoding="utf-8", timeout=15)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(installer.load_manifest()["version"], "1.2.0")
+
+    def test_v120_model_upgrade_preserves_settings_history_and_uninstalls(self):
+        from codex_copilot.delegation import dispatch_spec
+        from codex_copilot.routing import Profile
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, environment(temp)):
+            self.install_v120(temp)
+            config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            config.write_text('model = "user-choice"\nservice_tier = "priority"\n' + config.read_text(encoding="utf-8"), encoding="utf-8")
+            before = config.read_bytes()
+            state = Path(os.environ["CODEX_COPILOT_STATE_DIR"])
+            history = state / "metrics.jsonl"
+            retained = b'{"schema":1,"root_model":"gpt-6.1-sol"}\n'
+            history.write_bytes(retained)
+            measurement = state / "measurement.json"
+            measurement.write_bytes(b'{"enabled":true}\n')
+            preview = installer.install(dry_run=True)
+            self.assertEqual(tomllib.loads((Path(os.environ["CODEX_HOME"]) / "agents/copilot-reviewer.toml").read_text(encoding="utf-8"))["model"], "gpt-6.1-sol")
+            self.assertTrue(installer.install(expected_plan_token=preview["plan_token"])["changed"])
+            self.assertEqual(config.read_bytes(), before)
+            self.assertEqual(dispatch_spec("copilot_reviewer", Profile.BALANCED).model, "gpt-6.2-sol")
+            self.assertEqual(dispatch_spec("copilot_astra_final_reviewer", Profile.PREMIUM).model, "gpt-6.2-astra")
+            self.assertEqual(history.read_bytes(), retained)
+            self.assertEqual(measurement.read_bytes(), b'{"enabled":true}\n')
+            self.assertFalse(installer.install()["changed"])
+            installer.uninstall()
+            self.assertEqual(tomllib.loads(config.read_text(encoding="utf-8"))["model"], "user-choice")
+            self.assertEqual(history.read_bytes(), retained)
+
+    def test_v120_model_upgrade_rejects_drift_and_rolls_back_failure(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, environment(temp)):
+            self.install_v120(temp)
+            agent = Path(os.environ["CODEX_HOME"]) / "agents/copilot-reviewer.toml"
+            original_agent = agent.read_bytes()
+            manifest = installer.manifest_path().read_bytes()
+            agent.write_bytes(original_agent + b"\n# user edit\n")
+            with self.assertRaises(installer.InstallError):
+                installer.install()
+            self.assertEqual(agent.read_bytes(), original_agent + b"\n# user edit\n")
+            agent.write_bytes(original_agent)
+            atomic = installer._atomic_write
+            def fail_manifest(path, *args, **kwargs):
+                if path == installer.manifest_path():
+                    raise OSError("simulated manifest failure")
+                return atomic(path, *args, **kwargs)
+            with patch("codex_copilot.installer._atomic_write", side_effect=fail_manifest):
+                with self.assertRaises(installer.InstallError):
+                    installer.install()
+            self.assertEqual(agent.read_bytes(), original_agent)
+            self.assertEqual(installer.manifest_path().read_bytes(), manifest)
+            self.assertTrue(all(installer.artifact_matches(a) for a in installer.load_manifest()["artifacts"]))
+
     def install_v110(self, temp):
         # Immutable source snapshot: 55b995d1e4fca4552ef528229d7078c54c0fafed.
         original = Path(temp) / "old-source"

@@ -6,7 +6,7 @@ Read this when installation is requested, diagnostics show residue, or the CLI i
 
 - **Skill-only:** instructions exist, but no managed installation is recorded. Continue using the guidance and the unknown quota route; do not assume custom agents exist.
 - **Complete:** `doctor --json` reports `installation_state: complete`. Use quota and the installed agent delegation gate. Account/model access is still determined by Codex at runtime.
-- **Incomplete:** a manifest, launcher or agents exist, but required files/settings differ or are missing (service_tier preference does not count). Explain the failed checks; preserve state/backups. Do not dispatch missing or invalid agents. Continue the user's task with available guidance unless its required review cannot be performed.
+- **Incomplete:** a manifest, launcher or agents exist, but required files/settings differ or are missing (service_tier preference does not count). Report the exact blocking `config_checks` keys and expected values, or failed artifact checks; distinguish configuration drift from missing/modified files and from quota-access failure. Preview repair from a reviewed source checkout with `install --dry-run`; install only when authorized. Preserve state/backups. Do not dispatch missing or invalid agents. Continue the user's task with available guidance unless its required review cannot be performed.
 
 If the CLI is missing, inspect the known launcher location or run diagnostics from a source checkout before calling an existing full installation Skill-only. Default bin directory is `~/.local/bin`; Windows uses `codex-copilot.cmd`. `doctor` does not require PATH to pass when called by full path.
 
@@ -79,6 +79,13 @@ CLI/local-state access. Never change global sandbox policy. Resolve state access
 before trace-writing delegation; Desktop observations cannot replace that gate.
 Unresolved errors use unknown temporarily and are not successful quota acceptance.
 
+From 1.3.0, upgrade managed Sol/Astra roles and the runtime together to the
+GPT-6.2 pins. Inspect the executing CLI's `codex debug models` first; Desktop's
+bundled CLI and a PATH CLI can differ. Missing model access must be reported;
+never silently substitute an old model or widen a role. Checkpoint/finish active
+old-model sessions before upgrade: history stays readable, but the new policy
+rejects old-model resume/replay. Restart Desktop for refreshed agent definitions.
+
 ## Quota and recovery
 
 Quota reads have a deadline and clean up their app-server process. Missing login, invalid responses, EOF, timeout or startup failure use only a valid recent successful cache, otherwise `unknown`; they never authorize larger delegation budgets. A fixture is for tests, not proof of account access. Measurement remains opt-in and off by default.
@@ -104,3 +111,8 @@ Agent symlinks require both link and instruction-content fingerprints. Legacy
 link-only records are unverified for dispatch; upgrade from a reviewed checkout
 only if the target still matches that source, or use copy mode. Changed targets
 remain protected from overwrite. Missing required manifest records also fail integrity.
+
+A successful quota retry resolves only quota access; it does not repair managed settings.
+After an authorized repair, rerun doctor and confirm complete installation independently
+of live quota success. Existing agents and files alone do not prove valid configuration.
+Do not infer when or which application changed a setting without evidence.

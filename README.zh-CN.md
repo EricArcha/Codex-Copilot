@@ -23,13 +23,13 @@
 </p>
 <p align="center"><sub>24 秒，从任务请求走到有证据的交付。GIF 预览无声。</sub></p>
 
-## 当前源码版本：1.2.0
+## 当前源码版本：1.3.0
 
-源码 1.2.0 加入按任务分工的 GPT-6.1 Terra 路由及共享写入锁。已发布版本与标签见 [GitHub Releases](https://github.com/EricArcha/Codex-Copilot/releases)。
+源码 1.3.0 将 Sol/Astra 更新到 GPT-6.2，保留 Terra/Luna 分工及有界权限。本次源码候选尚未发布。已发布版本与标签见 [GitHub Releases](https://github.com/EricArcha/Codex-Copilot/releases)。
 
 Codex-Copilot 1.0.0 建立了安装、CLI/JSON 兼容性及发布边界。GitHub Release 已撤回，源码版本和标签保留。参见[变更记录](CHANGELOG.md)、[兼容承诺](docs/compatibility.md)、[发布规则](docs/releasing.md)和[贡献入口](CONTRIBUTING.md)。
 
-Codex-Copilot 按四类模型分工：**Terra** 用于 Green/Yellow 的 L0 主线程建议及可选的明确 L1 小修复；**Luna** 用于定向探索，也是默认子代理；**GPT-6.1 Sol** 负责复杂开发与独立审查；**Astra** 仅用于 premium 的 L3 任务和最终审查。Terra 要求 Codex CLI 0.159.0+ 及模型访问权限。已安装用户请更新受管安装，再重启 Desktop 并新开任务。主线程模型建议不会自动切换当前聊天。
+Codex-Copilot 按四类模型分工：**Terra** 用于 Green/Yellow 的 L0 主线程建议及可选的明确 L1 小修复；**Luna** 用于定向探索，也是默认子代理；**GPT-6.2 Sol** 负责常规开发、诊断与独立审查；**GPT-6.2 Astra** 负责 premium L3 的复杂工作和最终审查。Terra 要求 Codex CLI 0.159.0+ 及模型访问权限。已安装用户请更新受管安装，再重启 Desktop 并新开任务。主线程模型建议不会自动切换当前聊天。
 
 ## 项目里程碑
 
@@ -37,6 +37,7 @@ Codex-Copilot 按四类模型分工：**Terra** 用于 Green/Yellow 的 L0 主�
 
 | 日期 | 里程碑 | 主要变化 |
 | --- | --- | --- |
+| 2026-11-18 | [1.3.0 源码：GPT-6.2 路由](CHANGELOG.md#130---2026-11-18) | 更新 Sol/Astra 型号及分工，保留权限与预算限制；尚未正式发布。 |
 | 2026-10-29 | [1.2.0 正式发布：Terra 路由](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.2.0) | 按任务分工接入 Terra，新增有界 L1 worker，并与 Sol 共用写入锁。 |
 | 2026-10-27 | [已安装启动器的设置控制](https://github.com/EricArcha/Codex-Copilot/commit/2a2366d) | 通过已安装的启动器，以事务方式修改隐式调用偏好。 |
 | 2026-10-26 | [默认显式启动](https://github.com/EricArcha/Codex-Copilot/commit/ad61c51) | 安装时选择是否允许隐式调用，升级时保留本地选择。 |

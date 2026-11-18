@@ -154,6 +154,33 @@ class InstallationDiagnosticsTests(unittest.TestCase):
                      role="copilot_final_reviewer", phase="final_review", override=True)
         reader.assert_not_called()
 
+    def test_missing_agent_defaults_are_actionable_and_repair_is_idempotent(self):
+        installer.install()
+        original = self.config.read_text(encoding="utf-8")
+        drifted = original.replace('default_subagent_model = "gpt-6-luna"\n', "").replace(
+            'default_subagent_reasoning_effort = "low"\n', "")
+        drifted += '\n[[skills.config]]\npath = "user-skill"\nenabled = true\n'
+        self.assertNotEqual(original, drifted)
+        self.config.write_text(drifted, encoding="utf-8")
+        result = self.doctor()
+        self.assertEqual(result["installation_state"], "incomplete")
+        self.assertTrue(next(c for c in result["checks"] if c["name"] == "installation_integrity")["ok"])
+        detail = next(c for c in result["checks"] if c["name"] == "managed_config")["detail"]
+        for key in ("agents.default_subagent_model", "agents.default_subagent_reasoning_effort"):
+            self.assertIn(key, detail)
+        self.assertIn("install --dry-run", detail)
+        self.assertIn("only when authorized", detail)
+        with self.assertRaises(DelegationDenied):
+            dispatch(run_id="11111111-1111-4111-8111-111111111111", level=TaskLevel.L3,
+                     role="copilot_final_reviewer", phase="final_review")
+        installer.install(dry_run=True)
+        self.assertEqual(self.config.read_text(encoding="utf-8"), drifted)
+        installer.install()
+        self.assertEqual(self.doctor()["installation_state"], "complete")
+        self.assertIn('private = "secret"', self.config.read_text(encoding="utf-8"))
+        self.assertIn('path = "user-skill"', self.config.read_text(encoding="utf-8"))
+        self.assertFalse(installer.install()["changed"])
+
     def test_wrong_scalar_type_does_not_pass_as_equal_setting(self):
         installer.install()
         self.config.write_text(self.config.read_text(encoding="utf-8").replace("multi_agent = true", "multi_agent = 1"), encoding="utf-8")

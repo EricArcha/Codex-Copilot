@@ -1,5 +1,95 @@
 # Verification evidence
 
+## GPT-6.2 routing candidate — 2026-11-18
+
+- Requirement: support the latest documented Sol/Astra models and clarify the
+  division of work. Responsibility owners: routing, delegation, execution and
+  model. Interfaces touched: internal exact model pins and managed agent
+  artifacts; no schema, host permission, trust acquisition, quota thresholds,
+  budgets, collection, service-tier preference or automatic discovery expansion.
+- Official [model guide](https://learn.chatgpt.com/docs/models),
+  [selection guide](https://learn.chatgpt.com/docs/model-selection),
+  [Sol](https://developers.openai.com/api/docs/models/gpt-6.2-sol) and
+  [Astra](https://developers.openai.com/api/docs/models/gpt-6.2-astra) checked
+  today. Capability order: Astra, Sol, Terra, Luna. The product retains explicit
+  Premium L3 Astra, everyday Sol development/review, bounded Terra fixes/visual
+  work and focused read-only Luna exploration. API prices are not allowance data.
+- CLI 0.166.0 on PATH listed prior models. Desktop's bundled
+  0.169.0-alpha.11.1 listed gpt-6.2-sol and gpt-6.2-astra with Low/Medium/High
+  among their efforts. No persistent PATH, CLI installation or sandbox change.
+- Full suite: 238 discovered, 231 passed, seven platform-specific skips on macOS.
+  Symlink capability is probed by the existing tests. Skill Creator validation,
+  release metadata (source 1.3.0) and whitespace checks passed. Both README
+  milestones now include the same newest-first source event, without claiming
+  a published release. Remote multi-OS CI and fresh Desktop loading are untested.
+- Installer-owned fixture tests/fixtures/source-1.2.0.zip is the immutable product
+  snapshot of ba67666126fc771b0376f63dfc0eaff363771ab6. Prior fixtures unchanged.
+  All five isolated path overrides are used for upgrade/idempotence/uninstall,
+  edited-agent rejection and manifest-failure rollback. User settings, history
+  and measurement preference survive. Old-model reservations remain readable
+  and consumed; replay/rebinding/resume and unsupported models/efforts fail closed.
+- A single real managed model exec probe used gpt-6.2-sol Medium with the bundled
+  CLI, existing trusted cache, empty read-only workspace and fixed disabled-tool
+  flags. It returned 42 for 17 + 25 and completed successfully. The CLI also
+  emitted a nonblocking code-mode-host-unavailable item; no tool activity was
+  observed. This proves a bounded Sol inference path, not Astra entitlement,
+  comparative quality or savings.
+- Independent L3 final review PASS, no actionable findings. The gate used live
+  app-server Green quota and the installed gpt-6.1-sol High reviewer (capability
+  tier 2), avoiding installation of unreviewed policy. The reviewer independently
+  ran all 238 tests and checked all 39 fixture product files against the baseline
+  with Windows CRLF conversion accounted for. No product changes followed review.
+  The run consumed one managed probe and one reviewer, with one recheck reserved.
+- Local upgrade preview showed no managed-setting value changes; project-local
+  identity release-check passed.
+- Installed the reviewed local 1.3.0 source candidate after preserving config,
+  manifest and runtime-pointer snapshots alongside transaction backups. Version
+  is 1.3.0; doctor reports complete, runtime_available=true, no failed checks or
+  warnings, and successful live app-server quota. Installed Sol reviewers pin
+  gpt-6.2-sol High; Premium reviewer pins gpt-6.2-astra High. Repeat actual install
+  and preview both report no changes. Implicit invocation remains off.
+- The execution ledger closed completed with engineering/review passed and two
+  of three authorized calls consumed. Trace reports one successful reviewer and
+  COMPLIANT. Optional measurement ended once using live quota; percentages are
+  account observations, not task costs. No release/tag/PR or remote CI was run;
+  a Desktop restart/fresh-chat load and live Astra inference remain unverified.
+
+## Array-table configuration repair — 2026-11-04
+
+- Responsibility owner: config editing/managed installation. Changes affect TOML
+  insertion boundaries and diagnostic prose, not dispatch authorization, quota
+  trust, model policy, telemetry or host permissions. Existing JSON fields and
+  version 1.2.0 remain unchanged; changes are recorded as Unreleased.
+- Reproduced missing agent defaults despite intact installed artifacts. An
+  authorized repair with the old editor inserted keys into a later
+  `[[skills.config]]` entry because array tables did not end section bounds.
+  The fixed editor recognizes array boundaries and checks resulting values.
+- 234 tests discovered: 227 passed, seven platform-specific skips on macOS.
+  Installer tests use all five isolated path overrides. Regressions cover
+  array-table boundaries, unrelated registrations, uninstall restoration,
+  configuration drift, preview preservation, safe repair and idempotence.
+- First independent L3 review found header-like array text inside multiline
+  strings could be modified. Candidate header prefixes are now parsed to exclude
+  unfinished values; basic/literal multiline preservation regressions pass.
+- Second independent review found assignment-looking text in multiline strings
+  could still be rewritten. Assignment scans now require complete TOML prefixes
+  too; expanded regressions and all 234 tests pass.
+- After explicit user authorization for one additional review, cumulative
+  consumption was carried forward as two used calls with a three-call ceiling.
+  Final independent L3 review returned PASS with no actionable findings; it
+  reran all 234 tests and six additional basic/literal multiline reproductions
+  across root, dotted-root and section assignment scans, including restoration.
+  The final reviewed runtime was installed locally and doctor again returned
+  complete with live app-server quota; repeat-install preview was unchanged.
+- Skill validator, release metadata check (1.2.0), whitespace and project-local
+  commit identity checks passed. Both README milestone sections were checked
+  together; this maintenance fix needs no milestone entry.
+- Authorized local installation repair returned doctor complete, all checks
+  passing and live app-server quota. Repeat-install preview reported no changes.
+  The initial repair's two known misplaced settings were removed with a backup;
+  correct agent settings and unrelated registrations were retained. Desktop
+  restart/fresh-chat loading remains user-side; other OS CI was not run locally.
+
 ## Terra routing candidate — 2026-10-29
 
 - Baseline at 55b995d1e4fca4552ef528229d7078c54c0fafed: 219 tests discovered,

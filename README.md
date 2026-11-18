@@ -23,13 +23,13 @@
 </p>
 <p align="center"><sub>24 seconds. A clear route from request to evidence. The GIF preview is silent.</sub></p>
 
-## Current source version: 1.2.0
+## Current source version: 1.3.0
 
-Source 1.2.0 adds task-specific GPT-6.1 Terra routing and a shared writer slot. Published packages and tags are listed in [GitHub Releases](https://github.com/EricArcha/Codex-Copilot/releases).
+Source 1.3.0 updates Sol/Astra to GPT-6.2 while retaining Terra/Luna responsibilities and bounded permissions. This source candidate has not been published. Published packages and tags are listed in [GitHub Releases](https://github.com/EricArcha/Codex-Copilot/releases).
 
 Codex-Copilot 1.0.0 establishes stable installation, CLI/JSON compatibility and release boundaries. The GitHub Release has been withdrawn; the source version and tag remain available. See [CHANGELOG](CHANGELOG.md), [compatibility](docs/compatibility.md), [release policy](docs/releasing.md) and [contributing](CONTRIBUTING.md).
 
-Codex-Copilot routes work across four models: **Terra** handles Green/Yellow L0 recommendations and optional bounded L1 fixes; **Luna** handles focused exploration and is the default subagent; **GPT-6.1 Sol** handles complex development and independent review; **Astra** is reserved for premium L3 work and final review. Terra requires Codex CLI 0.159.0+ and model access. Existing full-install users should upgrade the managed installation, restart Codex Desktop and open a new task. Parent-model recommendations do not switch the active chat automatically.
+Codex-Copilot routes work across four models: **Terra** handles Green/Yellow L0 recommendations and optional bounded L1 fixes; **Luna** handles focused exploration and is the default subagent; **GPT-6.2 Sol** handles everyday development, diagnosis and independent review; **GPT-6.2 Astra** handles demanding premium L3 work and final review. Terra requires Codex CLI 0.159.0+ and model access. Existing full-install users should upgrade the managed installation, restart Codex Desktop and open a new task. Parent-model recommendations do not switch the active chat automatically.
 
 ## Project milestones
 
@@ -38,6 +38,7 @@ Newest first. Source-version milestones are distinguished from published release
 
 | Date | Milestone | What changed |
 | --- | --- | --- |
+| 2026-11-18 | [1.3.0 source: GPT-6.2 routing](CHANGELOG.md#130---2026-11-18) | Sol/Astra model refresh, explicit responsibilities and unchanged permission/budget fences; not a published release. |
 | 2026-10-29 | [1.2.0 release: Terra routing](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.2.0) | Task-specific Terra routing, a bounded L1 worker and shared Sol/Terra writer ownership. |
 | 2026-10-27 | [Installed launcher controls](https://github.com/EricArcha/Codex-Copilot/commit/2a2366d) | Change implicit-invocation preferences transactionally through the installed launcher. |
 | 2026-10-26 | [Explicit startup by default](https://github.com/EricArcha/Codex-Copilot/commit/ad61c51) | Choose implicit invocation during installation; preserve the local choice on upgrade. |
@@ -164,7 +165,7 @@ codex-copilot measure on     # Opt in to task-level measurement
 codex-copilot measure off    # Stop new automatic measurement
 ```
 
-Allowance measurement is off by default. New installs and upgrades show the one-time opt-in command; enabling it once persists locally. When enabled, a skill task briefly notes that recording is on, reuses its start quota check, and makes at most one extra read at completion. Turning it off preserves prior records. Percentages are observations, not exact bills or proven savings. Codex-Copilot never redeems usage reset credits. Its GPT-6 routing uses Luna for focused exploration, GPT-6.1 Sol for standard coding and review, and Astra only for premium L3 work. It keeps local routing notes private: no prompts, code, command output, or raw project paths are stored.
+Allowance measurement is off by default. New installs and upgrades show the one-time opt-in command; enabling it once persists locally. When enabled, a skill task briefly notes that recording is on, reuses its start quota check, and makes at most one extra read at completion. Turning it off preserves prior records. Percentages are observations, not exact bills or proven savings. Codex-Copilot never redeems usage reset credits. Its GPT-6 routing uses Luna for focused exploration, GPT-6.2 Sol for standard coding and review, and Astra only for premium L3 work. It keeps local routing notes private: no prompts, code, command output, or raw project paths are stored.
 
 ## For contributors
 

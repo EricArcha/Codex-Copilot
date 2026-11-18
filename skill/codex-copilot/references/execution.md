@@ -47,7 +47,7 @@ codex-copilot model exec --run-id <uuid> --request-id <uuid> --category generati
 ```
 
 Categories are research, generation, validation, repair, scoring and probe. This entry
-uses GPT-6.1 Sol Medium, fixed read-only isolation, an empty stable working directory,
+uses GPT-6.2 Sol Medium, fixed read-only isolation, an empty stable working directory,
 no user-config inheritance, and disabled shell, delegation, apps/plugins/hooks and other
 host tools. It refuses a CLI missing the required feature flags. Do not pass model/config
 or sandbox overrides. Standard output is model JSONL for the caller; stderr contains only
