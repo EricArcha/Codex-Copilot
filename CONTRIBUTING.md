@@ -8,11 +8,23 @@ gate. Normal changes require focused verification and independent review when
 required by the Skill; permission, installation/migration or delegation changes
 are L3 and require an independent final review. Fix findings before merging.
 
-Run `PYTHONPATH=src python3 -m unittest discover -s tests -v`, the official
-Skill Creator quick_validate.py against skill/codex-copilot, and
-`python3 scripts/check_release.py`. Follow AGENTS.md for Windows commands.
+Use the local checks in [AGENTS.md](AGENTS.md), including `python3 scripts/check_release.py`.
 Do installation experiments with all five path overrides in temporary directories.
 Never write a developer's persistent PATH or reset account state to pass tests.
+
+## Choose a merge path
+
+Cosmetic edits confined to `README.md` or `README.zh-CN.md` can go directly to
+`main` when repository protections allow it. This covers typos, presentation
+wording and ordinary link repairs. Changes to installation or usage instructions,
+compatibility claims, version or release history, or governance use a PR.
+
+For all other changes, sync with `main` and use a short `codex/` branch and PR.
+Merge after the `pull_request` CI run covers the latest PR revision and all
+applicable jobs and required reviews pass. The workflow runs on PRs, pushes to
+`main`, and version tags. A feature branch push has no separate CI run.
+The `main` run verifies the merged commit and gates publication. See the
+[release policy](docs/releasing.md) for the full publication sequence.
 
 PRs describe the concrete problem, resulting behavior, compatibility impact,
 tests and material limitations. Keep relevant evidence in docs/verification.md;

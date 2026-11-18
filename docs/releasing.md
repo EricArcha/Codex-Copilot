@@ -10,15 +10,18 @@ MINOR for compatible features, MAJOR for changes breaking the guarantees in
 MAJOR. The existing 0.1.0 and 0.1.1 source versions were not tagged GitHub releases;
 1.0.0 establishes the first stable contract. Do not invent historical releases.
 
-## Required sequence
+For ordinary contributions and merges, see [CONTRIBUTING.md](../CONTRIBUTING.md).
+Publish when users need a fixed version to install. The following checks apply
+when preparing a formal release.
+
+## Publication sequence
 
 1. Sync main without overwriting user work; develop in a `codex/` branch.
 2. Update VERSION, its mirror and CHANGELOG. Run `python3 scripts/check_release.py`.
 3. Pass the full unit suite, Skill validator and all applicable cross-platform CI
    jobs. Verify upgrades from the supported previous versions. Permission,
    installation/migration and delegation changes require L3 independent review.
-4. Create a PR with behavior, compatibility impact and validation evidence.
-   Merge only after checks on its latest commit and required review pass.
+4. Land the release changes via the PR process in [CONTRIBUTING.md](../CONTRIBUTING.md).
 5. Wait for verification on the resulting main commit. Run
    `python3 scripts/check_release.py --tag v<version>` on that exact commit.
    Tag validation also rejects uncommitted/untracked content in product trees;

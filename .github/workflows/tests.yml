@@ -1,7 +1,7 @@
 name: Cross-platform verification
 on:
   push:
-    branches: [main, 'feat/**', 'codex/**']
+    branches: [main]
     tags: ['v*']
   pull_request:
 permissions:
