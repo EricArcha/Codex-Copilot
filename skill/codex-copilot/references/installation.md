@@ -79,6 +79,13 @@ CLI/local-state access. Never change global sandbox policy. Resolve state access
 before trace-writing delegation; Desktop observations cannot replace that gate.
 Unresolved errors use unknown temporarily and are not successful quota acceptance.
 
+From 1.3.0, upgrade managed Sol/Astra roles and the runtime together to the
+GPT-6.2 pins. Inspect the executing CLI's `codex debug models` first; Desktop's
+bundled CLI and a PATH CLI can differ. Missing model access must be reported;
+never silently substitute an old model or widen a role. Checkpoint/finish active
+old-model sessions before upgrade: history stays readable, but the new policy
+rejects old-model resume/replay. Restart Desktop for refreshed agent definitions.
+
 ## Quota and recovery
 
 Quota reads have a deadline and clean up their app-server process. Missing login, invalid responses, EOF, timeout or startup failure use only a valid recent successful cache, otherwise `unknown`; they never authorize larger delegation budgets. A fixture is for tests, not proof of account access. Measurement remains opt-in and off by default.

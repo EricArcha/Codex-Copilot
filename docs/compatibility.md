@@ -40,6 +40,30 @@ with `copilot_worker`, including unknown outcomes. Ordinary review and the fixed
 an upgrade adds the new fingerprinted agent without replacing unrelated settings.
 Parent routes are recommendations and cannot switch the active Desktop chat.
 
+## Model refresh from 1.3.0
+
+Responsibility owners are routing (parent recommendations), delegation (managed
+roles), execution (reservation validation) and model (isolated data-plane pins).
+The requirement is GPT-6.2 support with the existing task/effort/permission matrix:
+Sol becomes `gpt-6.2-sol`, Premium Astra becomes `gpt-6.2-astra`; Terra/Luna and
+all effort, role, phase, quota and budget limits remain unchanged. No new host
+permission, trust source, collected data, dynamic model selection or agent is added.
+The fixed data plane uses GPT-6.2 Sol Medium from this version.
+
+Verify model/effort availability in the executing client's `codex debug models`.
+The Desktop-bundled CLI may be newer than PATH; 0.169.0-alpha.11.1 was verified
+for the new catalog, while 0.166.0 listed the prior models. This is observed
+compatibility evidence, not a claimed universal minimum. Missing account access
+requires a checkpoint or an explicit separately supported route, never silent
+substitution in a role or automatic CLI/PATH/config changes.
+
+Existing trace/ledger schemas and records remain readable. Reservations bound to
+prior models cannot resume or replay under the new model policy, and attempts
+cannot regain budget. Checkpoint/finish active old-model runs before upgrading;
+retain their records. New requests still pass the cumulative budget and current
+policy checks. Installation preserves unrelated configuration and measurement
+preferences/history, validates fingerprints, and rolls back transaction failures.
+
 ## User data and upgrades
 
 Never overwrite unknown files or replace the whole Codex configuration. Preserve

@@ -58,12 +58,12 @@ class DelegationTests(unittest.TestCase):
         agents.mkdir(parents=True)
         specs = {
             "copilot-scout": ("gpt-6-luna", "low"),
-            "copilot-investigator": ("gpt-6.1-sol", "medium"),
-            "copilot-worker": ("gpt-6.1-sol", "medium"),
+            "copilot-investigator": ("gpt-6.2-sol", "medium"),
+            "copilot-worker": ("gpt-6.2-sol", "medium"),
             "copilot-terra-worker": ("gpt-6.1-terra", "medium"),
-            "copilot-reviewer": ("gpt-6.1-sol", "high"),
-            "copilot-final-reviewer": ("gpt-6.1-sol", "high"),
-            "copilot-astra-final-reviewer": ("gpt-6-astra", "high"),
+            "copilot-reviewer": ("gpt-6.2-sol", "high"),
+            "copilot-final-reviewer": ("gpt-6.2-sol", "high"),
+            "copilot-astra-final-reviewer": ("gpt-6.2-astra", "high"),
         }
         for name, (model, effort) in specs.items():
             (agents / f"{name}.toml").write_text(
@@ -95,10 +95,10 @@ class DelegationTests(unittest.TestCase):
             with self.assertRaises(DelegationDenied):
                 dispatch(run_id=self.RUN_1, level=TaskLevel.L3, role="copilot_reviewer", phase="final_review")
         result = trace(self.RUN_1)
-        self.assertEqual(first["subagent_model"], "gpt-6.1-sol")
+        self.assertEqual(first["subagent_model"], "gpt-6.2-sol")
         self.assertEqual(first["quota_source"], "test")
         self.assertEqual(result["compliance"], "COMPLIANT")
-        self.assertEqual(result["agents"][1]["model"], "gpt-6.1-sol")
+        self.assertEqual(result["agents"][1]["model"], "gpt-6.2-sol")
         self.assertEqual(result["agents"][1]["quota_source"], "test")
         self.assertEqual(result["agents"][1]["status"], "success")
 
@@ -186,13 +186,15 @@ class DelegationTests(unittest.TestCase):
             if role == "copilot_terra_worker":
                 self.assertEqual((spec.model, spec.effort), ("gpt-6.1-terra", "medium"))
             elif role not in {"copilot_scout", "copilot_astra_final_reviewer"}:
-                self.assertEqual(spec.model, "gpt-6.1-sol")
+                self.assertEqual(spec.model, "gpt-6.2-sol")
                 self.assertIn(spec.effort, {"medium", "high"})
 
     def test_previous_sol_and_unsupported_efforts_require_agent_upgrade(self):
         path = Path(os.environ["CODEX_HOME"]) / "agents" / "copilot-reviewer.toml"
-        for model, effort in (("gpt-6-sol", "high"), ("gpt-6.1-sol", "none"),
-                              ("gpt-6.1-sol", "minimal"), ("gpt-6.1-sol", "max")):
+        for model, effort in (("gpt-6-sol", "high"), ("gpt-6.1-sol", "high"),
+                              ("gpt-6.2-astra", "high"), ("gpt-6.2-sol", "none"),
+                              ("gpt-6.2-sol", "minimal"), ("gpt-6.2-sol", "max"),
+                              ("gpt-6.2-sol", "ultra")):
             with self.subTest(model=model, effort=effort):
                 path.write_text(f'model = "{model}"\nmodel_reasoning_effort = "{effort}"\n')
                 with self.assertRaises(DelegationDenied):
@@ -213,7 +215,7 @@ class DelegationTests(unittest.TestCase):
                 dispatch(run_id=self.RUN_1, level=TaskLevel.L1, role="copilot_scout", phase="exploration")
             reviewer = dispatch(run_id=self.RUN_1, level=TaskLevel.L1,
                                 role="copilot_reviewer", phase="final_review")
-            self.assertEqual(reviewer["subagent_model"], "gpt-6.1-sol")
+            self.assertEqual(reviewer["subagent_model"], "gpt-6.2-sol")
             self.assertEqual(trace(self.RUN_1)["dispatched"], 2)
 
     def test_terra_worker_default_access_is_only_green_l1_implementation(self):
@@ -244,7 +246,7 @@ class DelegationTests(unittest.TestCase):
 
     def test_terra_worker_rejects_missing_model_and_effort_changes_without_substitution(self):
         path = Path(os.environ["CODEX_HOME"]) / "agents/copilot-terra-worker.toml"
-        for model, effort in (("gpt-6.1-sol", "medium"), ("gpt-5.6-terra", "medium"),
+        for model, effort in (("gpt-6.2-sol", "medium"), ("gpt-5.6-terra", "medium"),
                               ("gpt-6.1-terra", "none"), ("gpt-6.1-terra", "low"),
                               ("gpt-6.1-terra", "high"), ("gpt-6.1-terra", "max"),
                               ("gpt-6.1-terra", "ultra")):
@@ -265,7 +267,7 @@ class DelegationTests(unittest.TestCase):
                 phase="final_review",
                 profile=Profile.PREMIUM,
             )
-        self.assertEqual(event["subagent_model"], "gpt-6-astra")
+        self.assertEqual(event["subagent_model"], "gpt-6.2-astra")
         self.assertEqual(event["profile"], "premium")
 
     def test_astra_fallback_uses_the_standard_sol_reviewer(self):
@@ -278,7 +280,7 @@ class DelegationTests(unittest.TestCase):
                 astra_unavailable=True,
                 profile=Profile.PREMIUM,
             )
-        self.assertEqual(event["subagent_model"], "gpt-6.1-sol")
+        self.assertEqual(event["subagent_model"], "gpt-6.2-sol")
 
 
     def test_legacy_trace_stays_readable_after_explicit_recovery_and_new_calls(self):
@@ -286,7 +288,7 @@ class DelegationTests(unittest.TestCase):
         run_id = "66666666-6666-4666-8666-666666666666"
         record(dict(event="subagent_dispatched", run_id=run_id, subagent_ordinal=1,
                     task_level="L3", quota_band="green", profile="balanced",
-                    subagent_role="copilot_investigator", subagent_model="gpt-6.1-sol",
+                    subagent_role="copilot_investigator", subagent_model="gpt-6.2-sol",
                     subagent_effort="medium", subagent_phase="exploration"))
         self.assertEqual(trace(run_id)["dispatched"], 1)
         execution.begin(run_id=run_id, normal_calls=2, worst_calls=2, call_limit=2, resume_consumed=1)

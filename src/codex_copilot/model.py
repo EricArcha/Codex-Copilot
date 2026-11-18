@@ -24,7 +24,7 @@ DISABLED_FEATURES = (
     "image_generation", "view_image", "skill_search", "skill_mcp_dependency_install",
     "workspace_dependencies", "goals", "in_app_local_automation", "sleep_tool",
 )
-MODEL = "gpt-6.1-sol"
+MODEL = "gpt-6.2-sol"
 EFFORT = "medium"
 
 

@@ -357,7 +357,7 @@ def reserve(*, run_id: str, request_id: str, kind: str, category: str, phase: st
         validate_role(TaskLevel(level), role, phase, Profile(profile), astra_unavailable=astra_unavailable, band="unknown")
         if _ROLE_CONFIGURATION.get(role) != (model, effort) or category != ("review" if phase == "final_review" else "subagent"):
             raise ExecutionDenied("Subagent configuration or category violates role policy")
-    elif (role, model, effort, phase) != ("data_model", "gpt-6.1-sol", "medium", "evaluation") or category in {"subagent", "review"}:
+    elif (role, model, effort, phase) != ("data_model", "gpt-6.2-sol", "medium", "evaluation") or category in {"subagent", "review"}:
         raise ExecutionDenied("Invalid data-plane model configuration")
     with _database() as db:
         data = _load(db, run_id)

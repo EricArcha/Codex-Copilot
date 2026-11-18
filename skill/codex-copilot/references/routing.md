@@ -3,15 +3,15 @@
 ## Task level
 
 - **L0**: Clear, local, low-risk micro-change with an obvious verification command. Recommend GPT-6.1 Terra Medium for the Green/Yellow parent route (Conservative Green uses Low), no subagent, and no independent review. Red uses Luna Low; Unknown uses Sol Medium; Critical pauses. New behavior or an ordinary feature is at least L1 even when it touches one module.
-- **L1**: Normal change within one module. Default to GPT-6.1 Sol Medium; a fix with clear inputs and acceptance checks may instead use `copilot_terra_worker` as its sole writer. Add `copilot_scout` only when location or existing coverage is unclear; finish with `copilot_reviewer` within the cumulative cap.
+- **L1**: Normal change within one module. Default to GPT-6.2 Sol Medium; a fix with clear inputs and acceptance checks may instead use `copilot_terra_worker` as its sole writer. Add `copilot_scout` only when location or existing coverage is unclear; finish with `copilot_reviewer` within the cumulative cap.
 - **L2**: Cross-module change or unclear root cause. Use `copilot_scout` and/or `copilot_investigator` within the quota cap, one writer, then `copilot_reviewer`.
-- **L3**: Authentication, payment, permissions, migration, concurrency, security-sensitive, or otherwise high-blast-radius work. Reserve GPT-6.1 Sol High for one key decision or final review when the quota band permits it; the premium profile may instead reserve GPT-6 Astra High.
+- **L3**: Authentication, payment, permissions, migration, concurrency, security-sensitive, or otherwise high-blast-radius work. Reserve GPT-6.2 Sol High for one key decision or final review when the quota band permits it; the premium profile may instead reserve GPT-6.2 Astra High.
 
 Classify from actual blast radius and uncertainty, not prompt length. A large mechanical change can be L1; a one-line permission change can be L3.
 
 ## Model policy
 
-Model guidance verified **2026-10-29** against the official
+Model guidance verified **2026-11-18** against the official
 [model selection guide](https://learn.chatgpt.com/docs/model-selection) and
 [Codex model list](https://learn.chatgpt.com/docs/models):
 
@@ -19,17 +19,26 @@ Model guidance verified **2026-10-29** against the official
 |---|---|
 | `gpt-6.1-terra` | Green/Yellow L0 parent recommendations and bounded L1 fixes, including development-related visual/UI issues with explicit acceptance checks. |
 | `gpt-6-luna` | Focused read-only exploration and the existing low-quota L0 route. |
-| `gpt-6.1-sol` | Normal L1-L3 implementation, diagnosis and independent review; fixed isolated `model exec` work. |
-| `gpt-6-astra` | Explicit Premium L3 work and final review. |
+| `gpt-6.2-sol` | Everyday L1-L3 development, diagnosis and independent review; fixed isolated `model exec` work. |
+| `gpt-6.2-astra` | Demanding complex work and final review within the explicit Premium L3 route. |
 
-Terra is an additional task-specific tier, not a blanket replacement for Sol.
-Its installed worker pins Medium, `workspace-write`, L1 and `implementation`;
+The current capability order is Astra → Sol → Terra → Luna; descriptions such as
+“for coding” identify a use case, not a capability tier. Sol is the everyday
+development/review tier; Terra handles bounded fixes and visual/UI work with
+explicit acceptance checks; Luna handles focused read-only exploration. Astra
+remains reserved for demanding Premium L3 work under the existing quota gate.
+Terra’s installed worker pins Medium, `workspace-write`, L1 and `implementation`;
 uncertain cross-module or higher-risk work returns to the primary thread for
 reclassification. Sol retains Medium standard implementation, Low Conservative
 Green/Red routes and High independent review. This skill permits only the declared
 Low/Medium/High routes, never Max or Ultra; Sol does not support `none` or `minimal`.
 Terra's API supports other efforts, but that does not widen its Copilot worker policy.
 
+Before dispatch, inspect `codex debug models` using the CLI that will execute
+the work, and verify the pinned model and effort are available. A stale PATH CLI
+may list older models than the Desktop-bundled CLI; report the mismatch and
+explicitly select a compatible executable or upgrade the CLI, without changing
+persistent PATH. A catalog recommendation never authorizes an undeclared model.
 Terra requires Codex CLI 0.159.0+ and account availability in Desktop. Select the
 recommended parent model in Desktop when needed: these instructions cannot switch
 the active chat automatically. Check account availability before dispatch; if Terra
@@ -38,7 +47,8 @@ the separate Sol route. Never silently substitute a model in an installed role.
 Upgrade the managed installation and restart Desktop before using new roles.
 
 Model and effort compatibility: [Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra)
-and [Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol). API token prices
+and [Sol](https://developers.openai.com/api/docs/models/gpt-6.2-sol),
+[Astra](https://developers.openai.com/api/docs/models/gpt-6.2-astra). API token prices
 are not subscription allowance measurements or evidence of savings.
 
 ## Quota band
@@ -50,9 +60,9 @@ depleted solely because the weekly window is moderately lower.
 |---|---:|---|
 | Green / standard | 5-hour ≥50% and weekly ≥35% | L0: Terra Medium parent (Conservative uses Low), no subagent. L1/L2: Sol parent, at most one exploratory child or worker plus a Sol reviewer; Terra worker is L1-only. L3 reserves its final review. If final review uses the first slot, the second may only be a follow-up recheck of that reviewer session. |
 | Yellow / guarded | 5-hour ≥30% and weekly ≥20% | L0: Terra Medium, no subagent. One reviewer slot for code-changing L1-L3 work; a diagnosis-only task may use it for a scout. |
-| Red | 10-29% | L0: GPT-6 Luna Low. L1: GPT-6.1 Sol Low/Medium without delegation. Pause L2/L3. |
+| Red | 10-29% | L0: GPT-6 Luna Low. L1: GPT-6.2 Sol Low/Medium without delegation. Pause L2/L3. |
 | Critical | under 10% or reached | Do not begin code changes. Produce a checkpoint and the next natural quota-window refresh time. |
-| Unknown | unavailable | GPT-6.1 Sol Medium, one read-only subagent maximum, no Astra/Max/Ultra. |
+| Unknown | unavailable | GPT-6.2 Sol Medium, one read-only subagent maximum, no Astra/Max/Ultra. |
 
 When only one quota window is reported: Green ≥60%, Yellow 30–59%, Red 10–29%,
 Critical under 10% or reached.
@@ -93,7 +103,7 @@ Reserve review capacity: Green/standard L1/L2 allows at most one exploratory chi
 `copilot_reviewer`, or one worker instead of that exploratory child. Only L1 may use
 `copilot_terra_worker`; its default slot is Green's first slot. Yellow/Unknown L1/L2
 reserves the only slot for that reviewer. Green L3
-allows at most one read-only scout/investigator plus `copilot_final_reviewer` (GPT-6.1 Sol High).
+allows at most one read-only scout/investigator plus `copilot_final_reviewer` (GPT-6.2 Sol High).
 Yellow L3 reserves its only slot for that final reviewer. Unknown L3 reserves it for
 `copilot_reviewer`; Red and Critical allow none. If Astra is unavailable for a non-quota reason,
 use `copilot_reviewer` with `--astra-unavailable` as the sole L3 final-review fallback.
@@ -111,7 +121,7 @@ that consumes the guarded slot and makes a later reviewer dispatch unavailable.
 
 When Red pauses L2/L3, perform only the Start section's narrow read-only triage. Do not delegate, modify code or configuration, or start review. Immediately return a checkpoint with the task level, quota band, known evidence, zero changed files, next natural quota-window refresh time, and next action. A user override may resume work, but never permits reset-credit use.
 
-For Green/standard L3, use at most one read-only investigator before implementation and reserve the other agent slot for the final review. If final review uses the first slot, the second may only be a follow-up recheck of that reviewer session; investigator → final review leaves no follow-up capacity. A fresh second reviewer requires a bounded user grant within the total-call limits. The premium profile uses the dedicated GPT-6 Astra final reviewer; balanced and conservative use GPT-6.1 Sol High. Keep exactly one writer. The definition of done must cover the relevant permission matrix, migration compatibility, failure rollback or retry behavior, and representative existing data.
+For Green/standard L3, use at most one read-only investigator before implementation and reserve the other agent slot for the final review. If final review uses the first slot, the second may only be a follow-up recheck of that reviewer session; investigator → final review leaves no follow-up capacity. A fresh second reviewer requires a bounded user grant within the total-call limits. The premium profile uses the dedicated GPT-6.2 Astra final reviewer; balanced and conservative use GPT-6.2 Sol High. Keep exactly one writer. The definition of done must cover the relevant permission matrix, migration compatibility, failure rollback or retry behavior, and representative existing data.
 
 ## Delegation economy
 

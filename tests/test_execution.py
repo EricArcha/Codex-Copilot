@@ -40,7 +40,7 @@ class ExecutionTests(unittest.TestCase):
 
     def reserve(self, **kwargs):
         options = dict(run_id=self.run, request_id=uid(), kind="model", category="generation",
-                       phase="evaluation", snapshot=quota(), role="data_model", model="gpt-6.1-sol",
+                       phase="evaluation", snapshot=quota(), role="data_model", model="gpt-6.2-sol",
                        effort="medium", level="L2", profile="balanced")
         options.update(kwargs)
         if options["role"] == "copilot_reviewer" and "effort" not in kwargs:
@@ -207,6 +207,31 @@ class ExecutionTests(unittest.TestCase):
         with self.assertRaises(ex.ExecutionDenied):
             self.finish(next_call, session_id=uid())
 
+    def test_model_upgrade_keeps_old_session_readable_without_rebinding_or_refund(self):
+        from codex_copilot.delegation import _ROLE_CONFIGURATION
+        self.begin()
+        options = dict(kind="subagent", role="copilot_reviewer", phase="final_review", category="review")
+        with patch.dict(_ROLE_CONFIGURATION, {"copilot_reviewer": ("gpt-6.1-sol", "high")}):
+            call = self.reserve(**options, model="gpt-6.1-sol")
+            self.finish(call, session_id=uid())
+        self.assertEqual(ex.status(self.run)["calls"][0]["model"], "gpt-6.1-sol")
+        with self.assertRaises(ex.ExecutionDenied):
+            self.reserve(**options, request_id=call["request_id"], model="gpt-6.1-sol")
+        with self.assertRaises(ex.ExecutionDenied):
+            self.reserve(**options, request_id=call["request_id"])
+        with self.assertRaises(ex.ExecutionDenied):
+            self.reserve(**options, followup_id=call["request_id"])
+        self.assertEqual(ex.status(self.run)["consumed"], 1)
+
+    def test_data_plane_rejects_legacy_or_premium_models_and_extra_efforts(self):
+        self.begin()
+        self.preflight()
+        for model, effort in (("gpt-6.1-sol", "medium"), ("gpt-6.2-astra", "medium"),
+                              ("gpt-6.2-sol", "high"), ("gpt-6.2-sol", "ultra")):
+            with self.subTest(model=model, effort=effort), self.assertRaises(ex.ExecutionDenied):
+                self.reserve(model=model, effort=effort)
+        self.assertEqual(ex.status(self.run)["consumed"], 0)
+
     def test_writer_slot_cannot_be_reopened_by_grant(self):
         self.begin()
         first = self.reserve(kind="subagent", role="copilot_worker", phase="implementation", category="subagent")
@@ -219,7 +244,7 @@ class ExecutionTests(unittest.TestCase):
 
     def worker(self, role, **kwargs):
         options = dict(kind="subagent", role=role, phase="implementation", category="subagent",
-                       model="gpt-6.1-terra" if role == "copilot_terra_worker" else "gpt-6.1-sol", level="L1")
+                       model="gpt-6.1-terra" if role == "copilot_terra_worker" else "gpt-6.2-sol", level="L1")
         options.update(kwargs)
         return self.reserve(**options)
 
@@ -295,7 +320,7 @@ class ExecutionTests(unittest.TestCase):
                 self.run = uid()
                 self.begin()
                 options = dict(level=level, profile=profile, role=role,
-                               model="gpt-6-astra" if role == "copilot_astra_final_reviewer" else "gpt-6.1-sol",
+                               model="gpt-6.2-astra" if role == "copilot_astra_final_reviewer" else "gpt-6.2-sol",
                                astra_unavailable=fallback)
                 call = self.review(**options)
                 self.finish(call, session_id=uid())

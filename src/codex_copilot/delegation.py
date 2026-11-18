@@ -26,12 +26,12 @@ _KNOWN_ROLES = {
 _PHASES = {"exploration", "implementation", "final_review"}
 _ROLE_CONFIGURATION = {
     "copilot_scout": ("gpt-6-luna", "low"),
-    "copilot_investigator": ("gpt-6.1-sol", "medium"),
-    "copilot_worker": ("gpt-6.1-sol", "medium"),
+    "copilot_investigator": ("gpt-6.2-sol", "medium"),
+    "copilot_worker": ("gpt-6.2-sol", "medium"),
     "copilot_terra_worker": ("gpt-6.1-terra", "medium"),
-    "copilot_reviewer": ("gpt-6.1-sol", "high"),
-    "copilot_final_reviewer": ("gpt-6.1-sol", "high"),
-    "copilot_astra_final_reviewer": ("gpt-6-astra", "high"),
+    "copilot_reviewer": ("gpt-6.2-sol", "high"),
+    "copilot_final_reviewer": ("gpt-6.2-sol", "high"),
+    "copilot_astra_final_reviewer": ("gpt-6.2-astra", "high"),
 }
 _WRITER_ROLES = {"copilot_worker", "copilot_terra_worker"}
 
