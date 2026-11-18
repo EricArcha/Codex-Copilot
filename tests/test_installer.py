@@ -5,6 +5,7 @@ import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 from tests.platform_support import require_symlinks
 
@@ -12,6 +13,7 @@ from codex_copilot.installer import (
     AGENT_FILES,
     MEASUREMENT_NOTICE,
     RESTART_NOTICE,
+    SOL_MIGRATION_UNAVAILABLE,
     SYMLINK_RISK_WARNING,
     InstallError,
     _is_current_install,
@@ -44,6 +46,71 @@ class InstallerTests(unittest.TestCase):
                 self.assertFalse((runtime / name).exists())
                 self.assertFalse((skill / name).exists())
             self.assertFalse(install()["changed"])
+
+    def test_legacy_sol_default_migrates_only_after_catalog_verification(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)), patch(
+            "codex_copilot.installer.run_codex"
+        ) as codex:
+            config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            config.parent.mkdir()
+            original = 'model = "gpt-6.1-sol"\nmodel_reasoning_effort = "high"\n'
+            config.write_text(original)
+            codex.return_value = SimpleNamespace(stdout='{"models":[]}')
+            self.assertIn(SOL_MIGRATION_UNAVAILABLE, install()["warnings"])
+            manifest_path = Path(os.environ["CODEX_COPILOT_STATE_DIR"]) / "install.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["config_changes"].extend([{
+                "path": "model", "previous_present": True,
+                "previous_value": "gpt-5.6-sol", "installed_value": "gpt-5.6-terra",
+            }, {
+                "path": "model_reasoning_effort", "previous_present": True,
+                "previous_value": "medium", "installed_value": "high",
+            }])
+            manifest_path.write_text(json.dumps(manifest))
+
+            supported = SimpleNamespace(stdout=json.dumps({"models": [{
+                "slug": "gpt-6.2-sol", "supported_reasoning_levels": [{"effort": "high"}]
+            }]}))
+            codex.return_value = supported
+            codex.reset_mock()
+            with patch(
+                "codex_copilot.installer.repo_root", return_value=Path(os.environ["CODEX_COPILOT_SHARE_DIR"])
+            ):
+                self.assertTrue(install(implicit_invocation="on")["changed"])
+            codex.assert_not_called()
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.1-sol")
+
+            preview = install(dry_run=True)
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.1-sol")
+            self.assertEqual([change["installed_value"] for change in preview["config_changes"]
+                              if change["path"] == "model"], ["gpt-6.2-sol"])
+            codex.return_value = SimpleNamespace(stdout='{"models":[]}')
+            with self.assertRaisesRegex(InstallError, "plan changed"):
+                install(expected_plan_token=preview["plan_token"])
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.1-sol")
+            codex.return_value = supported
+
+            def catalog_with_concurrent_config_edit(*args, **kwargs):
+                config.write_text('new_preference = "keep"\n' + config.read_text())
+                return supported
+
+            codex.side_effect = catalog_with_concurrent_config_edit
+            with self.assertRaisesRegex(InstallError, "configuration changed during installation"):
+                install(expected_plan_token=preview["plan_token"])
+            self.assertEqual(tomllib.loads(config.read_text())["new_preference"], "keep")
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.1-sol")
+            codex.side_effect = None
+            preview = install(dry_run=True)
+            self.assertTrue(install(expected_plan_token=preview["plan_token"])["changed"])
+            migrated = tomllib.loads(config.read_text())
+            self.assertEqual(migrated["model"], "gpt-6.2-sol")
+            self.assertEqual(migrated["model_reasoning_effort"], "high")
+            self.assertFalse(install()["changed"])
+            uninstall()
+            restored = tomllib.loads(config.read_text())
+            self.assertEqual(restored["model"], "gpt-6.1-sol")
+            self.assertEqual(restored["model_reasoning_effort"], "high")
+            self.assertEqual(restored["new_preference"], "keep")
 
     def test_default_copy_install_is_idempotent_and_uninstalls(self):
         with tempfile.TemporaryDirectory() as temp:

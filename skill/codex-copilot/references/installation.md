@@ -86,6 +86,14 @@ never silently substitute an old model or widen a role. Checkpoint/finish active
 old-model sessions before upgrade: history stays readable, but the new policy
 rejects old-model resume/replay. Restart Desktop for refreshed agent definitions.
 
+From 1.3.1, the install plan upgrades an existing `model = "gpt-6.1-sol"` to
+`gpt-6.2-sol` for new chats after the executing CLI catalog verifies the selected
+effort. It preserves an explicit effort and uses Medium if none is configured.
+If the PATH CLI lacks the model or effort, the plan explains how to use a compatible
+CLI and skips the migration. This migration runs once and can be restored on
+uninstall if the managed value still matches. Restart Desktop and open a new
+chat to use the updated default.
+
 ## Quota and recovery
 
 Quota reads have a deadline and clean up their app-server process. Missing login, invalid responses, EOF, timeout or startup failure use only a valid recent successful cache, otherwise `unknown`; they never authorize larger delegation budgets. A fixture is for tests, not proof of account access. Measurement remains opt-in and off by default.

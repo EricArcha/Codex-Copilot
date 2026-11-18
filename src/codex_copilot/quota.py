@@ -5,6 +5,7 @@ import math
 import os
 import queue
 import subprocess
+import tempfile
 import threading
 import time
 from dataclasses import asdict, dataclass, fields, replace
@@ -430,6 +431,13 @@ def _snapshot_from_dict(raw: dict[str, Any]) -> QuotaSnapshot:
 
 
 def _atomic_json(path: Path, data: dict[str, Any]) -> None:
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    temporary = tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False
+    )
+    try:
+        with temporary:
+            json.dump(data, temporary, indent=2, sort_keys=True)
+            temporary.write("\n")
+        os.replace(temporary.name, path)
+    finally:
+        Path(temporary.name).unlink(missing_ok=True)

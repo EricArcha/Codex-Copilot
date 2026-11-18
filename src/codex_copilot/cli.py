@@ -33,7 +33,7 @@ from .paths import bin_dir, codex_home, skill_locations, skills_home
 from .process import codex_command, codex_resolution, run_codex
 from .user_path import normalize
 from .profile import active_profile, set_profile
-from .quota import QuotaSnapshot, get_quota
+from .quota import QuotaSnapshot, get_quota, unknown_snapshot
 from .routing import Profile, QuotaBand, TaskLevel, launch_level, route_for
 
 
@@ -54,6 +54,7 @@ def _parser() -> argparse.ArgumentParser:
 
     doctor_parser = sub.add_parser("doctor", help="Check installation and quota integration")
     doctor_parser.add_argument("--json", action="store_true")
+    doctor_parser.add_argument("--skip-quota", action="store_true", help="Check installation without starting the quota reader")
 
     status_parser = sub.add_parser("status", help="Read current ChatGPT rate-limit windows")
     status_parser.add_argument("--json", action="store_true")
@@ -266,7 +267,7 @@ def _version_tuple(text: str) -> tuple[int, ...] | None:
     return tuple(map(int, match.groups())) if match else None
 
 
-def doctor() -> dict[str, Any]:
+def doctor(*, skip_quota: bool = False) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
     def add(name: str, ok: bool, detail: str, severity: str = "ok") -> None:
@@ -364,7 +365,8 @@ def doctor() -> dict[str, Any]:
     add("path", in_path, f"{bin_dir()} in current process PATH" if in_path else f"{bin_dir()} is absent from current PATH; use the absolute launcher path. This does not diagnose quota access.", severity="ok" if in_path else "warning")
     registered = [p for p in skill_locations() if (p / "SKILL.md").exists()]
     add("skill_registration", len(registered) <= 1, "single registration" if len(registered) <= 1 else "duplicate Skill registrations detected")
-    quota = get_quota(refresh=True)
+    quota = (unknown_snapshot("Live quota check skipped. Run 'codex-copilot status --refresh --json' separately.")
+             if skip_quota else get_quota(refresh=True))
     profile = active_profile()
     add("profile", True, profile.value)
     astra_agent = codex_home() / "agents" / "copilot-astra-final-reviewer.toml"
@@ -376,7 +378,9 @@ def doctor() -> dict[str, Any]:
         severity="ok" if astra_agent.exists() else "warning",
     )
     quota_detail = quota.error or _status_text(quota).splitlines()[0]
-    if quota.band == QuotaBand.UNKNOWN.value:
+    if skip_quota:
+        add("quota", True, quota_detail)
+    elif quota.band == QuotaBand.UNKNOWN.value:
         warnings.append(f"Quota check unavailable: {quota_detail}")
         add("quota", True, quota_detail, severity="warning")
     elif quota.error:
@@ -522,7 +526,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(active_profile().value)
             return 0
         if args.command == "doctor":
-            result = doctor()
+            result = doctor(skip_quota=args.skip_quota)
             if args.json:
                 print(json.dumps(result, indent=2))
             else:

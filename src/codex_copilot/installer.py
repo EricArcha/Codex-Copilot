@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import time
 import uuid
 from dataclasses import asdict
@@ -14,6 +15,7 @@ from typing import Any
 from . import VERSION
 from .config_edit import MISSING, apply_updates, get_path, parse_toml, restore_updates
 from .paths import bin_dir, codex_home, repo_root, share_dir, skill_locations, skills_home, state_dir
+from .process import run_codex
 from .known_skills import KNOWN_DISTRIBUTION_DIGESTS, KNOWN_SKILL_DIGESTS
 from . import user_path
 from .config_policy import REQUIRED_CONFIG, config_checks
@@ -35,6 +37,12 @@ SYMLINK_RISK_WARNING = (
     "codex-copilot install --mode copy"
 )
 RESTART_NOTICE = "Restart Codex Desktop and open a new task before using the installed agents."
+PREVIOUS_SOL_DEFAULT = "gpt-6.1-sol"
+SOL_DEFAULT = "gpt-6.2-sol"
+SOL_MIGRATION_UNAVAILABLE = (
+    "The current Codex CLI catalog could not verify GPT-6.2 Sol with the configured effort. "
+    "To migrate the old default, rerun the source installer with a compatible Codex CLI first on the command's PATH."
+)
 MEASUREMENT_NOTICE = (
     "Optional allowance measurement is off by default. Run 'codex-copilot measure on' "
     "once for future skill tasks; 'codex-copilot measure off' stops new automatic measurements."
@@ -415,6 +423,17 @@ def _switch_implicit_invocation(current: dict[str, Any], desired: str, result: d
     return {**result, "changed": True, "needs_confirmation": False, "manifest": str(manifest_path())}
 
 
+def _supports_sol_default(effort: str) -> bool:
+    try:
+        result = run_codex(["debug", "models"], capture_output=True, text=True,
+                           encoding="utf-8", check=True, timeout=5)
+        return any(model["slug"] == SOL_DEFAULT and
+                   any(level["effort"] == effort for level in model["supported_reasoning_levels"])
+                   for model in json.loads(result.stdout)["models"])
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
+        return False
+
+
 def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: str | None = None, add_to_path: bool = False,
             implicit_invocation: str | None = None) -> dict[str, Any]:
     if mode not in {"copy", "symlink"}:
@@ -439,15 +458,30 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
     previous_path = (current or {}).get("user_path")
     if previous_path and previous_path.get("added") and user_path.normalize(previous_path["entry"]) != user_path.normalize(str(bin_dir().resolve())):
         raise InstallError("Uninstall before changing BIN_DIR for a PATH-managed installation; this preserves PATH ownership")
-    config_text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
+    original_config = config_path.read_text(encoding="utf-8") if config_path.exists() else None
+    config_text = original_config or ""
     config = parse_toml(config_text)
-    updated, changes = apply_updates(config_text, CONFIG_UPDATES)
-    current_install = _is_current_install(current, mode, config, implicit_invocation)
+    previous_changes = (current or {}).get("config_changes", [])
     setting_only = (mode == "copy" and not add_to_path and current is not None
                     and current.get("implicit_invocation") in {"on", "off"}
                     and current["implicit_invocation"] != implicit_invocation
                     and _is_current_install(current, mode, config, current["implicit_invocation"])
                     and {item["target"] for item in current["artifacts"]} == expected_artifact_targets(mode))
+    model_updates = {}
+    model_notice = None
+    if not setting_only and config.get("model") == PREVIOUS_SOL_DEFAULT and not any(
+        item["path"] == "model" and item["installed_value"] == SOL_DEFAULT for item in previous_changes
+    ):
+        effort = config.get("model_reasoning_effort", "medium")
+        if isinstance(effort, str) and _supports_sol_default(effort):
+            model_updates["model"] = SOL_DEFAULT
+            if "model_reasoning_effort" not in config:
+                model_updates["model_reasoning_effort"] = effort
+            model_notice = "The default model for new Desktop chats will be GPT-6.2 Sol after restart."
+        else:
+            model_notice = SOL_MIGRATION_UNAVAILABLE
+    updated, changes = apply_updates(config_text, {**CONFIG_UPDATES, **model_updates})
+    current_install = not model_updates and _is_current_install(current, mode, config, implicit_invocation)
     if mode == "copy" and not current_install and not setting_only:
         root, destination = repo_root().resolve(), share_dir().resolve()
         if root == destination or root.is_relative_to(destination) or destination.is_relative_to(root):
@@ -478,6 +512,8 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
         path_before, path_after, ownership = user_path.plan(bin_dir())
     actions = [f"{mode}: {source} -> {target}" for source, target, _ in planned]
     actions.extend([f"write runtime location: {pointer}", f"merge managed settings: {config_path}"])
+    if model_updates:
+        actions.append(f"migrate the default model for new chats: {PREVIOUS_SOL_DEFAULT} -> {SOL_DEFAULT}")
     actions.append(f"set implicit invocation: {implicit_invocation}")
     if mode == "copy":
         actions.insert(0, f"copy distribution: {repo_root()} -> {share_dir()}")
@@ -489,6 +525,8 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
     if setting_only:
         actions = [f"set implicit invocation: {implicit_invocation}"]
     warnings = [RESTART_NOTICE, MEASUREMENT_NOTICE, IMPLICIT_INVOCATION_NOTICE]
+    if model_notice:
+        warnings.append(model_notice)
     if current and "implicit_invocation" not in current:
         warnings.append(LEGACY_IMPLICIT_INVOCATION_NOTICE)
     if mode == "symlink":
@@ -549,11 +587,17 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
                 transaction.replace(Path(item["previous_backup"]), Path(item["target"]))
             else:
                 transaction.remove(Path(item["target"]))
+        latest_config = config_path.read_text(encoding="utf-8") if config_path.exists() else None
+        if latest_config != original_config:
+            raise InstallError("Codex configuration changed during installation; review a new dry run")
         transaction.text(config_path, updated)
-        original_changes = (current or {}).get("config_changes", [])
+        original_changes = previous_changes
+        retired_keys = {"service_tier"}
+        if model_updates:
+            retired_keys.update({"model", "model_reasoning_effort"})
         retired_changes = [*(current or {}).get("retired_config_changes", []),
-                           *[c for c in original_changes if c["path"] == "service_tier"]]
-        original_changes = [c for c in original_changes if c["path"] != "service_tier"]
+                           *[c for c in original_changes if c["path"] in retired_keys]]
+        original_changes = [c for c in original_changes if c["path"] not in retired_keys]
         owned_paths = {change["path"] for change in original_changes}
         original_changes = [*original_changes, *[asdict(c) for c in changes if c.path not in owned_paths]]
         previous_path = (current or {}).get("user_path")

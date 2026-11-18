@@ -3,6 +3,12 @@
 The CLI reads official App Server quota for status, doctor, launch and delegation.
 A functioning full workflow obtains actual windows; unknown is temporary failure.
 
+For startup, use `doctor --skip-quota --json` for installation checks and
+`status --json` for the quota read. When the host explicitly reports that the
+current shell has no network access, explain that restriction and request
+command-scoped host execution for status at the outset. An ordinary terminal
+failure is separate evidence; use its exact failure category and phase.
+
 Inspect `error_category` / `retryable` in `status --json`. If permission_denied,
 state_initialization_failed or state_write_failed occurs in a restricted host,
 explain the condition and use the host approval mechanism for command-scoped

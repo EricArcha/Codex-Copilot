@@ -1,14 +1,36 @@
 import json
 import os
 import tempfile
+import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
 
-from codex_copilot.quota import get_quota, snapshot_from_result
+from codex_copilot.quota import _atomic_json, get_quota, snapshot_from_result
 
 
 class QuotaTests(unittest.TestCase):
+    def test_overlapping_cache_writes_use_independent_temporary_files(self):
+        barrier = threading.Barrier(2, timeout=5)
+        replace_lock = threading.Lock()
+        real_replace = os.replace
+
+        def replace_when_both_writers_are_ready(source, target):
+            barrier.wait()
+            with replace_lock:
+                real_replace(source, target)
+
+        with tempfile.TemporaryDirectory() as temp, patch(
+            "codex_copilot.quota.os.replace", side_effect=replace_when_both_writers_are_ready
+        ), ThreadPoolExecutor(max_workers=2) as pool:
+            cache = Path(temp) / "quota-cache.json"
+            writes = [pool.submit(_atomic_json, cache, {"snapshot": value}) for value in (1, 2)]
+            for write in writes:
+                write.result(timeout=6)
+            self.assertIn(json.loads(cache.read_text()), ({"snapshot": 1}, {"snapshot": 2}))
+            self.assertEqual(list(Path(temp).iterdir()), [cache])
+
     def test_uses_separate_window_capacity_thresholds(self):
         result = {
             "rateLimits": {

@@ -1,5 +1,28 @@
 # Verification evidence
 
+## Quota cache and default-model migration — 2026-11-19
+
+- The macOS Desktop managed shell reported Seatbelt with networking disabled.
+  Its App Server failed at initialization with `permission_denied`. A host
+  macOS login shell with the same PATH CLI returned live App Server windows.
+  The sandbox result did not reproduce in the host login shell.
+- A deterministic interleaving reproduced the shared quota temporary-file
+  race without sandbox restrictions. After the fix, both writes succeed and
+  readers see a complete snapshot. Startup uses a separate install-only
+  diagnostic, then the existing quota command and host permission flow.
+- An isolated install using all five path overrides verified the legacy Sol
+  migration, idempotence and uninstall restoration. The compatible catalog
+  test used the validated Desktop CLI catalog entry. The older PATH CLI
+  produced the missing-model notice. Tests also cover concurrent config edits,
+  stale manifest preferences and the installed launcher configuration path.
+- Local checks passed: 241 tests discovered, 234 passed and seven platform
+  skips, Skill validation, release metadata and whitespace. The independent
+  GPT-6.2 Sol High L3 final review passed after fixes.
+- Local copy upgrade to source 1.3.1 passed installation checks and a host
+  login-shell live quota query with a valid cache. The actual default was
+  already GPT-6.2 Sol Medium at install time. No published release or fresh
+  Desktop startup was verified.
+
 ## GPT-6.2 routing candidate — 2026-11-18
 
 - Requirement: support the latest documented Sol/Astra models and clarify the

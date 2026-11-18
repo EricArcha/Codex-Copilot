@@ -37,6 +37,7 @@ Codex-Copilot 按四类模型分工：**Terra** 用于 Green/Yellow 的 L0 主�
 
 | 日期 | 里程碑 | 主要变化 |
 | --- | --- | --- |
+| 2026-11-19 | [1.3.1 源码：默认模型迁移](CHANGELOG.md#131---2026-11-19) | 安装器升级旧版 Sol 默认值，并修复并发额度查询的缓存写入。 |
 | 2026-11-18 | [1.3.0 源码：GPT-6.2 路由](CHANGELOG.md#130---2026-11-18) | 更新 Sol/Astra 型号及分工，保留权限与预算限制；尚未正式发布。 |
 | 2026-10-29 | [1.2.0 正式发布：Terra 路由](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.2.0) | 按任务分工接入 Terra，新增有界 L1 worker，并与 Sol 共用写入锁。 |
 | 2026-10-27 | [已安装启动器的设置控制](https://github.com/EricArcha/Codex-Copilot/commit/2a2366d) | 通过已安装的启动器，以事务方式修改隐式调用偏好。 |
@@ -117,6 +118,7 @@ Windows 启动器动态发现 `py -3` 或 `python`，不嵌入特定版本的解
 - 开启多代理能力
 - 最多同时运行 3 个子代理任务
 - 使用轻量默认子代理（`gpt-6-luna`、low reasoning）
+- 执行安装的 CLI 验证模型和推理强度后，将 GPT-6.1 Sol 默认值升级为 GPT-6.2 Sol，供新聊天使用
 - 保留用户的 service_tier 偏好；托管策略继续关闭 fast mode
 
 安装前的值会被记录，用于安全恢复。

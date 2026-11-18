@@ -5,6 +5,14 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-19
+
+- Fix quota cache writes when two quota commands finish at the same time.
+- Check installation separately from live quota at Skill startup and use the
+  host's command-specific permission flow directly in a known network-disabled shell.
+- Restore automatic migration of the legacy GPT-6.1 Sol default for new Desktop
+  chats through the installer preview, with CLI catalog validation and safe uninstall.
+
 ## [1.3.0] - 2026-11-18
 
 - Update everyday development, diagnosis, review and the isolated data plane to

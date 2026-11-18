@@ -26,6 +26,8 @@ protocol_error, state_write_failed. A successful live observation stays
 source=app-server even when caching fails; it carries state_write_failed.
 Unknown observations remain source=unavailable. Fresh successful cache fallback
 retains the existing 60-second bound and labels its source explicitly.
+`doctor --skip-quota` checks installation without making a live quota read.
+The default `doctor` behavior still includes live quota.
 
 Hidden underscore commands, exact model IDs, effort routing and quota thresholds
 are internal policy interfaces, not fixed forever. Changes still require release
@@ -70,6 +72,13 @@ Never overwrite unknown files or replace the whole Codex configuration. Preserve
 user edits, unrelated settings, measurement preferences and recorded history.
 Uninstall restores only eligible managed values. Install confirmation is bound
 to the inspected plan. Failed upgrades retain rollback/recovery evidence.
+
+From 1.3.1, the installer previews a one-time migration of the configured
+`gpt-6.1-sol` default to `gpt-6.2-sol` when the executing Codex catalog lists the
+target model and configured effort (Medium if unset). A missing or incompatible
+catalog leaves the old default in place and emits an actionable notice. This is
+the default for new chats after restart and does not set the active chat model.
+The migration restores the actual previous setting on uninstall when still owned.
 
 Support upgrade from 0.1.0 and 0.1.1 to 1.0.0 and from previously released 1.x
 versions to later 1.x versions. Historical fixtures are immutable source snapshots.
