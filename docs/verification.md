@@ -57,6 +57,16 @@
   already GPT-6.2 Sol Medium at install time. No published release or fresh
   Desktop startup was verified.
 
+## CI trigger and merge policy update — 2026-11-19
+
+- The workflow parsed successfully. Compared with the previous revision, the
+  only workflow change is the push branch filter. PR, `main` and `v*` tag
+  triggers retain all 12 OS/Python jobs, the Skill job and read-only permissions.
+- Local verification discovered 238 tests. 231 passed and seven macOS platform
+  skips were reported. The Skill validator, release metadata and project-local
+  identity checks passed. Both README milestone lists were checked together.
+  This contributor workflow change adds no product milestone.
+
 ## GPT-6.2 routing candidate — 2026-11-18
 
 - Requirement: support the latest documented Sol/Astra models and clarify the

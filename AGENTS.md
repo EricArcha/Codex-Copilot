@@ -28,7 +28,9 @@ This repository is the source of truth for the Codex-Copilot skill, custom agent
 
 ## Verification
 
-Run before considering a change complete:
+For the cosmetic README-only changes defined in [CONTRIBUTING.md](CONTRIBUTING.md),
+review the diff and check affected formatting and links locally. For other changes,
+run both checks before considering the change complete:
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
