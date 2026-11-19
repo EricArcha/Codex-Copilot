@@ -5,6 +5,13 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-11-19
+
+- Show reload guidance only after changes that affect Desktop agents or Skill
+  invocation. Keep installation previews and unchanged installs free of
+  restart prompts.
+- Continue an authorized upgrade delivery through reviewed merge, branch
+  cleanup and local synchronization while preserving the selected model.
 - Reuse post-restart Desktop chat evidence during acceptance and request
   a restart only for an outstanding check that requires a reload.
 

@@ -13,7 +13,14 @@ from unittest.mock import patch
 from tests.platform_support import require_symlinks
 
 from codex_copilot.cli import doctor, main
-from codex_copilot.installer import CONFIG_UPDATES, SYMLINK_RISK_WARNING, install, load_manifest
+from codex_copilot.installer import (
+    CONFIG_UPDATES,
+    IMPLICIT_INVOCATION_RELOAD_NOTICE,
+    RESTART_NOTICE,
+    SYMLINK_RISK_WARNING,
+    install,
+    load_manifest,
+)
 from codex_copilot.metrics import record
 from codex_copilot.quota import QuotaSnapshot, unknown_snapshot
 from codex_copilot.routing import QuotaBand, TaskLevel, route_for
@@ -170,6 +177,7 @@ class CliTests(unittest.TestCase):
                     self.assertEqual(main(["install", "--yes"]), 0)
                 self.assertIn("Managed settings", first_out.getvalue())
                 self.assertEqual(first_err.getvalue().count("Optional allowance measurement"), 1)
+                self.assertEqual(first_err.getvalue().count(RESTART_NOTICE), 1)
                 self.assertTrue((Path(env["CODEX_HOME"]) / "config.toml").exists())
 
                 second_out, second_err = StringIO(), StringIO()
@@ -177,6 +185,7 @@ class CliTests(unittest.TestCase):
                     self.assertEqual(main(["install"]), 0)
                 self.assertIn("Already installed; no changes.", second_out.getvalue())
                 self.assertNotIn("without --yes", second_err.getvalue())
+                self.assertNotIn(RESTART_NOTICE, second_err.getvalue())
 
     def test_interactive_install_asks_about_the_model_after_installing(self):
         for answer, recommendation, effort in (
@@ -226,12 +235,15 @@ class CliTests(unittest.TestCase):
             catalog.assert_not_called()
             self.assertNotIn("model", tomllib.loads(config.read_text()))
             self.assertIn("--set-default-model", out.getvalue())
+            self.assertNotIn("after restarting Codex Desktop", out.getvalue())
             self.assertEqual(main(["install", "--dry-run", "--set-default-model"]), 0)
+            self.assertNotIn("after restarting Codex Desktop", out.getvalue())
             self.assertNotIn("model", tomllib.loads(config.read_text()))
             self.assertEqual(main(["install", "--yes", "--set-default-model"]), 0)
             saved = tomllib.loads(config.read_text())
             self.assertEqual(saved["model"], "gpt-6.2-sol")
             self.assertEqual(saved["model_reasoning_effort"], "medium")
+            self.assertEqual(out.getvalue().count("after restarting Codex Desktop"), 1)
             ask.assert_not_called()
 
     def test_model_opt_in_reuses_existing_symlink_mode(self):
@@ -287,11 +299,18 @@ class CliTests(unittest.TestCase):
 
     def test_install_implicit_invocation_notice_prints_once_for_dry_real_and_repeat(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
-            for args in (["install", "--dry-run"], ["install", "--yes"], ["install"]):
+            for args, expected_reload in (
+                (["install", "--dry-run"], None),
+                (["install", "--yes"], RESTART_NOTICE),
+                (["install", "--implicit-invocation", "on", "--yes"], IMPLICIT_INVOCATION_RELOAD_NOTICE),
+                (["install"], None),
+            ):
                 stdout, stderr = StringIO(), StringIO()
                 with redirect_stdout(stdout), redirect_stderr(stderr):
                     self.assertEqual(main(args), 0)
                 self.assertEqual(stderr.getvalue().count("Explicit invocation is $codex-copilot"), 1)
+                for notice in (RESTART_NOTICE, IMPLICIT_INVOCATION_RELOAD_NOTICE):
+                    self.assertEqual(stderr.getvalue().count(notice), int(notice == expected_reload))
 
     def test_doctor_json_reports_implicit_invocation_on_off_and_unknown(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)), patch(

@@ -40,6 +40,7 @@ Only the user may manually redeem a reset credit or reset opportunity. Never sug
 
 ## Verify and finish
 
+- Follow the repository's authorized delivery scope through its final step. Wait for required CI and review in the same chat, and continue independent work when a step is blocked.
 - Run the repository's required checks. Quota pressure may narrow optional exploration but must not remove verification needed for the definition of done.
 - For L1-L3 code changes, reserve capacity for an independent review unless the quota route requires pausing. For Green/Yellow L3, use GPT-6.2 Astra High for the premium final review; balanced and conservative profiles use GPT-6.2 Sol High. The installed GPT-6.2 Sol High reviewer is the premium fallback when Astra is unavailable for reasons other than quota. If the required L3 review cannot run, pause rather than weaken the quality gate.
 - Keep engineering checks, effect acceptance and publication eligibility separate. Missing required effect evidence means an incomplete checkpoint, even when engineering tests pass. Before a release-candidate commit, run `codex-copilot release-check --json`; confirm missing project identity before committing and never change global Git identity.

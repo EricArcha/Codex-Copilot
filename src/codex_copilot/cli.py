@@ -386,7 +386,7 @@ def doctor(*, skip_quota: bool = False) -> dict[str, Any]:
         add("managed_config", settings_ok, "required settings match" if settings_ok else
             "required settings differ: " + ", ".join(blocked_keys) +
             "; preview repair from a reviewed source checkout with install --dry-run; "
-            "install only when authorized, then restart Desktop and run doctor --json")
+            "install only when authorized and verify the repair with doctor --skip-quota --json")
     add("skill", skill.exists(), str(skill))
     symlinked_agents = []
     for name in AGENT_FILES:
@@ -567,7 +567,7 @@ def main(argv: list[str] | None = None) -> int:
                 print("Installation cancelled. No changes made.", file=sys.stderr)
                 return 2
             result = install(mode=mode, expected_plan_token=preview["plan_token"], add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
-            _print_result({**result, "warnings": []})  # Already shown in the plan.
+            _print_result({**result, "warnings": [w for w in result["warnings"] if w not in preview["warnings"]]})
             if args.set_default_model or result.get("offer_default_model"):
                 return _offer_default_model(explicit=args.set_default_model, interactive=not args.yes and sys.stdin.isatty())
             return 0
