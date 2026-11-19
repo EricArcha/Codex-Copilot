@@ -23,9 +23,9 @@
 </p>
 <p align="center"><sub>24 seconds. A clear route from request to evidence. The GIF preview is silent.</sub></p>
 
-## Current source version: 1.3.0
+## Current source version: 1.3.4
 
-Source 1.3.0 updates Sol/Astra to GPT-6.2 while retaining Terra/Luna responsibilities and bounded permissions. This source candidate has not been published. Published packages and tags are listed in [GitHub Releases](https://github.com/EricArcha/Codex-Copilot/releases).
+Source 1.3.4 scopes Desktop reload guidance to the features that changed and documents the full upgrade delivery workflow. Published packages and tags are listed in [GitHub Releases](https://github.com/EricArcha/Codex-Copilot/releases).
 
 Codex-Copilot 1.0.0 establishes stable installation, CLI/JSON compatibility and release boundaries. The GitHub Release has been withdrawn; the source version and tag remain available. See [CHANGELOG](CHANGELOG.md), [compatibility](docs/compatibility.md), [release policy](docs/releasing.md) and [contributing](CONTRIBUTING.md).
 
@@ -38,6 +38,7 @@ Newest first. Source-version milestones are distinguished from published release
 
 | Date | Milestone | What changed |
 | --- | --- | --- |
+| 2026-11-19 | [1.3.4 source: Upgrade delivery](CHANGELOG.md#134---2026-11-19) | Covers merge, cleanup and local sync, with reload guidance tied to actual changes. |
 | 2026-11-19 | [1.3.3 source: Desktop model confirmation](CHANGELOG.md#133---2026-11-19) | Desktop chat shows and confirms the current model recommendation after installation. |
 | 2026-11-19 | [1.3.2 source: separate model choice](CHANGELOG.md#132---2026-11-19) | The installer asks before changing the default for new chats. |
 | 2026-11-19 | [1.3.1 source: default model migration](CHANGELOG.md#131---2026-11-19) | Installer upgrades the legacy Sol default and concurrent quota checks can safely save their results. |

@@ -55,7 +55,10 @@ is older than Desktop's, locate and verify the Desktop-bundled CLI, then put
 its directory first on PATH for these commands only. Use that same CLI for
 preview and apply. Do not change persistent PATH.
 
-After a successful install or upgrade, run:
+After a successful install or upgrade, follow the scope of the user's request.
+If the user already chose to keep the existing default or requested an upgrade
+delivery that preserves it, verify that both the model and effort were preserved.
+When the user is open to a model recommendation, run:
 
 ```text
 codex-copilot default-model --json
@@ -112,10 +115,14 @@ evidence. Treat older pending entries as dated observations. For the model
 confirmation's Keep branch, verify the user's choice and unchanged settings in
 the current chat.
 
-Request a restart only when a specific, in-scope check requires reloading a
-changed Desktop setting, Skill or role and the available evidence leaves that
-reload outstanding. Name the behavior that remains to be verified. A new chat
-opened after the required reload can supply the evidence for that check.
+Request a restart only when a specific, in-scope check requires a reload and
+the evidence still leaves that reload outstanding. Name the missing behavior.
+An earlier acceptance applies while the verified version and affected inputs
+match, including when a later commit only changes unrelated files. Use
+post-reload evidence for any affected behavior changed after that acceptance.
+Installer dry runs and unchanged installs provide installation evidence.
+A successful installer message about reloading agents or an invocation setting
+applies to the named feature and should be checked against the current chat.
 
 From 1.2.0, the managed installation adds `copilot_terra_worker` (Terra Medium,
 L1 implementation only). Terra requires CLI 0.159.0+ and account model access.

@@ -23,9 +23,9 @@
 </p>
 <p align="center"><sub>24 秒，从任务请求走到有证据的交付。GIF 预览无声。</sub></p>
 
-## 当前源码版本：1.3.0
+## 当前源码版本 1.3.4
 
-源码 1.3.0 将 Sol/Astra 更新到 GPT-6.2，保留 Terra/Luna 分工及有界权限。本次源码候选尚未发布。已发布版本与标签见 [GitHub Releases](https://github.com/EricArcha/Codex-Copilot/releases)。
+源码 1.3.4 按实际变更提示重新加载桌面功能，并明确升级交付的完整流程。已发布版本与标签见 [GitHub Releases](https://github.com/EricArcha/Codex-Copilot/releases)。
 
 Codex-Copilot 1.0.0 建立了安装、CLI/JSON 兼容性及发布边界。GitHub Release 已撤回，源码版本和标签保留。参见[变更记录](CHANGELOG.md)、[兼容承诺](docs/compatibility.md)、[发布规则](docs/releasing.md)和[贡献入口](CONTRIBUTING.md)。
 
@@ -37,6 +37,7 @@ Codex-Copilot 按四类模型分工：**Terra** 用于 Green/Yellow 的 L0 主�
 
 | 日期 | 里程碑 | 主要变化 |
 | --- | --- | --- |
+| 2026-11-19 | [1.3.4 源码：升级交付](CHANGELOG.md#134---2026-11-19) | 覆盖合并、清理分支和本地同步，只在对应功能发生变更时提示重新加载。 |
 | 2026-11-19 | [1.3.3 源码：桌面端模型确认](CHANGELOG.md#133---2026-11-19) | Desktop 聊天在安装后展示本次推荐，并单独确认是否应用。 |
 | 2026-11-19 | [1.3.2 源码：单独确认默认模型](CHANGELOG.md#132---2026-11-19) | 安装完成后，先询问用户再更改新聊天的默认模型。 |
 | 2026-11-19 | [1.3.1 源码：默认模型迁移](CHANGELOG.md#131---2026-11-19) | 安装器升级旧版 Sol 默认值，并修复并发额度查询的缓存写入。 |

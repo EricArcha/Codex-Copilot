@@ -39,7 +39,8 @@ SYMLINK_RISK_WARNING = (
     "'agent type is currently not available'. Use regular copies when reliability matters: "
     "codex-copilot install --mode copy"
 )
-RESTART_NOTICE = "Restart Codex Desktop and open a new task before using the installed agents."
+RESTART_NOTICE = "Reload Codex Desktop before using the updated custom agents in a new chat."
+IMPLICIT_INVOCATION_RELOAD_NOTICE = "Reload Codex Desktop to use the updated Skill invocation preference."
 DEFAULT_MODEL_UNAVAILABLE = (
     "The current Codex CLI catalog could not verify the recommended model and reasoning effort. "
     "To set the default, rerun 'codex-copilot install --yes --set-default-model' "
@@ -53,8 +54,7 @@ IMPLICIT_INVOCATION_NOTICE = (
     "Explicit invocation is $codex-copilot. With implicit invocation on, Codex may start "
     "the skill by itself, loading its instructions, which can read quota and create run state. "
     "The default is off to avoid spending allowance on misfires. Change it with "
-    "'codex-copilot install --implicit-invocation on|off', then restart Codex Desktop; "
-    "check it with 'codex-copilot doctor --json'."
+    "'codex-copilot install --implicit-invocation on|off'. Check it with 'codex-copilot doctor --json'."
 )
 LEGACY_IMPLICIT_INVOCATION_NOTICE = (
     "The previous release allowed implicit invocation; this upgrade turns it off unless "
@@ -263,6 +263,14 @@ def _is_current_install(manifest: dict[str, Any] | None, mode: str, config: dict
         if _distribution_fingerprint(repo_root()) != distribution.get("fingerprint"):
             return False
     return True
+
+
+def _agent_file_will_change(source: Path, target: Path, mode: str) -> bool:
+    if not target.is_file() or target.is_symlink() != (mode == "symlink"):
+        return True
+    if mode == "symlink" and target.resolve() != source.resolve():
+        return True
+    return target.read_bytes() != source.read_bytes()
 
 
 def _remove(path: Path) -> None:
@@ -584,7 +592,7 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
         actions.append(f"append Windows user PATH: {ownership['entry']}")
     if setting_only:
         actions = [f"set implicit invocation: {implicit_invocation}"]
-    warnings = [RESTART_NOTICE, MEASUREMENT_NOTICE, IMPLICIT_INVOCATION_NOTICE]
+    warnings = [MEASUREMENT_NOTICE, IMPLICIT_INVOCATION_NOTICE]
     if current and "implicit_invocation" not in current:
         warnings.append(LEGACY_IMPLICIT_INVOCATION_NOTICE)
     if mode == "symlink":
@@ -600,8 +608,17 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
               "config_path": str(config_path), "config_backup_dir": str(state_dir() / "backups"), "plan_token": token}
     if dry_run or no_changes:
         return result
+    previous_implicit = current.get("implicit_invocation", "on") if current else "off"
+    if previous_implicit != implicit_invocation:
+        warnings.append(IMPLICIT_INVOCATION_RELOAD_NOTICE)
     if setting_only:
         return _switch_implicit_invocation(current, implicit_invocation, result)
+    if (any(_agent_file_will_change(source, target, mode)
+            for source, target, kind in planned if kind == "agent")
+            or any(item["kind"] == "agent" and (Path(item["target"]).exists() or Path(item["target"]).is_symlink())
+                   for item in stale)
+            or any(check["blocking"] and check["impact"] == "dispatch_safety" for check in config_checks(config))):
+        warnings.append(RESTART_NOTICE)
     transaction = _Transaction()
     path_written = False
     try:

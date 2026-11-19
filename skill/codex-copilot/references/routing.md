@@ -136,3 +136,16 @@ For Green/standard L3, use at most one read-only investigator before implementat
 For sandbox permission or local-state failures, use the command-scoped host
 approval procedure in [quota.md](quota.md). Desktop observations never replace
 the CLI gate. A rejected approval does not authorize a dispatch.
+
+## Final review continuation
+
+Start required review alongside CI when local checks support the candidate.
+Give one reviewer the exact candidate, affected behavior, trust boundaries and
+existing evidence. Upon fixes, use the original reviewer session within the
+existing call budget. Review the fixes and affected paths, including any changes
+that invalidate earlier findings or evidence.
+
+At ten minutes without a verdict, check the existing review once. If it is
+running, continue independent work or wait for its result. Resolve missing
+evidence or a recoverable tool issue within scope. Notify the user only if an
+actual blocker requires their action. Elapsed time does not satisfy review.

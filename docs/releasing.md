@@ -31,10 +31,11 @@ when preparing a formal release.
    Release with the changelog entry, upgrade instructions and known limitations.
 7. Install from the tagged commit after reviewing the installer dry-run; verify
    version, doctor, repeat-install idempotence and live quota in host-approved
-   execution. Restart Desktop and verify the affected user flow in a fresh chat.
-   When installation or settings change, exercise the Desktop chat path,
-   including separate confirmation where applicable. Record pending fresh-chat
-   checks explicitly; terminal and installation checks cannot substitute.
+   execution. Verify the affected Desktop behavior using the
+   [Desktop acceptance checks](../skill/codex-copilot/references/installation.md#acceptance-after-install-or-upgrade).
+   Reuse relevant current-chat evidence when the tagged source leaves the
+   verified behavior and its inputs intact. If a required Desktop check remains,
+   record exactly what is missing. A terminal check supplies terminal evidence.
 
 Never publish while required validation fails. Never move or reuse a published
 version/tag. For a release defect, publish a new PATCH or MINOR as appropriate;

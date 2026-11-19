@@ -12,6 +12,7 @@ from tests.platform_support import require_symlinks
 import codex_copilot.installer as installer
 from codex_copilot.installer import (
     AGENT_FILES,
+    IMPLICIT_INVOCATION_RELOAD_NOTICE,
     MEASUREMENT_NOTICE,
     RESTART_NOTICE,
     SYMLINK_RISK_WARNING,
@@ -172,6 +173,8 @@ class InstallerTests(unittest.TestCase):
                 self.assertIn(RESTART_NOTICE, first["warnings"])
                 self.assertIn(MEASUREMENT_NOTICE, first["warnings"])
                 self.assertIn(MEASUREMENT_NOTICE, second["warnings"])
+                self.assertNotIn(RESTART_NOTICE, second["warnings"])
+                self.assertNotIn(IMPLICIT_INVOCATION_RELOAD_NOTICE, second["warnings"])
                 result = uninstall()
                 self.assertTrue(result["changed"])
                 self.assertFalse(Path(env["CODEX_COPILOT_SHARE_DIR"]).exists())
@@ -185,7 +188,7 @@ class InstallerTests(unittest.TestCase):
             with patch.dict(os.environ, env, clear=False):
                 result = install(mode="copy", dry_run=True)
                 self.assertTrue(result["dry_run"])
-                self.assertIn(RESTART_NOTICE, result["warnings"])
+                self.assertNotIn(RESTART_NOTICE, result["warnings"])
                 self.assertIn(MEASUREMENT_NOTICE, result["warnings"])
                 self.assertNotIn(SYMLINK_RISK_WARNING, result["warnings"])
                 self.assertFalse(Path(env["CODEX_COPILOT_STATE_DIR"]).exists())
@@ -204,6 +207,46 @@ class InstallerTests(unittest.TestCase):
                 self.assertFalse(artifact_matches(distribution))
                 uninstall()
                 self.assertFalse(skill.exists())
+
+    def test_reload_notice_follows_the_installed_change(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)):
+            root = installer.repo_root()
+            candidate = Path(temp) / "candidate"
+            candidate.mkdir()
+            for name in ("src", "skill", "agents", "bin"):
+                shutil.copytree(root / name, candidate / name)
+            shutil.copyfile(root / "VERSION", candidate / "VERSION")
+
+            install()
+            config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            before = config.read_bytes()
+            with patch.object(installer, "repo_root", return_value=candidate):
+                cli = candidate / "src" / "codex_copilot" / "cli.py"
+                with cli.open("ab") as update:
+                    update.write(b"\n# CLI-only change\n")
+                cli_update = install()
+                self.assertTrue(cli_update["changed"])
+                self.assertNotIn(RESTART_NOTICE, cli_update["warnings"])
+                self.assertNotIn(IMPLICIT_INVOCATION_RELOAD_NOTICE, cli_update["warnings"])
+
+                role = candidate / "agents" / AGENT_FILES[0]
+                with role.open("ab") as update:
+                    update.write(b"\n# Role update\n")
+                preview = install(dry_run=True)
+                self.assertNotIn(RESTART_NOTICE, preview["warnings"])
+                roles_updated = install(expected_plan_token=preview["plan_token"])
+                self.assertIn(RESTART_NOTICE, roles_updated["warnings"])
+                self.assertNotIn(IMPLICIT_INVOCATION_RELOAD_NOTICE, roles_updated["warnings"])
+
+                invocation_preview = install(dry_run=True, implicit_invocation="on")
+                self.assertNotIn(IMPLICIT_INVOCATION_RELOAD_NOTICE, invocation_preview["warnings"])
+                invocation_updated = install(
+                    implicit_invocation="on", expected_plan_token=invocation_preview["plan_token"]
+                )
+                self.assertIn(IMPLICIT_INVOCATION_RELOAD_NOTICE, invocation_updated["warnings"])
+                self.assertNotIn(RESTART_NOTICE, invocation_updated["warnings"])
+                self.assertNotIn(IMPLICIT_INVOCATION_RELOAD_NOTICE, install()["warnings"])
+            self.assertEqual(config.read_bytes(), before)
 
     def test_install_rejects_an_obsolete_confirmed_plan(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -381,8 +424,10 @@ class InstallerTests(unittest.TestCase):
             self.assertIn("set implicit invocation: off", result["actions"])
             notices = " ".join(result["warnings"])
             for text in ("$codex-copilot", "read quota", "create run state", "misfires",
-                         "install --implicit-invocation on|off", "doctor --json", "restart Codex Desktop"):
+                         "install --implicit-invocation on|off", "doctor --json"):
                 self.assertIn(text, notices)
+            self.assertNotIn("reload", notices.lower())
+            self.assertNotIn("restart", notices.lower())
             self.assertFalse(Path(os.environ["CODEX_COPILOT_STATE_DIR"]).exists())
 
     def test_implicit_invocation_invalid_manifest_values_are_rejected(self):

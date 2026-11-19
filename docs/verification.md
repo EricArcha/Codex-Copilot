@@ -1,5 +1,19 @@
 # Verification evidence
 
+## Upgrade delivery and Desktop reload guidance — 2026-11-19
+
+- Local suite passed 240 of 247 tests, with seven platform-specific skips.
+  Skill validation and 1.3.4 source-version checks passed.
+- In a temporary install with all five overrides, upgrading from 1.3.3 to
+  1.3.4 and re-running the preview produced no reload guidance with identical
+  roles and invocation mode. The Desktop CLI catalog offered a different
+  model in the fixture. Replaying the prior Keep decision left both the
+  fixture configuration and the actual configuration byte-for-byte intact.
+  The 1.3.3 user-facing post-restart acceptance is documented below.
+- A temporary Git remote rejected a simulated push, preserving both refs.
+  Deletion with an outdated expected head failed and preserved the moved
+  branch. The CI failure branch was checked against the contributor workflow.
+
 ## Desktop chat model confirmation — 2026-11-19
 
 - Desktop is the primary workflow. The installed Skill guides authorized
