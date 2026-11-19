@@ -38,6 +38,9 @@ Newest first. Source-version milestones are distinguished from published release
 
 | Date | Milestone | What changed |
 | --- | --- | --- |
+| 2026-11-19 | [1.3.3 source: Desktop model confirmation](CHANGELOG.md#133---2026-11-19) | Desktop chat shows and confirms the current model recommendation after installation. |
+| 2026-11-19 | [1.3.2 source: separate model choice](CHANGELOG.md#132---2026-11-19) | The installer asks before changing the default for new chats. |
+| 2026-11-19 | [1.3.1 source: default model migration](CHANGELOG.md#131---2026-11-19) | Installer upgrades the legacy Sol default and concurrent quota checks can safely save their results. |
 | 2026-11-18 | [1.3.0 source: GPT-6.2 routing](CHANGELOG.md#130---2026-11-18) | Sol/Astra model refresh, explicit responsibilities and unchanged permission/budget fences; not a published release. |
 | 2026-10-29 | [1.2.0 release: Terra routing](https://github.com/EricArcha/Codex-Copilot/releases/tag/v1.2.0) | Task-specific Terra routing, a bounded L1 worker and shared Sol/Terra writer ownership. |
 | 2026-10-27 | [Installed launcher controls](https://github.com/EricArcha/Codex-Copilot/commit/2a2366d) | Change implicit-invocation preferences transactionally through the installed launcher. |
@@ -119,6 +122,7 @@ Before changing anything, the installer shows every file action and managed sett
 - Enable multi-agent work
 - Allow up to 3 concurrent subagent tasks
 - Set a lightweight default subagent (`gpt-6-luna`, low reasoning)
+- After installation, Desktop chat offers the current recommendation as the default for new chats and waits for a separate decision. The interactive terminal also offers this choice.
 - Preserve your service-tier preference; keep fast mode disabled by managed policy
 
 The original values are recorded for safe restoration.

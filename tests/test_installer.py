@@ -5,9 +5,11 @@ import tempfile
 import tomllib
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 from tests.platform_support import require_symlinks
 
+import codex_copilot.installer as installer
 from codex_copilot.installer import (
     AGENT_FILES,
     MEASUREMENT_NOTICE,
@@ -16,10 +18,12 @@ from codex_copilot.installer import (
     InstallError,
     _is_current_install,
     artifact_matches,
+    configure_default_model,
     install,
     load_manifest,
     uninstall,
 )
+from codex_copilot.routing import Profile, QuotaBand, TaskLevel, route_for
 
 
 class InstallerTests(unittest.TestCase):
@@ -44,6 +48,107 @@ class InstallerTests(unittest.TestCase):
                 self.assertFalse((runtime / name).exists())
                 self.assertFalse((skill / name).exists())
             self.assertFalse(install()["changed"])
+
+    def test_confirmed_model_step_validates_catalog_and_preserves_concurrent_settings(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)), patch(
+            "codex_copilot.installer.run_codex"
+        ) as codex:
+            config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            config.parent.mkdir()
+            original = 'model = "gpt-6.1-sol"\nmodel_reasoning_effort = "high"\n'
+            config.write_text(original)
+            codex.return_value = SimpleNamespace(stdout='{"models":[]}')
+            self.assertTrue(install()["offer_default_model"])
+            codex.assert_not_called()
+            self.assertEqual(configure_default_model()["status"], "unavailable")
+            manifest_path = Path(os.environ["CODEX_COPILOT_STATE_DIR"]) / "install.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["config_changes"].extend([{
+                "path": "model", "previous_present": True,
+                "previous_value": "gpt-5.6-sol", "installed_value": "gpt-5.6-terra",
+            }, {
+                "path": "model_reasoning_effort", "previous_present": True,
+                "previous_value": "medium", "installed_value": "high",
+            }])
+            manifest_path.write_text(json.dumps(manifest))
+
+            supported = SimpleNamespace(stdout=json.dumps({"models": [{
+                "slug": "gpt-6.2-sol", "supported_reasoning_levels": [{"effort": "medium"}, {"effort": "low"}]
+            }]}))
+            codex.return_value = supported
+            codex.reset_mock()
+            with patch(
+                "codex_copilot.installer.repo_root", return_value=Path(os.environ["CODEX_COPILOT_SHARE_DIR"])
+            ):
+                self.assertTrue(install(implicit_invocation="on")["changed"])
+            codex.assert_not_called()
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.1-sol")
+
+            preview = configure_default_model()
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.1-sol")
+            self.assertEqual(preview["status"], "available")
+            codex.return_value = SimpleNamespace(stdout='{"models":[]}')
+            self.assertEqual(configure_default_model(expected_plan_token=preview["plan_token"])["status"], "unavailable")
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.1-sol")
+            codex.return_value = supported
+            lower_effort = route_for(QuotaBand.GREEN, TaskLevel.L1, Profile.CONSERVATIVE)
+            with patch("codex_copilot.installer.route_for", return_value=lower_effort), self.assertRaisesRegex(
+                InstallError, "recommendation changed"
+            ):
+                configure_default_model(expected_plan_token=preview["plan_token"])
+            self.assertEqual(tomllib.loads(config.read_text())["model_reasoning_effort"], "high")
+
+            def catalog_with_concurrent_config_edit(*args, **kwargs):
+                config.write_text('new_preference = "keep"\n' + config.read_text())
+                return supported
+
+            codex.side_effect = catalog_with_concurrent_config_edit
+            with self.assertRaisesRegex(InstallError, "configuration, installation, or recommendation changed"):
+                configure_default_model(expected_plan_token=preview["plan_token"])
+            self.assertEqual(tomllib.loads(config.read_text())["new_preference"], "keep")
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.1-sol")
+            codex.side_effect = None
+            preview = configure_default_model()
+            self.assertEqual(configure_default_model(expected_plan_token=preview["plan_token"])["status"], "changed")
+            migrated = tomllib.loads(config.read_text())
+            self.assertEqual(migrated["model"], "gpt-6.2-sol")
+            self.assertEqual(migrated["model_reasoning_effort"], "medium")
+            self.assertFalse(install()["changed"])
+            next_route = route_for(QuotaBand.GREEN, TaskLevel.L0, Profile.CONSERVATIVE)
+            codex.return_value = SimpleNamespace(stdout=json.dumps({"models": [{
+                "slug": next_route.root_model, "supported_reasoning_levels": [{"effort": next_route.root_effort}]
+            }]}))
+            with patch("codex_copilot.installer.route_for", return_value=next_route):
+                preview = configure_default_model()
+                self.assertEqual(configure_default_model(expected_plan_token=preview["plan_token"])["status"], "changed")
+            uninstall()
+            restored = tomllib.loads(config.read_text())
+            self.assertEqual(restored["model"], "gpt-6.1-sol")
+            self.assertEqual(restored["model_reasoning_effort"], "high")
+            self.assertEqual(restored["new_preference"], "keep")
+
+    def test_model_rollback_preserves_a_later_user_edit(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)), patch(
+            "codex_copilot.installer._supports_default_model", return_value=True
+        ):
+            install()
+            config_path = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            before_manifest = installer.manifest_path().read_bytes()
+            preview = configure_default_model()
+            write = installer._atomic_write
+
+            def fail_manifest(path, *args):
+                if path == installer.manifest_path():
+                    config_path.write_text('new_preference = "keep"\n' + config_path.read_text())
+                    raise OSError("failed to write the manifest")
+                return write(path, *args)
+
+            with patch.object(installer, "_atomic_write", side_effect=fail_manifest), self.assertRaisesRegex(
+                InstallError, "Rollback incomplete"
+            ):
+                configure_default_model(expected_plan_token=preview["plan_token"])
+            self.assertEqual(tomllib.loads(config_path.read_text())["new_preference"], "keep")
+            self.assertEqual(installer.manifest_path().read_bytes(), before_manifest)
 
     def test_default_copy_install_is_idempotent_and_uninstalls(self):
         with tempfile.TemporaryDirectory() as temp:

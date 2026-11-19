@@ -1,5 +1,62 @@
 # Verification evidence
 
+## Desktop chat model confirmation — 2026-11-19
+
+- Desktop is the primary workflow. The installed Skill guides authorized
+  installation, a separate chat confirmation of the computed model and
+  effort, and application of the exact confirmed preview. The terminal uses
+  the shared recommendation and transaction.
+- From the current macOS Desktop chat's tool shell, an isolated installation
+  with all five path overrides used the actual Desktop-bundled CLI catalog.
+  The available preview kept old settings, a stale token was rejected, and
+  a fresh token applied the exact proposed pair without dropping other
+  settings. The live 1.3.3 user installation reported complete and the
+  existing default model already matched; it was not changed.
+- Local suite: 246 tests discovered, 239 passed and seven platform skips.
+  Skill validation, release metadata checks and independent L3 review passed.
+- **Post-restart Desktop chat acceptance passed.** The user confirmed that
+  the acceptance chat was opened after restarting Desktop and explicitly
+  invoked the installed 1.3.3 Skill in its first message. The isolated preview
+  offered GPT-6.2 Sol / Medium. The user selected Keep in the chat, and the
+  isolated GPT-6.1 Terra / Low configuration remained byte-for-byte intact.
+  The actual GPT-6.2 Sol / Medium configuration also matched its original
+  hash. The confirmed-apply path was exercised in a separate isolated test.
+
+## Confirm the recommended new-chat default — 2026-11-19
+
+- An isolated terminal install confirmed that the recommendation appears after
+  installation, Enter keeps both settings, and yes applies the displayed model
+  and effort. Tests exercise multiple recommendations, skipped and explicit
+  unattended choices, revalidation, symlink mode and uninstall ownership.
+- The independent GPT-6.2 Sol High L3 review passed. The local suite passed
+  238 of 245 tests with seven platform skips. Skill validation, release metadata
+  and whitespace checks passed.
+- Local copy upgrade to source 1.3.2 reported complete. It kept the existing
+  model and effort, and the repeat preview reported no changes.
+
+## Quota cache and default-model migration — 2026-11-19
+
+- The macOS Desktop managed shell reported Seatbelt with networking disabled.
+  Its App Server failed at initialization with `permission_denied`. A host
+  macOS login shell with the same PATH CLI returned live App Server windows.
+  The sandbox result did not reproduce in the host login shell.
+- A deterministic interleaving reproduced the shared quota temporary-file
+  race without sandbox restrictions. After the fix, both writes succeed and
+  readers see a complete snapshot. Startup uses a separate install-only
+  diagnostic, then the existing quota command and host permission flow.
+- An isolated install using all five path overrides verified the legacy Sol
+  migration, idempotence and uninstall restoration. The compatible catalog
+  test used the validated Desktop CLI catalog entry. The older PATH CLI
+  produced the missing-model notice. Tests also cover concurrent config edits,
+  stale manifest preferences and the installed launcher configuration path.
+- Local checks passed: 241 tests discovered, 234 passed and seven platform
+  skips, Skill validation, release metadata and whitespace. The independent
+  GPT-6.2 Sol High L3 final review passed after fixes.
+- Local copy upgrade to source 1.3.1 passed installation checks and a host
+  login-shell live quota query with a valid cache. The actual default was
+  already GPT-6.2 Sol Medium at install time. No published release or fresh
+  Desktop startup was verified.
+
 ## CI trigger and merge policy update — 2026-11-19
 
 - The workflow parsed successfully. Compared with the previous revision, the

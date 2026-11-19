@@ -19,9 +19,11 @@ from .config_policy import config_checks, require_dispatch_config
 from .delegation import DelegationDenied, complete as complete_delegation, dispatch as dispatch_delegation, trace
 from .installer import (
     AGENT_FILES,
+    DEFAULT_MODEL_UNAVAILABLE,
     SYMLINK_RISK_WARNING,
     InstallError,
     artifact_matches,
+    configure_default_model,
     expected_artifact_targets,
     install,
     load_manifest,
@@ -33,7 +35,7 @@ from .paths import bin_dir, codex_home, skill_locations, skills_home
 from .process import codex_command, codex_resolution, run_codex
 from .user_path import normalize
 from .profile import active_profile, set_profile
-from .quota import QuotaSnapshot, get_quota
+from .quota import QuotaSnapshot, get_quota, unknown_snapshot
 from .routing import Profile, QuotaBand, TaskLevel, launch_level, route_for
 
 
@@ -43,17 +45,25 @@ def _parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     install_parser = sub.add_parser("install", help="Install the skill, agents, CLI, and managed config")
-    install_parser.add_argument("--mode", choices=("symlink", "copy"), default="copy")
+    install_parser.add_argument("--mode", choices=("symlink", "copy"),
+                                help="Installation mode (default: copy; model-only opt-in reuses the installed mode)")
     install_parser.add_argument("--dry-run", action="store_true")
     install_parser.add_argument("--yes", action="store_true", help="Confirm the displayed installation plan")
+    install_parser.add_argument("--set-default-model", action="store_true",
+                                help="After installation, set the recommended model as the default for new chats")
     install_parser.add_argument("--add-to-path", action="store_true", help="Opt in to managed Windows user PATH changes")
     install_parser.add_argument("--implicit-invocation", choices=("on", "off"), help="Allow Codex to start the skill implicitly (default: off; preserves the installed choice)")
+
+    default_parser = sub.add_parser("default-model", help="Preview the Desktop default recommendation or apply a confirmed preview")
+    default_parser.add_argument("--json", action="store_true")
+    default_parser.add_argument("--apply-plan", metavar="TOKEN", help="Apply exactly the preview that the user confirmed")
 
     uninstall_parser = sub.add_parser("uninstall", help="Remove managed installation artifacts")
     uninstall_parser.add_argument("--dry-run", action="store_true")
 
     doctor_parser = sub.add_parser("doctor", help="Check installation and quota integration")
     doctor_parser.add_argument("--json", action="store_true")
+    doctor_parser.add_argument("--skip-quota", action="store_true", help="Check installation without starting the quota reader")
 
     status_parser = sub.add_parser("status", help="Read current ChatGPT rate-limit windows")
     status_parser.add_argument("--json", action="store_true")
@@ -233,6 +243,45 @@ def _confirm_install() -> bool:
         return False
 
 
+def _offer_default_model(*, explicit: bool, interactive: bool) -> int:
+    if not explicit and not interactive:
+        print("Kept the default model. To use the recommended default, run: codex-copilot install --yes --set-default-model")
+        return 0
+    try:
+        plan = configure_default_model()
+        if plan["status"] != "available":
+            return _report_default_model(plan, required=explicit)
+        question = (f"Switch the default for new chats to this installation's recommendation, "
+                    f"{plan['model']} with {plan['effort']} reasoning?")
+        print(f"Recommendation for routine development ({plan['profile']} profile, {plan['band']} quota band).")
+        if not explicit:
+            try:
+                accepted = builtins.input(question + " [y/N] ").strip().lower() in {"y", "yes"}
+            except (EOFError, KeyboardInterrupt):
+                accepted = False
+            if not accepted:
+                print("Kept the default model.")
+                return 0
+        result = configure_default_model(expected_plan_token=plan["plan_token"])
+    except (InstallError, OSError, ValueError) as exc:
+        print(f"error: Could not finish the optional model step: {exc}", file=sys.stderr)
+        return 1
+    return _report_default_model(result, required=True)
+
+
+def _report_default_model(result: dict[str, Any], *, required: bool) -> int:
+    if result["status"] == "changed":
+        print(f"{result['model']} will be the default for new chats after restarting Codex Desktop.")
+    elif result["status"] == "current":
+        print(f"{result['model']} is already the default for new chats.")
+    else:
+        message = ("The current route is paused. Kept the default model." if result["status"] == "paused"
+                   else DEFAULT_MODEL_UNAVAILABLE)
+        print(f"warning: {message}", file=sys.stderr)
+        return int(required)
+    return 0
+
+
 def _format_reset(timestamp: int | None) -> str:
     if timestamp is None:
         return "unknown"
@@ -266,7 +315,7 @@ def _version_tuple(text: str) -> tuple[int, ...] | None:
     return tuple(map(int, match.groups())) if match else None
 
 
-def doctor() -> dict[str, Any]:
+def doctor(*, skip_quota: bool = False) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
     def add(name: str, ok: bool, detail: str, severity: str = "ok") -> None:
@@ -364,7 +413,8 @@ def doctor() -> dict[str, Any]:
     add("path", in_path, f"{bin_dir()} in current process PATH" if in_path else f"{bin_dir()} is absent from current PATH; use the absolute launcher path. This does not diagnose quota access.", severity="ok" if in_path else "warning")
     registered = [p for p in skill_locations() if (p / "SKILL.md").exists()]
     add("skill_registration", len(registered) <= 1, "single registration" if len(registered) <= 1 else "duplicate Skill registrations detected")
-    quota = get_quota(refresh=True)
+    quota = (unknown_snapshot("Live quota check skipped. Run 'codex-copilot status --refresh --json' separately.")
+             if skip_quota else get_quota(refresh=True))
     profile = active_profile()
     add("profile", True, profile.value)
     astra_agent = codex_home() / "agents" / "copilot-astra-final-reviewer.toml"
@@ -376,7 +426,9 @@ def doctor() -> dict[str, Any]:
         severity="ok" if astra_agent.exists() else "warning",
     )
     quota_detail = quota.error or _status_text(quota).splitlines()[0]
-    if quota.band == QuotaBand.UNKNOWN.value:
+    if skip_quota:
+        add("quota", True, quota_detail)
+    elif quota.band == QuotaBand.UNKNOWN.value:
         warnings.append(f"Quota check unavailable: {quota_detail}")
         add("quota", True, quota_detail, severity="warning")
     elif quota.error:
@@ -486,19 +538,38 @@ def _launch(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        if args.command == "default-model":
+            result = configure_default_model(expected_plan_token=args.apply_plan)
+            if args.json:
+                print(json.dumps(result, indent=2))
+            elif result["status"] == "available":
+                print(f"Recommended for new Desktop chats: {result['model']} with {result['effort']} reasoning.")
+                print("Preview only. Use --json to obtain a plan token for an explicitly confirmed change.")
+            else:
+                return _report_default_model(result, required=args.apply_plan is not None)
+            return int(args.apply_plan is not None and result["status"] not in {"changed", "current"})
         if args.command == "install":
-            preview = install(mode=args.mode, dry_run=True, add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
+            mode = args.mode
+            if mode is None and args.set_default_model:
+                current = load_manifest()
+                mode = current["mode"] if current else None
+            mode = mode or "copy"
+            preview = install(mode=mode, dry_run=True, add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
             _print_install_plan(preview)
+            if args.set_default_model:
+                print("Requested after installation: set the recommended model as the new-chat default when available.")
             if args.dry_run:
                 print("Dry run: no changes made.")
                 return 0
             if not preview.get("needs_confirmation"):
-                return 0
+                return _offer_default_model(explicit=True, interactive=False) if args.set_default_model else 0
             if not args.yes and not _confirm_install():
                 print("Installation cancelled. No changes made.", file=sys.stderr)
                 return 2
-            result = install(mode=args.mode, expected_plan_token=preview["plan_token"], add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
+            result = install(mode=mode, expected_plan_token=preview["plan_token"], add_to_path=args.add_to_path, implicit_invocation=args.implicit_invocation)
             _print_result({**result, "warnings": []})  # Already shown in the plan.
+            if args.set_default_model or result.get("offer_default_model"):
+                return _offer_default_model(explicit=args.set_default_model, interactive=not args.yes and sys.stdin.isatty())
             return 0
         if args.command == "uninstall":
             _print_result(uninstall(dry_run=args.dry_run))
@@ -522,7 +593,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(active_profile().value)
             return 0
         if args.command == "doctor":
-            result = doctor()
+            result = doctor(skip_quota=args.skip_quota)
             if args.json:
                 print(json.dumps(result, indent=2))
             else:

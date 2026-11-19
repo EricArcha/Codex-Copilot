@@ -44,7 +44,9 @@ recommended parent model in Desktop when needed: these instructions cannot switc
 the active chat automatically. Check account availability before dispatch; if Terra
 is unavailable, report it and keep work in the existing parent or explicitly choose
 the separate Sol route. Never silently substitute a model in an installed role.
-Upgrade the managed installation and restart Desktop before using new roles.
+Verify that Desktop has loaded any newly installed or upgraded role before
+dispatch. Use the [Desktop acceptance checks](installation.md#acceptance-after-install-or-upgrade)
+to determine whether a reload is still needed.
 
 Model and effort compatibility: [Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra)
 and [Sol](https://developers.openai.com/api/docs/models/gpt-6.2-sol),

@@ -31,7 +31,10 @@ when preparing a formal release.
    Release with the changelog entry, upgrade instructions and known limitations.
 7. Install from the tagged commit after reviewing the installer dry-run; verify
    version, doctor, repeat-install idempotence and live quota in host-approved
-   execution. Restart Desktop and verify in a fresh chat.
+   execution. Restart Desktop and verify the affected user flow in a fresh chat.
+   When installation or settings change, exercise the Desktop chat path,
+   including separate confirmation where applicable. Record pending fresh-chat
+   checks explicitly; terminal and installation checks cannot substitute.
 
 Never publish while required validation fails. Never move or reuse a published
 version/tag. For a release defect, publish a new PATCH or MINOR as appropriate;

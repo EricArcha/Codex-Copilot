@@ -5,6 +5,29 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+- Reuse post-restart Desktop chat evidence during acceptance and request
+  a restart only for an outstanding check that requires a reload.
+
+## [1.3.3] - 2026-11-19
+
+- Ask for separate consent in Desktop chat after installation or upgrade,
+  and apply only the model recommendation shown in that chat.
+
+## [1.3.2] - 2026-11-19
+
+- Offer the current routine-development model and reasoning recommendation as
+  the default for new chats after installation or upgrade.
+  Keep the current default unless the user separately answers yes or passes
+  `--set-default-model`. Unattended `--yes` applies only to installation.
+
+## [1.3.1] - 2026-11-19
+
+- Fix quota cache writes when two quota commands finish at the same time.
+- Check installation separately from live quota at Skill startup and use the
+  host's command-specific permission flow directly in a known network-disabled shell.
+- Restore automatic migration of the legacy GPT-6.1 Sol default for new Desktop
+  chats through the installer preview, with CLI catalog validation and safe uninstall.
+
 ## [1.3.0] - 2026-11-18
 
 - Update everyday development, diagnosis, review and the isolated data plane to

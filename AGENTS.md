@@ -51,6 +51,9 @@ before release. Update CHANGELOG for user-facing changes. Permission, installati
 
 - Product scope is Codex Desktop development orchestration: allowance-aware routing,
   bounded delegation, safe managed installation and privacy-safe measurement.
+  Desktop chat is the primary user path. Implement and verify affected Desktop
+  flows before marking a user-facing change complete. The CLI supports those
+  flows and must not take priority over them; terminal verification is supplemental.
   Do not expand it into a general agent framework, billing service, credential
   manager, global sandbox configurator or telemetry collector.
 - `skill/codex-copilot/SKILL.md` is the short workflow entry point; references contain

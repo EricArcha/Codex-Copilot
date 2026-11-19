@@ -53,6 +53,15 @@ class InstallationDiagnosticsTests(unittest.TestCase):
         installer.install()
         self.assertNotIn("service_tier", self.config.read_text(encoding="utf-8"))
 
+    def test_doctor_can_verify_installation_without_live_quota(self):
+        installer.install()
+        with patch.object(cli, "get_quota") as reader, patch.object(cli.shutil, "which", return_value=None):
+            result = cli.doctor(skip_quota=True)
+        reader.assert_not_called()
+        self.assertEqual(result["installation_state"], "complete")
+        self.assertFalse(result["quota_status"]["read_success"])
+        self.assertEqual(result["quota_status"]["cache_status"], "not_checked")
+
     def test_direct_uninstall_of_legacy_manifest_preserves_current_tier(self):
         installer.install()
         manifest = installer.load_manifest()

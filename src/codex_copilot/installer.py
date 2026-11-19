@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import time
 import uuid
 from dataclasses import asdict
@@ -14,6 +15,10 @@ from typing import Any
 from . import VERSION
 from .config_edit import MISSING, apply_updates, get_path, parse_toml, restore_updates
 from .paths import bin_dir, codex_home, repo_root, share_dir, skill_locations, skills_home, state_dir
+from .process import run_codex
+from .profile import active_profile
+from .quota import cached_quota
+from .routing import QuotaBand, TaskLevel, route_for
 from .known_skills import KNOWN_DISTRIBUTION_DIGESTS, KNOWN_SKILL_DIGESTS
 from . import user_path
 from .config_policy import REQUIRED_CONFIG, config_checks
@@ -35,6 +40,11 @@ SYMLINK_RISK_WARNING = (
     "codex-copilot install --mode copy"
 )
 RESTART_NOTICE = "Restart Codex Desktop and open a new task before using the installed agents."
+DEFAULT_MODEL_UNAVAILABLE = (
+    "The current Codex CLI catalog could not verify the recommended model and reasoning effort. "
+    "To set the default, rerun 'codex-copilot install --yes --set-default-model' "
+    "with a compatible Codex CLI first on the command's PATH."
+)
 MEASUREMENT_NOTICE = (
     "Optional allowance measurement is off by default. Run 'codex-copilot measure on' "
     "once for future skill tasks; 'codex-copilot measure off' stops new automatic measurements."
@@ -65,7 +75,11 @@ def load_manifest() -> dict[str, Any] | None:
     path = manifest_path()
     if not path.exists():
         return None
-    manifest = json.loads(path.read_text(encoding="utf-8"))
+    return _parse_manifest(path.read_text(encoding="utf-8"))
+
+
+def _parse_manifest(text: str) -> dict[str, Any]:
+    manifest = json.loads(text)
     if not isinstance(manifest, dict) or manifest.get("schema") not in (1, 2):
         raise InstallError("Invalid installation manifest; preserve the state directory for recovery")
     valid = isinstance(manifest.get("config_path"), str) and bool(manifest["config_path"])
@@ -318,10 +332,17 @@ class _Transaction:
         self.backup(target)
         _remove(target)
 
-    def rollback(self) -> None:
+    def rollback(self, *, expected_text: dict[Path, str] | None = None) -> None:
         failures = []
         for target, previous in reversed(list(self.originals.items())):
             try:
+                if expected_text is not None:
+                    current = target.read_text(encoding="utf-8") if target.is_file() and not target.is_symlink() else None
+                    if current != expected_text[target]:
+                        if previous and previous.is_file() and current == previous.read_text(encoding="utf-8"):
+                            continue
+                        failures.append(str(target))
+                        continue
                 _remove(target)
                 if previous:
                     target.parent.mkdir(parents=True, exist_ok=True)
@@ -415,6 +436,79 @@ def _switch_implicit_invocation(current: dict[str, Any], desired: str, result: d
     return {**result, "changed": True, "needs_confirmation": False, "manifest": str(manifest_path())}
 
 
+def _supports_default_model(model_id: str, effort: str) -> bool:
+    try:
+        result = run_codex(["debug", "models"], capture_output=True, text=True,
+                           encoding="utf-8", check=True, timeout=5)
+        return any(model["slug"] == model_id and
+                   any(level["effort"] == effort for level in model["supported_reasoning_levels"])
+                   for model in json.loads(result.stdout)["models"])
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
+        return False
+
+
+def configure_default_model(*, expected_plan_token: str | None = None) -> dict[str, Any]:
+    """Preview by default; only a matching confirmed plan writes the preference."""
+    manifest_file = manifest_path()
+    manifest_text = manifest_file.read_text(encoding="utf-8")
+    manifest = _parse_manifest(manifest_text)
+    config_path = codex_home() / "config.toml"
+    config_text = config_path.read_text(encoding="utf-8")
+    config = parse_toml(config_text)
+    if (Path(manifest["config_path"]).resolve() != config_path.resolve()
+            or not _is_current_install(manifest, manifest["mode"], config, manifest.get("implicit_invocation", "off"))):
+        raise InstallError("Complete the installation before setting the model default")
+    snapshot = cached_quota()
+    try:
+        band = QuotaBand(snapshot.band) if snapshot else QuotaBand.UNKNOWN
+    except ValueError:
+        band = QuotaBand.UNKNOWN
+    route = route_for(band, TaskLevel.L1, active_profile())
+    if route.pause:
+        return {"status": "paused"}
+    model, effort = route.root_model, route.root_effort
+    if config.get("model") == model:
+        return {"status": "current", "model": model}
+    if not _supports_default_model(model, effort):
+        return {"status": "unavailable"}
+    updated, changes = apply_updates(config_text, {"model": model, "model_reasoning_effort": effort})
+    token = _plan_token(config_text, manifest, [], ["set default model", model, effort], None)
+    if expected_plan_token is None:
+        return {"status": "available", "plan_token": token, "model": model, "effort": effort,
+                "band": route.band, "profile": route.profile}
+    if (token != expected_plan_token or config_path.read_text(encoding="utf-8") != config_text
+            or manifest_file.read_text(encoding="utf-8") != manifest_text):
+        raise InstallError("The configuration, installation, or recommendation changed. Review the model choice again.")
+    previous = manifest["config_changes"]
+    model_keys = {"model", "model_reasoning_effort"}
+    owned = {c["path"]: c for c in previous if c["path"] in model_keys}
+    # A later recommendation retains the original rollback values while the
+    # prior installed choice still matches. An intervening user edit starts
+    # a new model preference to restore.
+    model_still_owned = "model" in owned and config.get("model", MISSING) == owned["model"]["installed_value"]
+    records = [asdict(c) for c in changes]
+    if model_still_owned:
+        for record in records:
+            prior = owned.get(record["path"])
+            if prior and record["previous_present"] and record["previous_value"] == prior["installed_value"]:
+                record["previous_present"] = prior["previous_present"]
+                record["previous_value"] = prior["previous_value"]
+    manifest["config_changes"] = [c for c in previous if c["path"] not in model_keys] + records
+    manifest["retired_config_changes"] = [*manifest.get("retired_config_changes", []),
+                                          *[c for c in previous if c["path"] in model_keys]]
+    manifest_updated = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
+    transaction = _Transaction()
+    try:
+        transaction.text(config_path, updated)
+        if manifest_file.read_text(encoding="utf-8") != manifest_text:
+            raise InstallError("The installation changed before the model setting could be recorded.")
+        transaction.text(manifest_file, manifest_updated, 0o600)
+    except Exception as exc:
+        transaction.rollback(expected_text={config_path: updated, manifest_file: manifest_updated})
+        raise InstallError(f"The model change was rolled back. Backups: {transaction.root}") from exc
+    return {"status": "changed", "model": model}
+
+
 def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: str | None = None, add_to_path: bool = False,
             implicit_invocation: str | None = None) -> dict[str, Any]:
     if mode not in {"copy", "symlink"}:
@@ -439,15 +533,17 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
     previous_path = (current or {}).get("user_path")
     if previous_path and previous_path.get("added") and user_path.normalize(previous_path["entry"]) != user_path.normalize(str(bin_dir().resolve())):
         raise InstallError("Uninstall before changing BIN_DIR for a PATH-managed installation; this preserves PATH ownership")
-    config_text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
+    original_config = config_path.read_text(encoding="utf-8") if config_path.exists() else None
+    config_text = original_config or ""
     config = parse_toml(config_text)
-    updated, changes = apply_updates(config_text, CONFIG_UPDATES)
-    current_install = _is_current_install(current, mode, config, implicit_invocation)
+    previous_changes = (current or {}).get("config_changes", [])
     setting_only = (mode == "copy" and not add_to_path and current is not None
                     and current.get("implicit_invocation") in {"on", "off"}
                     and current["implicit_invocation"] != implicit_invocation
                     and _is_current_install(current, mode, config, current["implicit_invocation"])
                     and {item["target"] for item in current["artifacts"]} == expected_artifact_targets(mode))
+    updated, changes = apply_updates(config_text, CONFIG_UPDATES)
+    current_install = _is_current_install(current, mode, config, implicit_invocation)
     if mode == "copy" and not current_install and not setting_only:
         root, destination = repo_root().resolve(), share_dir().resolve()
         if root == destination or root.is_relative_to(destination) or destination.is_relative_to(root):
@@ -549,8 +645,11 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
                 transaction.replace(Path(item["previous_backup"]), Path(item["target"]))
             else:
                 transaction.remove(Path(item["target"]))
+        latest_config = config_path.read_text(encoding="utf-8") if config_path.exists() else None
+        if latest_config != original_config:
+            raise InstallError("Codex configuration changed during installation; review a new dry run")
         transaction.text(config_path, updated)
-        original_changes = (current or {}).get("config_changes", [])
+        original_changes = previous_changes
         retired_changes = [*(current or {}).get("retired_config_changes", []),
                            *[c for c in original_changes if c["path"] == "service_tier"]]
         original_changes = [c for c in original_changes if c["path"] != "service_tier"]
@@ -572,7 +671,8 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
     except Exception as exc:
         _rollback(transaction, path_written, path_before, path_after)
         raise InstallError(f"Installation failed and was rolled back: {exc}. Backups: {transaction.root}") from exc
-    return {**result, "changed": True, "needs_confirmation": False, "manifest": str(manifest_path())}
+    return {**result, "changed": True, "needs_confirmation": False, "manifest": str(manifest_path()),
+            "offer_default_model": True}
 
 
 def uninstall(*, dry_run: bool = False) -> dict[str, Any]:

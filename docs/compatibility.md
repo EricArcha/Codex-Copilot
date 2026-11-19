@@ -26,6 +26,8 @@ protocol_error, state_write_failed. A successful live observation stays
 source=app-server even when caching fails; it carries state_write_failed.
 Unknown observations remain source=unavailable. Fresh successful cache fallback
 retains the existing 60-second bound and labels its source explicitly.
+`doctor --skip-quota` checks installation without making a live quota read.
+The default `doctor` behavior still includes live quota.
 
 Hidden underscore commands, exact model IDs, effort routing and quota thresholds
 are internal policy interfaces, not fixed forever. Changes still require release
@@ -70,6 +72,23 @@ Never overwrite unknown files or replace the whole Codex configuration. Preserve
 user edits, unrelated settings, measurement preferences and recorded history.
 Uninstall restores only eligible managed values. Install confirmation is bound
 to the inspected plan. Failed upgrades retain rollback/recovery evidence.
+
+From 1.3.2, a successful interactive installation or upgrade can offer the
+current L1 routing recommendation for new chats. It uses the current profile
+and a fresh trusted quota cache when available (Unknown otherwise) without a
+live quota read. The executing CLI must verify the recommended model and
+reasoning effort. The separate question defaults to keeping the current
+settings. `install --yes` keeps them and reports how to opt in.
+`install --yes --set-default-model` opts in explicitly. The optional model
+transaction can fail independently of installation. It binds the change to the
+reviewed configuration and restores the prior setting on uninstall when still
+owned. The active chat's model is unaffected.
+
+From 1.3.3, Desktop chat previews that same recommendation with
+`default-model --json` and applies only the separately confirmed plan with
+`default-model --apply-plan <token> --json`. A plan token binds the recommended
+pair and the reviewed local configuration and installation. It is not a
+permission grant. Ordinary development tasks do not change the global default.
 
 Support upgrade from 0.1.0 and 0.1.1 to 1.0.0 and from previously released 1.x
 versions to later 1.x versions. Historical fixtures are immutable source snapshots.
