@@ -609,7 +609,8 @@ def install(*, mode: str = "copy", dry_run: bool = False, expected_plan_token: s
     if dry_run or no_changes:
         return result
     previous_implicit = current.get("implicit_invocation", "on") if current else "off"
-    if previous_implicit != implicit_invocation:
+    installed_policy = skills_home() / "codex-copilot" / "agents" / "openai.yaml"
+    if previous_implicit != implicit_invocation or (implicit_invocation == "on" and not installed_policy.is_file()):
         warnings.append(IMPLICIT_INVOCATION_RELOAD_NOTICE)
     if setting_only:
         return _switch_implicit_invocation(current, implicit_invocation, result)

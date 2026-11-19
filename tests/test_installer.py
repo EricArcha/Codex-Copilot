@@ -246,6 +246,14 @@ class InstallerTests(unittest.TestCase):
                 self.assertIn(IMPLICIT_INVOCATION_RELOAD_NOTICE, invocation_updated["warnings"])
                 self.assertNotIn(RESTART_NOTICE, invocation_updated["warnings"])
                 self.assertNotIn(IMPLICIT_INVOCATION_RELOAD_NOTICE, install()["warnings"])
+
+                shutil.rmtree(self.policy().parents[1])
+                repair = install(dry_run=True)
+                self.assertNotIn(IMPLICIT_INVOCATION_RELOAD_NOTICE, repair["warnings"])
+                repaired = install(expected_plan_token=repair["plan_token"])
+                self.assertIn(IMPLICIT_INVOCATION_RELOAD_NOTICE, repaired["warnings"])
+                self.assertNotIn(RESTART_NOTICE, repaired["warnings"])
+                self.assertIn("allow_implicit_invocation: true", self.policy().read_text(encoding="utf-8"))
             self.assertEqual(config.read_bytes(), before)
 
     def test_install_rejects_an_obsolete_confirmed_plan(self):
