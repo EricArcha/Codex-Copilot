@@ -54,6 +54,10 @@ def _parser() -> argparse.ArgumentParser:
     install_parser.add_argument("--add-to-path", action="store_true", help="Opt in to managed Windows user PATH changes")
     install_parser.add_argument("--implicit-invocation", choices=("on", "off"), help="Allow Codex to start the skill implicitly (default: off; preserves the installed choice)")
 
+    default_parser = sub.add_parser("default-model", help="Preview the Desktop default recommendation or apply a confirmed preview")
+    default_parser.add_argument("--json", action="store_true")
+    default_parser.add_argument("--apply-plan", metavar="TOKEN", help="Apply exactly the preview that the user confirmed")
+
     uninstall_parser = sub.add_parser("uninstall", help="Remove managed installation artifacts")
     uninstall_parser.add_argument("--dry-run", action="store_true")
 
@@ -534,6 +538,16 @@ def _launch(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        if args.command == "default-model":
+            result = configure_default_model(expected_plan_token=args.apply_plan)
+            if args.json:
+                print(json.dumps(result, indent=2))
+            elif result["status"] == "available":
+                print(f"Recommended for new Desktop chats: {result['model']} with {result['effort']} reasoning.")
+                print("Preview only. Use --json to obtain a plan token for an explicitly confirmed change.")
+            else:
+                return _report_default_model(result, required=args.apply_plan is not None)
+            return int(args.apply_plan is not None and result["status"] not in {"changed", "current"})
         if args.command == "install":
             mode = args.mode
             if mode is None and args.set_default_model:

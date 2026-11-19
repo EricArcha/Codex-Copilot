@@ -33,13 +33,53 @@ Default copy mode requires neither administrator rights nor symlink privileges. 
 Implicit invocation defaults to **off**; invoke the Skill explicitly with `$codex-copilot`.
 With `on`, Codex may start the Skill by itself, loading instructions that can read quota
 and create run state. The default avoids spending allowance on misfires. Change it with
-`codex-copilot install --implicit-invocation on|off`, then restart Codex Desktop; check
-`doctor --json` → `implicit_invocation` (`on`, `off`, or `unknown` without a recorded choice).
+`codex-copilot install --implicit-invocation on|off`. Check `doctor --json` →
+`implicit_invocation` (`on`, `off`, or `unknown` without a recorded choice).
+Use the Desktop acceptance checks below when verifying live behavior.
 Upgrades preserve the recorded choice. Legacy installations without that field switch
 from implicit invocation to `off` with a notice unless `--implicit-invocation on` is given.
 Enabling it requires copy mode; symlink installs use the repository default `off`.
 
 Installation previews all managed settings and artifacts; `--yes` confirms a reviewed plan for automation. Existing session authorization to install is sufficient; do not ask again merely because the CLI has a confirmation prompt. Without installation authorization, offer the appropriate commands and continue the task.
+
+### Desktop chat installation and confirmation
+
+Desktop chat is the primary workflow. When the user requests installation or
+upgrade from chat, preview the source installer with the intended options
+(preserve an existing symlink mode), run that authorized plan with `--yes`
+and without `--set-default-model`, and verify it with the installed launcher's
+`doctor --skip-quota --json`. Use the same verified absolute launcher for both
+model commands below. The examples use its short name for readability.
+Check the executing CLI catalog with `codex debug models`. If the shell's CLI
+is older than Desktop's, locate and verify the Desktop-bundled CLI, then put
+its directory first on PATH for these commands only. Use that same CLI for
+preview and apply. Do not change persistent PATH.
+
+After a successful install or upgrade, run:
+
+```text
+codex-copilot default-model --json
+```
+
+When the result is `available`, ask in the current chat, in the user's
+language: “Switch the default for new chats to this installation's
+recommendation, <model> / <effort>, or keep your current settings?” Use the
+model and effort from this result. Keep is the default, and permission to
+install does not answer this question. Wait for an explicit affirmative reply
+about that pair, then use only that preview's token:
+
+```text
+codex-copilot default-model --apply-plan <plan_token> --json
+```
+
+If the preview changed or the command declines the apply, keep settings as
+they are and show any new recommendation for a fresh decision. If the result
+is `current`, report that the model already matches; keep the configured
+reasoning effort. If it is
+`paused` or `unavailable`, report the reason and leave settings in place. Never
+use the terminal's combined `--set-default-model` option to complete a chat
+confirmation. Do not prompt or change the global default during ordinary
+development tasks. Per-task model advice applies to the active task.
 
 The installer reuses an existing `$CODEX_HOME/skills/codex-copilot`; otherwise its default is `~/.agents/skills/codex-copilot`. A verified current or known release Skill can be backed up and adopted. Unknown content, changed managed artifacts, and duplicate registrations block installation. Never delete a conflict without examining and backing it up. `CODEX_COPILOT_SKILLS_HOME` selects the parent directory explicitly; `CODEX_HOME` selects Codex configuration, not the default shared Skill directory.
 
@@ -59,18 +99,30 @@ Windows launcher discovers `py -3` or `python` and requires Python 3.11+. It rec
 
 ## Acceptance after install or upgrade
 
-Restart Codex Desktop and open a fresh chat to load updated roles. Verify the
-installed `--version` matches the selected release and `doctor --json` reports
+Verify the installed `--version` matches the selected release and `doctor --json` reports
 complete with intact managed files. Use the displayed launcher path if PATH is
 not configured. Repeating install from the same release should report no changes.
-A complete installation verifies artifacts/settings, not model entitlement.
+A complete installation verifies the managed files and settings. Model access is checked at runtime.
+
+Before asking for a restart or a fresh chat, check the current conversation,
+including the user's first message and any report that Desktop already restarted.
+If the user confirms this is the post-restart chat and the expected Skill version
+and requested behavior are observed here, close that check using this chat's
+evidence. Treat older pending entries as dated observations. For the model
+confirmation's Keep branch, verify the user's choice and unchanged settings in
+the current chat.
+
+Request a restart only when a specific, in-scope check requires reloading a
+changed Desktop setting, Skill or role and the available evidence leaves that
+reload outstanding. Name the behavior that remains to be verified. A new chat
+opened after the required reload can supply the evidence for that check.
 
 From 1.2.0, the managed installation adds `copilot_terra_worker` (Terra Medium,
 L1 implementation only). Terra requires CLI 0.159.0+ and account model access.
 Its new agent file is subject to the same conflict, fingerprint, rollback and
 uninstall protections; do not replace an unknown file to complete an upgrade.
-Restart Desktop and use a fresh chat to load this role. Parent-model routing
-recommendations cannot switch the model of an already-running chat.
+Use the Desktop reload check when verifying updated role discovery.
+Parent-model routing recommendations apply to the active task.
 
 `status --refresh --json` must show real quota windows with source=app-server.
 For permission_denied, state_initialization_failed or state_write_failed, use
@@ -84,7 +136,7 @@ GPT-6.2 pins. Inspect the executing CLI's `codex debug models` first; Desktop's
 bundled CLI and a PATH CLI can differ. Missing model access must be reported;
 never silently substitute an old model or widen a role. Checkpoint/finish active
 old-model sessions before upgrade: history stays readable, but the new policy
-rejects old-model resume/replay. Restart Desktop for refreshed agent definitions.
+rejects old-model resume/replay.
 
 From 1.3.2, after an interactive install or upgrade, the installer separately
 asks whether to apply this run's recommended model and reasoning effort for
@@ -94,7 +146,8 @@ keep the existing settings. `install --yes` keeps them and prints the opt-in com
 Use `codex-copilot install --yes --set-default-model` to explicitly opt in now
 or later. The executing CLI must verify the recommended model and effort. If
 the current model already matches, the installer keeps the current effort.
-Restart Desktop and open a new chat to use the updated default.
+When a new default was applied and the scope includes verifying it takes effect,
+use the Desktop reload check above.
 
 ## Quota and recovery
 

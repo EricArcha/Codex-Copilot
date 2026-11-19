@@ -1,5 +1,27 @@
 # Verification evidence
 
+## Desktop chat model confirmation — 2026-11-19
+
+- Desktop is the primary workflow. The installed Skill guides authorized
+  installation, a separate chat confirmation of the computed model and
+  effort, and application of the exact confirmed preview. The terminal uses
+  the shared recommendation and transaction.
+- From the current macOS Desktop chat's tool shell, an isolated installation
+  with all five path overrides used the actual Desktop-bundled CLI catalog.
+  The available preview kept old settings, a stale token was rejected, and
+  a fresh token applied the exact proposed pair without dropping other
+  settings. The live 1.3.3 user installation reported complete and the
+  existing default model already matched; it was not changed.
+- Local suite: 246 tests discovered, 239 passed and seven platform skips.
+  Skill validation, release metadata checks and independent L3 review passed.
+- **Post-restart Desktop chat acceptance passed.** The user confirmed that
+  the acceptance chat was opened after restarting Desktop and explicitly
+  invoked the installed 1.3.3 Skill in its first message. The isolated preview
+  offered GPT-6.2 Sol / Medium. The user selected Keep in the chat, and the
+  isolated GPT-6.1 Terra / Low configuration remained byte-for-byte intact.
+  The actual GPT-6.2 Sol / Medium configuration also matched its original
+  hash. The confirmed-apply path was exercised in a separate isolated test.
+
 ## Confirm the recommended new-chat default — 2026-11-19
 
 - An isolated terminal install confirmed that the recommendation appears after

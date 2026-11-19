@@ -245,6 +245,36 @@ class CliTests(unittest.TestCase):
             config = Path(os.environ["CODEX_HOME"]) / "config.toml"
             self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.2-sol")
 
+    def test_desktop_install_previews_and_applies_only_the_shown_recommendation(self):
+        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, self.environment(temp)), patch(
+            "codex_copilot.installer._supports_default_model", return_value=True
+        ), patch("builtins.input") as ask, redirect_stderr(StringIO()):
+            config = Path(os.environ["CODEX_HOME"]) / "config.toml"
+            with redirect_stdout(StringIO()):
+                self.assertEqual(main(["install", "--yes"]), 0)
+
+            def preview():
+                stdout = StringIO()
+                with redirect_stdout(stdout):
+                    self.assertEqual(main(["default-model", "--json"]), 0)
+                return json.loads(stdout.getvalue())
+
+            plan = preview()
+            self.assertEqual((plan["status"], plan["model"], plan["effort"]), ("available", "gpt-6.2-sol", "medium"))
+            self.assertNotIn("model", tomllib.loads(config.read_text()))
+            config.write_text('model = "user-choice"\n' + config.read_text())
+            with redirect_stdout(StringIO()):
+                self.assertEqual(main(["default-model", "--apply-plan", plan["plan_token"], "--json"]), 1)
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "user-choice")
+
+            stdout = StringIO()
+            with redirect_stdout(stdout):
+                self.assertEqual(main(["default-model", "--apply-plan", preview()["plan_token"], "--json"]), 0)
+            self.assertEqual(json.loads(stdout.getvalue())["status"], "changed")
+            self.assertEqual(tomllib.loads(config.read_text())["model"], "gpt-6.2-sol")
+            self.assertEqual(preview()["status"], "current")
+            ask.assert_not_called()
+
     def test_install_implicit_invocation_flag_reaches_preview_and_confirmation(self):
         for setting in ("on", "off"):
             with self.subTest(setting=setting), tempfile.TemporaryDirectory() as temp:

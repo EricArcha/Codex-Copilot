@@ -84,6 +84,12 @@ transaction can fail independently of installation. It binds the change to the
 reviewed configuration and restores the prior setting on uninstall when still
 owned. The active chat's model is unaffected.
 
+From 1.3.3, Desktop chat previews that same recommendation with
+`default-model --json` and applies only the separately confirmed plan with
+`default-model --apply-plan <token> --json`. A plan token binds the recommended
+pair and the reviewed local configuration and installation. It is not a
+permission grant. Ordinary development tasks do not change the global default.
+
 Support upgrade from 0.1.0 and 0.1.1 to 1.0.0 and from previously released 1.x
 versions to later 1.x versions. Historical fixtures are immutable source snapshots.
 Do not require downgrades to be supported; recovery uses installer backups and

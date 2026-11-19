@@ -5,6 +5,14 @@ versions, not retroactively claimed GitHub releases.
 
 ## [Unreleased]
 
+- Reuse post-restart Desktop chat evidence during acceptance and request
+  a restart only for an outstanding check that requires a reload.
+
+## [1.3.3] - 2026-11-19
+
+- Ask for separate consent in Desktop chat after installation or upgrade,
+  and apply only the model recommendation shown in that chat.
+
 ## [1.3.2] - 2026-11-19
 
 - Offer the current routine-development model and reasoning recommendation as
