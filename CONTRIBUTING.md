@@ -18,21 +18,18 @@ An explicit request for “升级交付” or “upgrade delivery” in this pro
 the following sequence. A narrower request ends at its stated scope. A model
 change still requires its own approval of the exact recommendation.
 
-1. Verify the configured remote and latest `main`. Use a clean `codex/` branch,
+1. Verify the configured remote and latest `main`. Choose the merge path below,
    preserve user changes, and resolve conflicts before validating the candidate.
-2. Commit the scoped changes, verify the outgoing files and destination, push,
-   and open the PR. Start the applicable independent review alongside PR CI
-   after the candidate's focused checks pass. Finish the full local checks.
-3. Wait for checks and required review for the exact candidate. If CI fails,
-   fix and recheck it within scope. If the PR head or base moves, verify the
-   new candidate before merging. Pin the verified head for the merge.
-4. Confirm that the change reached remote `main`. Sync local `main` by
-   fast-forwarding a clean checkout, then delete only the reviewed branch.
-   Recheck its local head and ancestry, and use an expected-head lease for
-   remote deletion. Leave a moved branch or one containing unmerged work intact.
-5. Preview and sync the local installation from the merged source after checks
-   pass. Keep the configured default model and effort, verify installer
-   integrity, and reuse existing Desktop acceptance evidence where it applies.
+2. Commit the scoped changes and verify the outgoing files and destination.
+   For a direct push, pass the required local checks and push to `main` without
+   force. Follow the PR checks below when a PR is required.
+3. Confirm that the change reached remote `main` and fast-forward a clean local
+   `main`. If a PR was used, delete the reviewed branch after verifying its
+   local head and ancestry. Use an expected-head lease for remote deletion.
+   Leave a moved branch or one containing unmerged work intact.
+4. Verify the local installation. When managed artifacts changed, preview and
+   sync them from the verified `main` after checks pass. Keep the configured
+   model and effort, and reuse applicable Desktop acceptance evidence.
 
 Continue through waits and recoverable failures in the same chat. If a push is
 rejected, verify the exact destination, authorization and outgoing payload
@@ -42,15 +39,22 @@ completed stages, the blocker, and the single action that can unblock delivery.
 
 ## Choose a merge path
 
-Cosmetic edits confined to `README.md` or `README.zh-CN.md` can go directly to
-`main` when repository protections allow it. This covers typos, presentation
-wording and ordinary link repairs. Changes to installation or usage instructions,
-compatibility claims, version or release history, or governance use a PR.
+Low-risk documentation edits can go directly to `main` after the local checks
+in [AGENTS.md](AGENTS.md) pass and when repository protections allow it. This
+covers typos, wording clarifications that preserve meaning, and ordinary link
+repairs. Changes to installation or usage instructions, compatibility claims,
+version or release history, or governance use a PR.
 
-For all other changes, sync with `main` and use a short `codex/` branch and PR.
-Merge after the `pull_request` CI run covers the latest PR revision and all
-applicable jobs and required reviews pass. The workflow runs on PRs, pushes to
-`main`, and version tags. A feature branch push has no separate CI run.
+Use a short `codex/` branch and PR for code, installer, migration, permission,
+delegation, CI and other changes that need verification before reaching `main`.
+Use the PR path if repository protections require it. Start required independent
+review alongside PR CI after focused local checks pass and finish the full local
+checks. Merge only after CI and required review pass for the exact candidate.
+Fix failures within scope and reverify if the PR head or base moves. Pin the
+verified head for the merge.
+
+CI runs on PRs, pushes to `main`, and version tags.
+A feature branch push has no separate CI run.
 The `main` run verifies the merged commit and gates publication. See the
 [release policy](docs/releasing.md) for the full publication sequence.
 
